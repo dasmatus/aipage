@@ -112,24 +112,27 @@
 
             <!-- LM Studio Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="lmstudio">
-                <h3>How to use LM Studio:</h3>
+                <h3>How to setup LM Studio:</h3>
                 <ol>
-                    <li>Open LM Studio and start the "Local Inference Server" (port 1234 by default)</li>
-                    <li>Ensure a model is loaded in LM Studio</li>
+                    <li>Download and install from <a href="https://lmstudio.ai" target="_blank">lmstudio.ai</a></li>
+                    <li>Open LM Studio and download a model (e.g., Meta Llama 3)</li>
+                    <li>Go to the <b>Local Server</b> tab (double-arrow icon)</li>
+                    <li>Load your model and click <b>Start Server</b></li>
                     <li>Enter the Base URL below (default: http://localhost:1234/v1)</li>
                 </ol>
-                <p class="note">⚠️ Running models locally requires significant hardware resources.</p>
+                <p class="note">⚠️ Running models locally requires significant RAM and a decent GPU/CPU.</p>
             </div>
 
             <!-- Ollama Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="ollama">
-                <h3>How to use Ollama:</h3>
+                <h3>How to setup Ollama:</h3>
                 <ol>
-                    <li>Install and run Ollama on your machine</li>
-                    <li>Download a model (e.g., `ollama run llama3`)</li>
-                    <li>Enter the Base URL below (default: http://localhost:11434)</li>
+                    <li>Download and install from <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                    <li>Open your terminal and run: <code>ollama run llama3</code></li>
+                    <li>Wait for the download to finish and the prompt to appear</li>
+                    <li>Keep Ollama running and enter the Base URL below</li>
                 </ol>
-                <p class="note">⚠️ Ensure Ollama is listening on the provided address.</p>
+                <p class="note">⚠️ On macOS/Linux, Ollama usually runs in the background automatically.</p>
             </div>
 
             <div id="local-settings" class="hidden">
