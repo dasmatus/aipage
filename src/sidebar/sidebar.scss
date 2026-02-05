@@ -92,16 +92,17 @@ body {
     }
 }
 
+/* Global Utilities */
+.hidden {
+    display: none !important;
+}
+
 /* Views */
 .view {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-
-    &.hidden {
-        display: none !important;
-    }
 }
 
 /* Settings with Nesting */
