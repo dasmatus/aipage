@@ -2,7 +2,7 @@
 
 let sidebarOpen = false;
 let iframe: HTMLIFrameElement | null = null;
-const SIDEBAR_WIDTH = 400; // px
+const SIDEBAR_WIDTH = 300; // px
 
 function init() {
     // 1. Find the Quick Menu container (EduPage specific class)
@@ -19,17 +19,18 @@ function init() {
     // 3. Create AI Button (styled like existing buttons but with flair)
     const btn = document.createElement('a');
     btn.id = 'edubar-ai-btn';
-    btn.className = 'edubarSmartLink qbutton qbutton-normal tips-bottom'; // Inherit EduPage classes
+    btn.className = 'edubarChatBtn qbutton qbutton-normal tips-bottom'; // Use existing class for styling
     btn.style.cursor = 'pointer';
     btn.style.display = 'inline-flex';
     btn.style.alignItems = 'center';
     btn.style.gap = '6px';
     btn.setAttribute('title', 'AI Assistant');
 
-    // Add Vercel-like Icon (Sparkles)
+    // Add Star Icon
     btn.innerHTML = `
-        <span style="font-size: 16px;">✨</span>
-        <span style="font-weight: 600; font-size: 13px;">AI</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
     `;
 
     // 4. Insert button at the beginning of the menu
@@ -64,6 +65,7 @@ function openSidebar() {
     const edubar = document.getElementById('edubar');
     if (edubar) {
         edubar.style.width = `calc(100% - ${SIDEBAR_WIDTH}px)`;
+        edubar.style.boxSizing = 'border-box'; // Ensure padding doesn't break width
         edubar.style.transition = 'width 0.3s ease';
     }
 }

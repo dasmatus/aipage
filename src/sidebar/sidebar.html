@@ -31,13 +31,33 @@
     </div>
 
     <div id="settings-view" class="view hidden">
-        <div class="input-group">
-            <label>API Key</label>
-            <input type="password" id="api-key-input" placeholder="Enter Gemini API Key">
-            <p class="hint">Your key is stored locally.</p>
+        <div class="settings-content">
+            <h2>Setup Required</h2>
+            <p class="settings-description">
+                To use the AI assistant, you need a Google Gemini API key.
+            </p>
+
+            <div class="instructions-box">
+                <h3>How to get your API key:</h3>
+                <ol>
+                    <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                            rel="noopener noreferrer">Google AI Studio</a></li>
+                    <li>Sign in with your Google account</li>
+                    <li>Click "Get API Key" or "Create API Key"</li>
+                    <li>Copy the generated key (starts with AIzaSy...)</li>
+                    <li>Paste it below and click "Save Key"</li>
+                </ol>
+                <p class="note">⚠️ Your API key is stored locally and securely in your browser.</p>
+            </div>
+
+            <div class="input-group">
+                <label>API Key</label>
+                <input type="password" id="api-key-input" placeholder="Enter Gemini API Key (AIzaSy...)">
+                <p class="hint">Your key is stored locally and never shared.</p>
+            </div>
+            <button id="save-key-btn" class="primary-btn">Save Key</button>
+            <button id="back-btn" class="secondary-btn">Back to Chat</button>
         </div>
-        <button id="save-key-btn" class="primary-btn">Save Key</button>
-        <button id="back-btn" class="secondary-btn">Back to Chat</button>
     </div>
 
     <div id="chat-view" class="view">

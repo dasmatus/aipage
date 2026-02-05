@@ -86,8 +86,73 @@ body {
     padding: 20px;
     gap: 16px;
     background: var(--bg-color);
-    align-items: center;
-    justify-content: center;
+    overflow-y: auto;
+}
+
+.settings-content {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.settings-content h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #222;
+}
+
+.settings-description {
+    margin: 0 0 20px 0;
+    color: var(--secondary-text);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.instructions-box {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.instructions-box h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+.instructions-box ol {
+    margin: 0 0 12px 0;
+    padding-left: 20px;
+    color: #444;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.instructions-box ol li {
+    margin-bottom: 6px;
+}
+
+.instructions-box a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.instructions-box a:hover {
+    text-decoration: underline;
+}
+
+.instructions-box .note {
+    margin: 0;
+    padding: 8px 12px;
+    background: #fff9e6;
+    border-left: 3px solid var(--accent-color);
+    font-size: 12px;
+    color: #666;
+    border-radius: 3px;
 }
 
 .input-group {
