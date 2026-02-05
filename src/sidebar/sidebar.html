@@ -11,13 +11,6 @@
 <body>
     <div class="header">
         <div class="header-title">
-            <!-- Simple Star Icon -->
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polygon
-                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                </polygon>
-            </svg>
             <span>EduPage AI</span>
         </div>
         <button id="settings-btn" class="icon-btn">
@@ -32,127 +25,128 @@
 
     <div id="settings-view" class="view hidden">
         <div class="settings-content">
-            <h2>Setup Required</h2>
+            <h2>Vyžaduje sa nastavenie</h2>
             <p class="settings-description">
-                Choose your preferred AI provider and configure your API key.
+                Vyberte si preferovaného poskytovateľa AI a nakonfigurujte svoj API kľúč.
             </p>
 
             <div class="input-group">
-                <label>AI Provider</label>
+                <label>Poskytovateľ AI</label>
                 <select id="provider-select">
                     <option value="gemini">Google Gemini</option>
                     <option value="openai">OpenAI ChatGPT</option>
                     <option value="claude">Anthropic Claude</option>
                     <option value="mistral">Mistral AI</option>
-                    <option value="lmstudio">LM Studio (Local)</option>
-                    <option value="ollama">Ollama (Local)</option>
+                    <option value="lmstudio">LM Studio (Lokálne)</option>
+                    <option value="ollama">Ollama (Lokálne)</option>
                 </select>
             </div>
 
             <!-- Gemini Instructions -->
             <div class="instructions-box provider-instructions" data-provider="gemini">
-                <h3>How to get your Gemini API key:</h3>
+                <h3>Ako získať Gemini API kľúč:</h3>
                 <ol>
-                    <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                    <li>Navštívte <a href="https://aistudio.google.com/app/apikey" target="_blank"
                             rel="noopener noreferrer">Google AI Studio</a></li>
-                    <li>Sign in with your Google account</li>
-                    <li>Click "Get API Key" or "Create API Key"</li>
-                    <li>Copy the generated key (starts with AIzaSy...)</li>
-                    <li>Paste it below and click "Save Key"</li>
+                    <li>Prihláste sa pomocou svojho Google účtu</li>
+                    <li>Kliknite na "Get API Key" alebo "Create API Key"</li>
+                    <li>Skopírujte vygenerovaný kľúč (začína na AIzaSy...)</li>
+                    <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
                 </ol>
-                <p class="note">⚠️ Your API key is stored locally and securely in your browser.</p>
+                <p class="note">⚠️ Váš API kľúč je uložený lokálne a bezpečne vo vašom prehliadači.</p>
             </div>
 
             <!-- OpenAI Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="openai">
-                <h3>How to get your OpenAI API key:</h3>
+                <h3>Ako získať OpenAI API kľúč:</h3>
                 <ol>
-                    <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank"
+                    <li>Navštívte <a href="https://platform.openai.com/api-keys" target="_blank"
                             rel="noopener noreferrer">OpenAI Platform</a></li>
-                    <li>Sign in or create an account</li>
-                    <li>Click "Create new secret key"</li>
-                    <li>Copy the generated key (starts with sk-...)</li>
-                    <li>Paste it below and click "Save Key"</li>
+                    <li>Prihláste sa alebo si vytvorte účet</li>
+                    <li>Kliknite na "Create new secret key"</li>
+                    <li>Skopírujte vygenerovaný kľúč (začína na sk-...)</li>
+                    <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
                 </ol>
-                <p class="note">⚠️ OpenAI API usage is billed based on tokens. Check pricing at <a
+                <p class="note">⚠️ Používanie OpenAI API je spoplatnené na základe tokenov. Cenník nájdete na <a
                         href="https://openai.com/pricing" target="_blank">openai.com/pricing</a></p>
             </div>
 
             <!-- Claude Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="claude">
-                <h3>How to get your Claude API key:</h3>
+                <h3>Ako získať Claude API kľúč:</h3>
                 <ol>
-                    <li>Visit <a href="https://console.anthropic.com/" target="_blank"
+                    <li>Navštívte <a href="https://console.anthropic.com/" target="_blank"
                             rel="noopener noreferrer">Anthropic Console</a></li>
-                    <li>Sign in or create an account</li>
-                    <li>Navigate to API Keys section</li>
-                    <li>Click "Create Key"</li>
-                    <li>Copy the generated key (starts with sk-ant-...)</li>
-                    <li>Paste it below and click "Save Key"</li>
+                    <li>Prihláste sa alebo si vytvorte účet</li>
+                    <li>Prejdite do sekcie API Keys</li>
+                    <li>Kliknite na "Create Key"</li>
+                    <li>Skopírujte vygenerovaný kľúč (začína na sk-ant-...)</li>
+                    <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
                 </ol>
-                <p class="note">⚠️ Claude API requires a paid account. Check pricing at <a
+                <p class="note">⚠️ Claude API vyžaduje platený účet. Cenník nájdete na <a
                         href="https://www.anthropic.com/pricing" target="_blank">anthropic.com/pricing</a></p>
             </div>
 
             <!-- Mistral Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="mistral">
-                <h3>How to get your Mistral API key:</h3>
+                <h3>Ako získať Mistral API kľúč:</h3>
                 <ol>
-                    <li>Visit <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral
+                    <li>Navštívte <a href="https://console.mistral.ai/" target="_blank"
+                            rel="noopener noreferrer">Mistral
                             Console</a></li>
-                    <li>Sign in or create an account</li>
-                    <li>Navigate to API Keys</li>
-                    <li>Click "Create new key"</li>
-                    <li>Copy the generated key</li>
-                    <li>Paste it below and click "Save Key"</li>
+                    <li>Prihláste sa alebo si vytvorte účet</li>
+                    <li>Prejdite do sekcie API Keys</li>
+                    <li>Kliknite na "Create new key"</li>
+                    <li>Skopírujte vygenerovaný kľúč</li>
+                    <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
                 </ol>
-                <p class="note">⚠️ Mistral API usage is billed based on tokens. Check pricing at <a
+                <p class="note">⚠️ Používanie Mistral API je spoplatnené na základe tokenov. Cenník nájdete na <a
                         href="https://mistral.ai/technology/#pricing" target="_blank">mistral.ai/pricing</a></p>
             </div>
 
             <!-- LM Studio Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="lmstudio">
-                <h3>How to setup LM Studio:</h3>
+                <h3>Ako nastaviť LM Studio:</h3>
                 <ol>
-                    <li>Download and install from <a href="https://lmstudio.ai" target="_blank">lmstudio.ai</a></li>
-                    <li>Open LM Studio and download a model (e.g., Meta Llama 3)</li>
-                    <li>Go to the <b>Local Server</b> tab (double-arrow icon)</li>
-                    <li>Load your model and click <b>Start Server</b></li>
-                    <li>Enter the Base URL below (default: http://localhost:1234/v1)</li>
+                    <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank">lmstudio.ai</a></li>
+                    <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
+                    <li>Prejdite na kartu <b>Local Server</b> (ikona s dvoma šípkami)</li>
+                    <li>Načítajte model a kliknite na <b>Start Server</b></li>
+                    <li>Nižšie zadajte základnú URL (predvolená: http://localhost:1234/v1)</li>
                 </ol>
-                <p class="note">⚠️ Running models locally requires significant RAM and a decent GPU/CPU.</p>
+                <p class="note">⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a slušné GPU/CPU.</p>
             </div>
 
             <!-- Ollama Instructions -->
             <div class="instructions-box provider-instructions hidden" data-provider="ollama">
-                <h3>How to setup Ollama:</h3>
+                <h3>Ako nastaviť Ollama:</h3>
                 <ol>
-                    <li>Download and install from <a href="https://ollama.com" target="_blank">ollama.com</a></li>
-                    <li>Open your terminal and run: <code>ollama run llama3</code></li>
-                    <li>Wait for the download to finish and the prompt to appear</li>
-                    <li>Keep Ollama running and enter the Base URL below</li>
+                    <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                    <li>Otvorte terminál a spustite: <code>ollama run llama3</code></li>
+                    <li>Počkajte, kým sa sťahovanie dokončí a objaví sa výzva</li>
+                    <li>Nechajte Ollama bežať a zadajte základnú URL nižšie</li>
                 </ol>
-                <p class="note">⚠️ On macOS/Linux, Ollama usually runs in the background automatically.</p>
+                <p class="note">⚠️ Na macOS/Linuxe Ollama zvyčajne beží automaticky na pozadí.</p>
             </div>
 
             <div id="local-settings" class="hidden">
                 <div class="input-group">
-                    <label>Base URL</label>
+                    <label>Základná URL</label>
                     <input type="text" id="base-url-input" placeholder="http://localhost:1234/v1">
                 </div>
                 <div class="input-group">
-                    <label>Model Name</label>
-                    <input type="text" id="model-name-input" placeholder="e.g. llama3">
+                    <label>Názov modelu</label>
+                    <input type="text" id="model-name-input" placeholder="napr. llama3">
                 </div>
             </div>
 
             <div class="input-group" id="api-key-group">
-                <label>API Key</label>
-                <input type="password" id="api-key-input" placeholder="Enter your API key">
-                <p class="hint">Your key is stored locally and never shared.</p>
+                <label>API kľúč</label>
+                <input type="password" id="api-key-input" placeholder="Zadajte svoj API kľúč">
+                <p class="hint">Váš kľúč je uložený lokálne a nikdy sa nezdieľa.</p>
             </div>
-            <button id="save-key-btn" class="primary-btn">Save Key</button>
-            <button id="back-btn" class="secondary-btn">Back to Chat</button>
+            <button id="save-key-btn" class="primary-btn">Uložiť kľúč</button>
+            <button id="back-btn" class="secondary-btn">Späť do chatu</button>
         </div>
     </div>
 
@@ -160,11 +154,11 @@
         <div class="chat-history" id="chat-history">
             <div class="message ai">
                 <div class="avatar">AI</div>
-                <div class="content">Hello! How can I help you with your studies today?</div>
+                <div class="content">Ahoj! Ako ti môžem dnes pomôcť so štúdiom?</div>
             </div>
         </div>
         <div class="chat-input-area">
-            <textarea id="chat-input" placeholder="Ask anything..." rows="1"></textarea>
+            <textarea id="chat-input" placeholder="Spýtaj sa na čokoľvek..." rows="1"></textarea>
             <button id="send-btn" disabled>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="22" y1="2" x2="11" y2="13"></line>

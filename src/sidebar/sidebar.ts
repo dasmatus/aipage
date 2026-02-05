@@ -103,7 +103,7 @@ elements.saveKeyBtn.addEventListener('click', async () => {
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
 
     if (!key && !isLocal) {
-        alert('Please enter an API key');
+        alert('Prosím, zadajte API kľúč');
         return;
     }
 
@@ -120,7 +120,7 @@ elements.saveKeyBtn.addEventListener('click', async () => {
         );
     }
 
-    alert('Settings saved!');
+    alert('Nastavenia uložené!');
     UI.switchView(elements.chatView, elements.settingsView);
 });
 

@@ -41,7 +41,7 @@ export class ChatManager {
         const content = document.createElement('div');
         content.className = 'content';
 
-        if (role === 'user' || text === 'Thinking...') {
+        if (role === 'user' || text === 'Rozmýšľam...') {
             content.innerText = text;
         } else {
             // Background parse for AI messages
@@ -83,7 +83,7 @@ export class ChatManager {
         this.appendMessage('user', text);
 
         // Placeholder AI Message
-        const aiMessageDiv = this.appendMessage('ai', 'Thinking...');
+        const aiMessageDiv = this.appendMessage('ai', 'Rozmýšľam...');
         const contentArea = aiMessageDiv.querySelector('.content') as HTMLElement;
 
         try {

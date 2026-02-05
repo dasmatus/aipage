@@ -36,7 +36,7 @@ function init() {
     btn.style.display = 'inline-flex';
     btn.style.alignItems = 'center';
     btn.style.gap = '6px';
-    btn.setAttribute('title', 'AI Assistant');
+    btn.setAttribute('title', 'AI Asistent');
 
     btn.innerHTML = `
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
