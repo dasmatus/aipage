@@ -1,0 +1,14 @@
+{
+    "name": "edupage-gemini-sidebar",
+    "version": "1.0.0",
+    "description": "Vercel-style Gemini Sidebar for EduPage",
+    "scripts": {
+        "build": "node build.js"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.58.1",
+        "@types/chrome": "^0.0.260",
+        "esbuild": "^0.27.2",
+        "typescript": "^5.3.3"
+    }
+}
