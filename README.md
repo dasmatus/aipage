@@ -27,37 +27,77 @@ A Chrome extension that adds an AI-powered sidebar to EduPage, featuring a clean
    - Click "Load unpacked"
    - Select the `dist` folder from this project
 
-## Setting Up Your Gemini API Key
+## Setting Up Your AI Provider
 
-To use the AI assistant, you'll need a Google Gemini API key:
+The extension supports multiple AI providers. Choose your preferred provider and configure the corresponding API key.
 
-### Step 1: Get Your API Key
+### Supported Providers
 
-1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click **"Get API Key"** or **"Create API Key"**
-4. Choose to create a new API key in a new or existing project
-5. Copy the generated API key (it will look like: `AIzaSy...`)
+- **Google Gemini** (Default)
+- **OpenAI ChatGPT**
+- **Anthropic Claude**
+- **Mistral AI**
+- **LM Studio** (Local)
+- **Ollama** (Local)
 
-⚠️ **Important**: Keep your API key secure and never share it publicly!
-
-### Step 2: Configure the Extension
+### Step 1: Choose Your Provider
 
 1. Navigate to any EduPage site (e.g., `https://yourschool.edupage.org`)
 2. Click the **AI button** (star icon) in the EduPage navbar
 3. The sidebar will open showing the settings view
-4. Paste your API key into the **"API Key"** field
-5. Click **"Save Key"**
+4. Select your preferred AI provider from the dropdown
 
-Your API key is stored locally in your browser and is never sent anywhere except to Google's Gemini API when you send messages.
+### Step 2: Configure Your Provider
 
-### Step 3: Start Chatting
+#### Google Gemini
+
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Get API Key"** or **"Create API Key"**
+4. Copy the key (starts with `AIzaSy...`)
+
+#### OpenAI, Claude, Mistral
+
+Follow the links in the sidebar settings to get your API keys from their respective consoles.
+
+#### LM Studio (Local)
+
+1. Open LM Studio and start the **Local Inference Server**.
+2. Keep the default Port `1234` or update the **Base URL** in the extension settings.
+3. Ensure a model is loaded in LM Studio.
+4. Enter the **Model Name** if you want to target a specific one (default: `loaded-model`).
+
+#### Ollama (Local)
+
+1. Install Ollama and run it (`ollama serve`).
+2. Download a model (e.g., `ollama pull llama3`).
+3. Enter the **Base URL** (default: `http://localhost:11434`).
+4. Enter the **Model Name** (e.g., `llama3`).
+
+### Step 3: Save Settings
+
+1. Paste your API key into the **"API Key"** field
+2. Click **"Save Key"**
+
+Your API key is stored locally in your browser and is never sent anywhere except to your selected provider's API when you send messages.
+
+### Step 4: Start Chatting
 
 Once your API key is saved:
 - The sidebar will automatically switch to the chat view
 - Type your question in the input field at the bottom
 - Press Enter or click the send button
 - The AI will respond to your queries
+
+### Switching Providers
+
+You can switch between providers at any time:
+1. Click the settings icon (gear) in the sidebar header
+2. Select a different provider from the dropdown
+3. Enter the API key for that provider (if not already saved)
+4. Click "Save Key"
+
+Each provider's API key is stored separately, so you can switch between them without re-entering keys.
 
 ## Usage
 

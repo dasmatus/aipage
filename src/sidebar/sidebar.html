@@ -34,11 +34,24 @@
         <div class="settings-content">
             <h2>Setup Required</h2>
             <p class="settings-description">
-                To use the AI assistant, you need a Google Gemini API key.
+                Choose your preferred AI provider and configure your API key.
             </p>
 
-            <div class="instructions-box">
-                <h3>How to get your API key:</h3>
+            <div class="input-group">
+                <label>AI Provider</label>
+                <select id="provider-select">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI ChatGPT</option>
+                    <option value="claude">Anthropic Claude</option>
+                    <option value="mistral">Mistral AI</option>
+                    <option value="lmstudio">LM Studio (Local)</option>
+                    <option value="ollama">Ollama (Local)</option>
+                </select>
+            </div>
+
+            <!-- Gemini Instructions -->
+            <div class="instructions-box provider-instructions" data-provider="gemini">
+                <h3>How to get your Gemini API key:</h3>
                 <ol>
                     <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank"
                             rel="noopener noreferrer">Google AI Studio</a></li>
@@ -50,9 +63,89 @@
                 <p class="note">⚠️ Your API key is stored locally and securely in your browser.</p>
             </div>
 
-            <div class="input-group">
+            <!-- OpenAI Instructions -->
+            <div class="instructions-box provider-instructions hidden" data-provider="openai">
+                <h3>How to get your OpenAI API key:</h3>
+                <ol>
+                    <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank"
+                            rel="noopener noreferrer">OpenAI Platform</a></li>
+                    <li>Sign in or create an account</li>
+                    <li>Click "Create new secret key"</li>
+                    <li>Copy the generated key (starts with sk-...)</li>
+                    <li>Paste it below and click "Save Key"</li>
+                </ol>
+                <p class="note">⚠️ OpenAI API usage is billed based on tokens. Check pricing at <a
+                        href="https://openai.com/pricing" target="_blank">openai.com/pricing</a></p>
+            </div>
+
+            <!-- Claude Instructions -->
+            <div class="instructions-box provider-instructions hidden" data-provider="claude">
+                <h3>How to get your Claude API key:</h3>
+                <ol>
+                    <li>Visit <a href="https://console.anthropic.com/" target="_blank"
+                            rel="noopener noreferrer">Anthropic Console</a></li>
+                    <li>Sign in or create an account</li>
+                    <li>Navigate to API Keys section</li>
+                    <li>Click "Create Key"</li>
+                    <li>Copy the generated key (starts with sk-ant-...)</li>
+                    <li>Paste it below and click "Save Key"</li>
+                </ol>
+                <p class="note">⚠️ Claude API requires a paid account. Check pricing at <a
+                        href="https://www.anthropic.com/pricing" target="_blank">anthropic.com/pricing</a></p>
+            </div>
+
+            <!-- Mistral Instructions -->
+            <div class="instructions-box provider-instructions hidden" data-provider="mistral">
+                <h3>How to get your Mistral API key:</h3>
+                <ol>
+                    <li>Visit <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral
+                            Console</a></li>
+                    <li>Sign in or create an account</li>
+                    <li>Navigate to API Keys</li>
+                    <li>Click "Create new key"</li>
+                    <li>Copy the generated key</li>
+                    <li>Paste it below and click "Save Key"</li>
+                </ol>
+                <p class="note">⚠️ Mistral API usage is billed based on tokens. Check pricing at <a
+                        href="https://mistral.ai/technology/#pricing" target="_blank">mistral.ai/pricing</a></p>
+            </div>
+
+            <!-- LM Studio Instructions -->
+            <div class="instructions-box provider-instructions hidden" data-provider="lmstudio">
+                <h3>How to use LM Studio:</h3>
+                <ol>
+                    <li>Open LM Studio and start the "Local Inference Server" (port 1234 by default)</li>
+                    <li>Ensure a model is loaded in LM Studio</li>
+                    <li>Enter the Base URL below (default: http://localhost:1234/v1)</li>
+                </ol>
+                <p class="note">⚠️ Running models locally requires significant hardware resources.</p>
+            </div>
+
+            <!-- Ollama Instructions -->
+            <div class="instructions-box provider-instructions hidden" data-provider="ollama">
+                <h3>How to use Ollama:</h3>
+                <ol>
+                    <li>Install and run Ollama on your machine</li>
+                    <li>Download a model (e.g., `ollama run llama3`)</li>
+                    <li>Enter the Base URL below (default: http://localhost:11434)</li>
+                </ol>
+                <p class="note">⚠️ Ensure Ollama is listening on the provided address.</p>
+            </div>
+
+            <div id="local-settings" class="hidden">
+                <div class="input-group">
+                    <label>Base URL</label>
+                    <input type="text" id="base-url-input" placeholder="http://localhost:1234/v1">
+                </div>
+                <div class="input-group">
+                    <label>Model Name</label>
+                    <input type="text" id="model-name-input" placeholder="e.g. llama3">
+                </div>
+            </div>
+
+            <div class="input-group" id="api-key-group">
                 <label>API Key</label>
-                <input type="password" id="api-key-input" placeholder="Enter Gemini API Key (AIzaSy...)">
+                <input type="password" id="api-key-input" placeholder="Enter your API key">
                 <p class="hint">Your key is stored locally and never shared.</p>
             </div>
             <button id="save-key-btn" class="primary-btn">Save Key</button>

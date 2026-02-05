@@ -1,145 +1,161 @@
-// Side Panel Logic
+/**
+ * EduPage AI Sidebar - Main Entry Point
+ * 
+ * This file orchestrates the sidebar logic by connecting UI components,
+ * storage management, and AI chat functionality.
+ */
 
-const STORAGE_KEY = 'gemini_api_key';
+import { ProviderType } from './providers';
+import * as Storage from './storage';
+import * as UI from './ui-utils';
+import { ChatManager } from './chat-manager';
 
-// Elements
-const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
-const settingsView = document.getElementById('settings-view') as HTMLDivElement;
-const chatView = document.getElementById('chat-view') as HTMLDivElement;
-const apiKeyInput = document.getElementById('api-key-input') as HTMLInputElement;
-const saveKeyBtn = document.getElementById('save-key-btn') as HTMLButtonElement;
-const backBtn = document.getElementById('back-btn') as HTMLButtonElement;
-const chatHistory = document.getElementById('chat-history') as HTMLDivElement;
-const chatInput = document.getElementById('chat-input') as HTMLTextAreaElement;
-const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
+// --- Elements ---
+// (We cast to specific HTML types for better IDE support and type-safety)
+const elements = {
+    settingsBtn: document.getElementById('settings-btn') as HTMLButtonElement,
+    settingsView: document.getElementById('settings-view') as HTMLDivElement,
+    chatView: document.getElementById('chat-view') as HTMLDivElement,
+    providerSelect: document.getElementById('provider-select') as HTMLSelectElement,
+    apiKeyInput: document.getElementById('api-key-input') as HTMLInputElement,
+    baseUrlInput: document.getElementById('base-url-input') as HTMLInputElement,
+    modelNameInput: document.getElementById('model-name-input') as HTMLInputElement,
+    localSettingsDiv: document.getElementById('local-settings') as HTMLDivElement,
+    saveKeyBtn: document.getElementById('save-key-btn') as HTMLButtonElement,
+    backBtn: document.getElementById('back-btn') as HTMLButtonElement,
+    chatHistory: document.getElementById('chat-history') as HTMLDivElement,
+    chatInput: document.getElementById('chat-input') as HTMLTextAreaElement,
+    sendBtn: document.getElementById('send-btn') as HTMLButtonElement
+};
 
-// State
+// --- State ---
+let currentProvider: ProviderType = 'gemini';
 let apiKey: string | null = null;
+let chatManager: ChatManager;
 
-// Initialize
+/**
+ * Initializes the sidebar state and event listeners.
+ */
 async function initSidebar() {
-    const result = await chrome.storage.local.get([STORAGE_KEY]);
-    apiKey = result[STORAGE_KEY];
+    chatManager = new ChatManager(elements.chatHistory);
 
-    if (!apiKey) {
-        showSettings();
-    } else {
-        // Populate input just in case
-        apiKeyInput.value = apiKey;
+    // 1. Load user preferences
+    currentProvider = await Storage.getProviderPreference();
+    elements.providerSelect.value = currentProvider;
+
+    // 2. Load keys and local settings
+    await refreshProviderState();
+
+    // 3. Navigate to settings if first time (no key for cloud providers)
+    const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
+    if (!apiKey && !isLocal) {
+        UI.switchView(elements.settingsView, elements.chatView);
     }
 }
 
-// Navigation
-function showSettings() {
-    settingsView.classList.remove('hidden');
-    chatView.classList.add('hidden');
+/**
+ * Synchronizes the UI and internal state with the current provider.
+ */
+async function refreshProviderState() {
+    apiKey = await Storage.getApiKey(currentProvider);
+    elements.apiKeyInput.value = apiKey || '';
+
+    if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
+        const settings = await Storage.getLocalSettings(currentProvider);
+        elements.baseUrlInput.value = settings.url;
+        elements.modelNameInput.value = settings.model;
+
+        // Set fallbacks for common local setups
+        if (!elements.baseUrlInput.value) {
+            elements.baseUrlInput.value = currentProvider === 'lmstudio'
+                ? 'http://localhost:1234/v1'
+                : 'http://localhost:11434';
+        }
+    }
+
+    UI.updateProviderInstructions(currentProvider);
+    UI.toggleLocalSettingsVisibility(currentProvider, elements.localSettingsDiv);
 }
 
-function showChat() {
-    if (!apiKey) return;
-    settingsView.classList.add('hidden');
-    chatView.classList.remove('hidden');
-}
+// --- Event Listeners ---
 
-settingsBtn.addEventListener('click', showSettings);
-backBtn.addEventListener('click', () => {
-    if (apiKey) showChat();
+// Header Navigation
+elements.settingsBtn.addEventListener('click', () => {
+    UI.switchView(elements.settingsView, elements.chatView);
 });
 
-// Settings Logic
-saveKeyBtn.addEventListener('click', async () => {
-    const key = apiKeyInput.value.trim();
-    if (key) {
-        await chrome.storage.local.set({ [STORAGE_KEY]: key });
-        apiKey = key;
-        showChat();
+elements.backBtn.addEventListener('click', () => {
+    const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
+    if (apiKey || isLocal) {
+        UI.switchView(elements.chatView, elements.settingsView);
     }
 });
 
-// Chat Logic
-chatInput.addEventListener('input', () => {
-    sendBtn.disabled = !chatInput.value.trim();
-    // Auto-resize
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+// Settings Management
+elements.providerSelect.addEventListener('change', async () => {
+    currentProvider = elements.providerSelect.value as ProviderType;
+    await Storage.saveProviderPreference(currentProvider);
+    await refreshProviderState();
 });
 
-chatInput.addEventListener('keydown', (e) => {
+elements.saveKeyBtn.addEventListener('click', async () => {
+    const key = elements.apiKeyInput.value.trim();
+    const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
+
+    if (!key && !isLocal) {
+        alert('Please enter an API key');
+        return;
+    }
+
+    // Save common API key
+    await chrome.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: key });
+    apiKey = key;
+
+    // Save local-only settings
+    if (isLocal) {
+        await Storage.saveLocalSettings(
+            currentProvider,
+            elements.baseUrlInput.value.trim(),
+            elements.modelNameInput.value.trim()
+        );
+    }
+
+    alert('Settings saved!');
+    UI.switchView(elements.chatView, elements.settingsView);
+});
+
+// Chat Interaction
+elements.chatInput.addEventListener('input', () => {
+    elements.sendBtn.disabled = !elements.chatInput.value.trim();
+    UI.autoResizeTextarea(elements.chatInput);
+});
+
+elements.chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        handleSend();
     }
 });
 
-sendBtn.addEventListener('click', sendMessage);
+elements.sendBtn.addEventListener('click', handleSend);
 
-async function sendMessage() {
-    const text = chatInput.value.trim();
-    if (!text || !apiKey) return;
+async function handleSend() {
+    const text = elements.chatInput.value.trim();
+    if (!text) return;
 
-    // Add User Message
-    appendMessage('user', text);
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    sendBtn.disabled = true;
+    // Clear input immediately for UX
+    elements.chatInput.value = '';
+    elements.sendBtn.disabled = true;
+    UI.autoResizeTextarea(elements.chatInput);
 
-    // Placeholder AI Message
-    const aiMessageDiv = appendMessage('ai', 'Thinking...');
+    const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
+    const options = isLocal ? {
+        baseUrl: elements.baseUrlInput.value.trim(),
+        modelName: elements.modelNameInput.value.trim()
+    } : undefined;
 
-    try {
-        const responseText = await fetchGemini(text);
-        if (aiMessageDiv.querySelector('.content')) {
-            (aiMessageDiv.querySelector('.content') as HTMLElement).innerText = responseText;
-        }
-    } catch (error) {
-        if (aiMessageDiv.querySelector('.content')) {
-            (aiMessageDiv.querySelector('.content') as HTMLElement).innerText = "Error: " + error;
-        }
-    }
+    await chatManager.sendMessage(text, currentProvider, apiKey, options);
 }
 
-function appendMessage(role: 'user' | 'ai', text: string) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${role}`;
-
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.textContent = role === 'user' ? 'U' : 'AI';
-
-    const content = document.createElement('div');
-    content.className = 'content';
-    content.innerText = text; // Simple text for now, can add Markdown later
-
-    msgDiv.appendChild(avatar);
-    msgDiv.appendChild(content);
-
-    chatHistory.appendChild(msgDiv);
-    chatHistory.scrollTop = chatHistory.scrollHeight;
-    return msgDiv;
-}
-
-// Simple Gemini Client (Non-streaming for MVP)
-async function fetchGemini(prompt: string): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: prompt }]
-            }]
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
-}
-
+// Let's go!
 initSidebar();

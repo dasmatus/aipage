@@ -39,8 +39,8 @@ test.describe('EduPage Navbar Integration', () => {
         // 1. Start Button
         await expect(page.locator('#edubarStartButton')).toBeVisible();
 
-        // 2. Chat Button
-        await expect(page.locator('.edubarChatBtn')).toBeVisible();
+        // 2. Chat Button (Using :not to ignore our injected AI button)
+        await expect(page.locator('.edubarChatBtn:not(#edubar-ai-btn)')).toBeVisible();
 
         // 3. Timeline/Notifications Button
         await expect(page.locator('.edubarTimelineBtn')).toBeVisible();
@@ -55,7 +55,7 @@ test.describe('EduPage Navbar Integration', () => {
     test('should display the injected AI button', async ({ page }) => {
         // The content script should verify the quickmenu exists and inject the button
         await expect(page.locator('#edubar-ai-btn')).toBeVisible();
-        await expect(page.locator('#edubar-ai-btn')).toHaveText(/AI/);
+        await expect(page.locator('#edubar-ai-btn')).toHaveAttribute('title', 'AI Assistant');
     });
 
     test('sidebar should not obscure navbar buttons when opened', async ({ page }) => {
@@ -77,7 +77,7 @@ test.describe('EduPage Navbar Integration', () => {
             '#edubarStartButton',       // Start
             '#edubar-ai-btn',           // AI Button
             '.edubarTimelineBtn',       // Messages/Announcements (Timeline)
-            '.edubarChatBtn',           // Chat
+            '.edubarChatBtn:not(#edubar-ai-btn)', // Chat
             '#edubarHelpMenuBtn',       // Help
             '.edubarProfilebox'         // User Account
         ];
