@@ -121,7 +121,7 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('.message.user .content')).toHaveText('Hello AI');
 
         // Check for AI placeholder
-        await expect(page.locator('.message.ai .content').last()).toContainText('Thinking...');
+        await expect(page.locator('.message.ai .content').last()).toContainText('Rozmýšľam...');
     });
 
     test('should show local settings for LM Studio and Ollama', async ({ page }) => {

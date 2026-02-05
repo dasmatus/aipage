@@ -8,18 +8,42 @@ let isResizing = false;
 
 // EduPage Navbar identifier
 const NAVBAR_ID = 'edubar';
+const TEST_PLAYER_HEADER_CLASS = '.etest-player-header';
 
 function init() {
-    // 1. Find the Quick Menu container (EduPage specific class)
-    const quickMenu = document.querySelector('.edubarQuickmenu');
-    if (!quickMenu) {
-        console.log("EduBar QuickMenu not found, retrying in 1s...");
+    // Try to find either the standard menu or the test player menu
+    const quickMenu = document.querySelector('.edubarQuickmenu') as HTMLElement;
+    const testMenu = document.querySelector('.etest-player-header-inner .etest-header-nav:last-child') as HTMLElement;
+
+    // Visibility check: specifically check if the container or its immediate header is hidden.
+    // This handles the test player case where the standard edubar is in DOM but hidden.
+    const isVisible = (el: HTMLElement | null) => {
+        if (!el) return false;
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none') return false;
+
+        const header = el.closest('.edubarHeader');
+        if (header && window.getComputedStyle(header).display === 'none') return false;
+
+        return true;
+    };
+
+    const isQuickMenuVisible = isVisible(quickMenu);
+    const isTestMenuVisible = isVisible(testMenu);
+
+    if (!isQuickMenuVisible && !isTestMenuVisible) {
         setTimeout(init, 1000);
         return;
     }
 
-    // 2. Check if button already exists
-    if (document.getElementById('edubar-ai-btn')) return;
+    // 2. Check if button already exists and is visible
+    const existingBtn = document.getElementById('edubar-ai-btn');
+    if (existingBtn && existingBtn.offsetParent !== null) return;
+
+    // If it exists but is hidden, remove it so we can re-inject into the visible container
+    if (existingBtn) {
+        existingBtn.remove();
+    }
 
     // Load saved width
     chrome.storage.local.get(['sidebarWidth'], (result) => {
@@ -31,24 +55,42 @@ function init() {
     // 3. Create AI Button
     const btn = document.createElement('a');
     btn.id = 'edubar-ai-btn';
-    btn.className = 'edubarChatBtn qbutton qbutton-normal tips-bottom';
+
+    // Prioritize Test Menu if visible (since it's more specific)
+    let container: HTMLElement;
+    if (isTestMenuVisible) {
+        container = testMenu!;
+        btn.className = 'etest-action-button interactiveElem';
+    } else {
+        container = quickMenu!;
+        btn.className = 'edubarChatBtn qbutton qbutton-normal tips-bottom';
+    }
+
     btn.style.cursor = 'pointer';
     btn.style.display = 'inline-flex';
     btn.style.alignItems = 'center';
+    btn.style.justifyContent = 'center';
     btn.style.gap = '6px';
     btn.setAttribute('title', 'AI Asistent');
 
+    // Add star icon
     btn.innerHTML = `
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
         </svg>
     `;
 
-    quickMenu.insertBefore(btn, quickMenu.firstChild);
+    container.insertBefore(btn, container.firstChild);
     btn.addEventListener('click', toggleSidebar);
 }
 
 function getNavbarHeight(): number {
+    // Check if test player is active
+    const testHeader = document.querySelector(TEST_PLAYER_HEADER_CLASS) as HTMLElement;
+    if (testHeader && testHeader.offsetHeight > 0) {
+        return testHeader.offsetHeight;
+    }
+
     const navbar = document.getElementById(NAVBAR_ID);
     return navbar ? navbar.offsetHeight : 0;
 }
@@ -97,18 +139,25 @@ function closeSidebar() {
 }
 
 function updateLayout(width: number) {
-    const margin = width > 0 ? `${width}px` : '0px';
     const widthCalc = width > 0 ? `calc(100% - ${width}px)` : '100%';
 
     document.body.style.width = widthCalc;
     document.body.style.position = 'relative';
     document.body.style.transition = isResizing ? 'none' : 'width 0.3s ease';
 
+    // Update standard navbar
     const navbar = document.getElementById(NAVBAR_ID);
     if (navbar) {
         navbar.style.width = widthCalc;
         navbar.style.boxSizing = 'border-box';
         navbar.style.transition = isResizing ? 'none' : 'width 0.3s ease';
+    }
+
+    // Update test player header
+    const testHeader = document.querySelector(TEST_PLAYER_HEADER_CLASS) as HTMLElement;
+    if (testHeader) {
+        testHeader.style.width = widthCalc;
+        testHeader.style.transition = isResizing ? 'none' : 'width 0.3s ease';
     }
 }
 
