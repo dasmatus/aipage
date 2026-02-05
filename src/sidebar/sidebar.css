@@ -1,14 +1,320 @@
 :root {
-    --bg-color: #000000;
-    --text-color: #ffffff;
-    --border-color: #333333;
-    --accent-color: #ffffff;
-    --secondary-text: #888888;
-    --input-bg: #111111;
-    --message-user-bg: #111111;
-    --message-ai-bg: #000000;
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --bg-color: #f4f6f8;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --accent-color: #fbc02d;
+    /* EduPage Yellow-ish */
+    --accent-text: #000000;
+    --secondary-text: #666666;
+    --input-bg: #ffffff;
+    --message-user-bg: #e3f2fd;
+    --message-ai-bg: #ffffff;
+    --font-family: Arial, Helvetica, sans-serif;
+    --header-height: 50px;
 }
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    font-size: 13px;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: var(--header-height);
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #444;
+}
+
+.header-title svg path {
+    fill: #fbc02d;
+    /* Logo color */
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-text);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.icon-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+/* Views */
+.view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Settings */
+#settings-view {
+    padding: 20px;
+    gap: 16px;
+    background: var(--bg-color);
+    align-items: center;
+    justify-content: center;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.input-group label {
+    font-size: 12px;
+    color: var(--secondary-text);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+input[type="password"],
+textarea {
+    background: var(--input-bg);
+    border: 1px solid #ccc;
+    color: var(--text-color);
+    padding: 8px 10px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+input[type="password"]:focus,
+textarea:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(251, 192, 45, 0.2);
+}
+
+.hint {
+    font-size: 11px;
+    color: #888;
+    margin: 0;
+}
+
+.primary-btn {
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border: 1px solid #e0a800;
+    padding: 8px 16px;
+    border-radius: 3px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 13px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+.primary-btn:hover {
+    background: #fdd835;
+}
+
+.secondary-btn {
+    background: transparent;
+    color: #666;
+    border: none;
+    padding: 8px 16px;
+    font-weight: normal;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 12px;
+}
+
+.secondary-btn:hover {
+    color: #333;
+}
+
+/* Chat */
+.chat-history {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--bg-color);
+}
+
+.message {
+    display: flex;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #666;
+    flex-shrink: 0;
+    border: 1px solid #ccc;
+}
+
+.message.user .avatar {
+    background: #4a90e2;
+    color: white;
+    border: none;
+}
+
+.message.ai .avatar {
+    background: var(--accent-color);
+    color: black;
+    border: none;
+}
+
+.content {
+    background: var(--message-ai-bg);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e0e0;
+    color: #333;
+}
+
+.message.user .content {
+    background: var(--message-user-bg);
+    border-color: #bbdefb;
+    color: #0d47a1;
+}
+
+/* Markdown Styles in Chat */
+.content code {
+    background: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    color: #d63384;
+}
+
+.content pre {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid #eee;
+    margin: 8px 0;
+}
+
+.content pre code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
+
+/* Chat Input */
+.chat-input-area {
+    padding: 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    background: var(--card-bg);
+    align-items: flex-end;
+}
+
+.chat-input-area textarea {
+    flex: 1;
+    resize: none;
+    min-height: 36px;
+    max-height: 120px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+#send-btn {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+#send-btn:hover {
+    background: #357abd;
+}
+
+#send-btn:disabled {
+    background: #e0e0e0;
+    color: #aaa;
+    cursor: default;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
+
 
 body {
     margin: 0;
