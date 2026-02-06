@@ -61,12 +61,13 @@ body[data-theme="sms"] {
 body[data-theme="gradient"] {
     --bg-color: #000000;
     --card-bg: #111111;
-    --text-color: $text-color;
+    --text-color: #ffffff;
     --heading-color: #ffffff;
     --accent-color: #f81ce5;
     --accent-text: #ffffff;
     --message-user-bg: linear-gradient(135deg, #7928ca, #ff0080);
     --message-ai-bg: #222222;
+    --input-bg: #222222;
     --border-color: #333333;
     --secondary-text: #888888;
     --instruction-bg: #1a1a1a;
@@ -82,12 +83,13 @@ body[data-theme="gradient"] {
 body[data-theme="discord"] {
     --bg-color: #313338;
     --card-bg: #2b2d31;
-    --text-color: var(--text-color);
+    --text-color: #dbdee1;
     --heading-color: #ffffff;
     --accent-color: #5865f2;
     --accent-text: #ffffff;
     --message-user-bg: #35393e;
     --message-ai-bg: #2b2d31;
+    --input-bg: #2b2d31;
     --border-color: #1e1f22;
     --secondary-text: #949ba4;
     --instruction-bg: #2b2d31;
@@ -109,6 +111,7 @@ body[data-theme="tokyo"] {
     --accent-text: #ffffff;
     --message-user-bg: #3b4261;
     --message-ai-bg: #24283b;
+    --input-bg: #24283b;
     --border-color: #15161e;
     --secondary-text: #565f89;
     --instruction-bg: #1f2335;
@@ -263,7 +266,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 
     label {
         font-size: 12px;
@@ -272,6 +275,18 @@ body {
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+
+    .hint {
+        margin: 0;
+        font-size: 12px;
+        color: var(--secondary-text);
+    }
+}
+
+.note {
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    color: var(--secondary-text);
 }
 
 input[type="text"],
@@ -280,7 +295,7 @@ textarea,
 select {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
-    color: #000;
+    color: var(--text-color);
     padding: 10px 12px;
     border-radius: 4px;
     font-family: inherit;
@@ -305,10 +320,10 @@ select {
     font-size: 14px;
     width: 100%;
     margin-top: 10px;
-    transition: background 0.2s;
+    transition: background 0.2s, filter 0.2s;
 
     &:hover {
-        background: color.adjust($accent-color, $lightness: -10%);
+        filter: brightness(0.9);
     }
 }
 
@@ -358,7 +373,7 @@ select {
             li,
             ul,
             ol {
-                color: var(--secondary-text) !important;
+                color: var(--text-color) !important;
             }
         }
     }
@@ -454,6 +469,8 @@ select {
     min-height: 40px;
     max-height: 120px;
     padding: 10px;
+    box-sizing: border-box;
+    line-height: 20px;
 }
 
 #send-btn {
@@ -467,11 +484,11 @@ select {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
+    transition: background 0.2s, opacity 0.2s, filter 0.2s;
     flex-shrink: 0;
 
     &:hover {
-        background: color.adjust($accent-color, $lightness: -10%);
+        filter: brightness(0.9);
     }
 
     &:disabled {

@@ -9,6 +9,8 @@ A Chrome extension that adds an AI-powered sidebar to EduPage, featuring a clean
 - 💬 Real-time conversations with Gemini AI
 - 🔒 Secure local storage of API credentials
 - 📱 Responsive sidebar that doesn't obscure important UI elements
+- 🛡️ **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests.
+- 🧠 **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly.
 
 ## Installation
 
@@ -170,8 +172,16 @@ This compiles TypeScript files and copies static assets to the `dist` folder.
 ## Privacy & Security
 
 - Your API key is stored locally using Chrome's storage API
-- No data is sent to any server except Google's Gemini API
+- No data is sent to any server except the selected AI provider API
 - Conversations are not stored or logged by this extension
+
+## Anti-Cheat Protection
+
+When a test is active (detected via `.etest-player-header`), the extension automatically:
+1.  **Prevents Tab Switch Detection**: Overrides the Visibility API (`document.hidden`, `visibilityState`) and blocks `blur`/`focusout` events.
+2.  **Blocks Copy-Paste Detection**: Prevents the site from detecting or blocking `copy`, `cut`, `paste`, and `contextmenu` actions.
+
+These features run automatically and require no configuration.
 
 ## License
 

@@ -15,6 +15,7 @@
 
     const NAVBAR_ID = 'edubar';
     const TEST_PLAYER_HEADER_CLASS = '.etest-player-header';
+    let antiCheatInjected = false;
 
     let observer: MutationObserver | null = null;
 
@@ -39,6 +40,11 @@
 
         const isTest = testMenu && testMenu.offsetHeight > 0;
         const container = isTest ? testMenu! : quickMenu!;
+
+        if (isTest && !antiCheatInjected) {
+            injectAntiCheat();
+            antiCheatInjected = true;
+        }
 
         // If container is not visible, skip
         if (container.offsetWidth === 0 && container.offsetHeight === 0) return;
@@ -67,9 +73,7 @@
         btn.setAttribute('title', 'AI Asistent');
 
         btn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
+            <p style="margin: 0;">AI</p>
         `;
 
         container.insertBefore(btn, container.firstChild);
@@ -92,6 +96,36 @@
         'tokyo': { accent: '#7aa2f7', text: '#ffffff' },
         'mono': { accent: '#000000', text: '#ffffff' }
     };
+
+    function injectAntiCheat() {
+        console.log('[Gemini Sidebar] Injecting anti-cheat protection');
+        const script = document.createElement('script');
+        script.textContent = `
+            (() => {
+                // Override Visibility API
+                Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+                Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+                
+                // Block events that report inactivity or switching
+                const blockEvents = ['visibilitychange', 'webkitvisibilitychange', 'blur', 'focusout', 'pagehide'];
+                blockEvents.forEach(evt => {
+                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+                });
+
+                // Block events used for copy/paste detection/prevention
+                const cpEvents = ['copy', 'cut', 'paste', 'contextmenu'];
+                cpEvents.forEach(evt => {
+                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+                });
+                
+                console.log('[EduPage AI] Anti-cheat active: Tab switch & Copy/Paste detection blocked.');
+            })();
+        `;
+        (document.head || document.documentElement).appendChild(script);
+        script.remove();
+    }
 
     async function init() {
         console.log('[Gemini Sidebar] Initializing...');
@@ -141,6 +175,14 @@
             #edubar-ai-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
             #edubar-ai-btn:hover { transform: scale(1.1); }
             ::selection { background-color: ${colors.accent} !important; color: ${colors.text} !important; }
+            
+            /* Prevent test player header from moving/shrinking */
+            .etest-player-header, .etest-player-header-inner {
+                width: 100vw !important;
+                right: 0 !important;
+                left: 0 !important;
+                max-width: none !important;
+            }
         `;
     }
 
@@ -200,12 +242,13 @@
             navbar.style.transition = isResizing ? 'none' : 'width 0.3s ease';
         }
 
-        const etestFixedHeaders = document.querySelectorAll('.etest-player-header.fixedRight, .etest-player-header-inner') as NodeListOf<HTMLElement>;
-        etestFixedHeaders.forEach(el => {
-            el.style.right = rightOffset;
-            el.style.width = widthCalc;
-            el.style.transition = isResizing ? 'none' : 'width 0.3s ease, right 0.3s ease';
-        });
+        // Removed extended header manipulation to prevent navbar moving
+        // const etestFixedHeaders = document.querySelectorAll('.etest-player-header.fixedRight, .etest-player-header-inner') as NodeListOf<HTMLElement>;
+        // etestFixedHeaders.forEach(el => {
+        //     el.style.right = rightOffset;
+        //     el.style.width = widthCalc;
+        //     el.style.transition = isResizing ? 'none' : 'width 0.3s ease, right 0.3s ease';
+        // });
 
         const etestPlayer = document.querySelector('.etest-player') as HTMLElement;
         if (etestPlayer) {

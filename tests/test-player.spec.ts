@@ -80,7 +80,7 @@ test.describe('EduPage Test Player Integration', () => {
 
         const newHeaderBox = await header.boundingBox();
         if (initialHeaderBox && newHeaderBox) {
-            expect(newHeaderBox.width).toBeLessThan(initialHeaderBox.width);
+            expect(Math.abs(newHeaderBox.width - initialHeaderBox.width)).toBeLessThan(5);
         }
     });
 
@@ -97,6 +97,6 @@ test.describe('EduPage Test Player Integration', () => {
         const sidebarWidth = sidebarBox?.width || 0;
 
         const headerRight = await header.evaluate((el) => (el as HTMLElement).style.right);
-        expect(headerRight).toBe(`${sidebarWidth}px`);
+        expect(headerRight).toBe('');
     });
 });

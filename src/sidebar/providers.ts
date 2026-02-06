@@ -7,6 +7,8 @@
 
 export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudio' | 'ollama';
 
+const SYSTEM_PROMPT = "You are a helpful assistant that answers questions correctly.";
+
 /**
  * Interface that all AI providers must implement.
  */
@@ -59,7 +61,7 @@ export class GeminiProvider implements AIProvider {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
         const data = await performRequest(url, 'POST', { 'Content-Type': 'application/json' }, JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: SYSTEM_PROMPT + "\n\n" + prompt }] }]
         }));
 
         return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
@@ -81,7 +83,10 @@ export class OpenAIProvider implements AIProvider {
             'Authorization': `Bearer ${apiKey}`
         }, JSON.stringify({
             model: options?.modelName || 'gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ],
             temperature: 0.7
         }));
 
@@ -106,6 +111,7 @@ export class ClaudeProvider implements AIProvider {
         }, JSON.stringify({
             model: options?.modelName || 'claude-3-5-sonnet-20241022',
             max_tokens: 1024,
+            system: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: prompt }]
         }));
 
@@ -128,7 +134,10 @@ export class MistralProvider implements AIProvider {
             'Authorization': `Bearer ${apiKey}`
         }, JSON.stringify({
             model: options?.modelName || 'mistral-small-latest',
-            messages: [{ role: 'user', content: prompt }]
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ]
         }));
 
         return data.choices?.[0]?.message?.content || 'No response';
@@ -151,7 +160,10 @@ export class LMStudioProvider implements AIProvider {
             'Content-Type': 'application/json'
         }, JSON.stringify({
             model: modelName,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ],
             temperature: 0.7
         }));
 
@@ -175,7 +187,10 @@ export class OllamaProvider implements AIProvider {
             'Content-Type': 'application/json'
         }, JSON.stringify({
             model: modelName,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ],
             stream: false
         }));
 
