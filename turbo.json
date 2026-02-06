@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "outputs": ["dist/**"],
+      "inputs": ["src/**", "build.js", "tsconfig.json", "package.json"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": ["test-results/**", "playwright-report/**"],
+      "inputs": ["tests/**", "playwright.config.ts"]
+    }
+  }
+}

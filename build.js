@@ -16,6 +16,7 @@ async function build() {
         outfile: 'dist/content.js',
         platform: 'browser',
         target: ['chrome100'],
+        minify: true,
     });
 
     // Build Background Script
@@ -25,6 +26,7 @@ async function build() {
         outfile: 'dist/background.js',
         platform: 'browser',
         target: ['chrome100'],
+        minify: true,
     });
 
     // Build Sidebar Script
@@ -34,6 +36,7 @@ async function build() {
         outfile: 'dist/sidebar.js',
         platform: 'browser',
         target: ['chrome100'],
+        minify: true,
     });
 
     // Compile Sass
@@ -42,6 +45,7 @@ async function build() {
         outfile: 'dist/sidebar.css',
         bundle: true,
         plugins: [sassPlugin()],
+        minify: true,
     });
 
     // Copy static files

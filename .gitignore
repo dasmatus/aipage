@@ -3,6 +3,7 @@ node_modules/
 
 # Build
 dist/
+.turbo/
 
 # System
 .DS_Store

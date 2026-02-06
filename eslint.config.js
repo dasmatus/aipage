@@ -8,6 +8,9 @@ module.exports = [
     js.configs.recommended,
     ...tseslint.configs.recommended,
     {
+        ignores: ['dist/**', 'eslint.config.js', 'build.js', 'playwright.config.ts']
+    },
+    {
         files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
         languageOptions: {
             parser: tseslint.parser,
@@ -15,7 +18,8 @@ module.exports = [
             sourceType: 'module',
             globals: {
                 ...globals.browser,
-                ...globals.node
+                ...globals.node,
+                chrome: 'readonly'
             }
         },
         plugins: {
