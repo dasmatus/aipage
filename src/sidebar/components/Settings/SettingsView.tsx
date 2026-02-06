@@ -89,15 +89,105 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         await chrome.storage.local.set({ ai_sidebar_global: checked });
     };
 
+
+    const renderInstructions = (fullProvider: ProviderType) => {
+        // Simple mapping or conditional return
+        // We use data-provider attribute for tests
+        return (
+            <>
+                {fullProvider === 'gemini' && (
+                    <div className="instructions-box provider-instructions" data-provider="gemini">
+                        <h3>Ako získať Gemini API kľúč:</h3>
+                        <ol>
+                            <li>Navštívte <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
+                            <li>Prihláste sa pomocou svojho Google účtu</li>
+                            <li>Kliknite na "Get API Key" alebo "Create API Key"</li>
+                            <li>Skopírujte vygenerovaný kľúč (začína na AIzaSy...)</li>
+                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                        </ol>
+                        <p className="note">⚠️ Váš API kľúč je uložený lokálne a bezpečne vo vašom prehliadači.</p>
+                    </div>
+                )}
+                {fullProvider === 'openai' && (
+                    <div className="instructions-box provider-instructions" data-provider="openai">
+                        <h3>Ako získať OpenAI API kľúč:</h3>
+                        <ol>
+                            <li>Navštívte <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
+                            <li>Prihláste sa alebo si vytvorte účet</li>
+                            <li>Kliknite na "Create new secret key"</li>
+                            <li>Skopírujte vygenerovaný kľúč (začína na sk-...)</li>
+                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                        </ol>
+                        <p className="note">⚠️ Používanie OpenAI API je spoplatnené na základe tokenov.</p>
+                    </div>
+                )}
+                {fullProvider === 'claude' && (
+                    <div className="instructions-box provider-instructions" data-provider="claude">
+                        <h3>Ako získať Claude API kľúč:</h3>
+                        <ol>
+                            <li>Navštívte <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
+                            <li>Prihláste sa alebo si vytvorte účet</li>
+                            <li>Prejdite do sekcie API Keys</li>
+                            <li>Kliknite na "Create Key"</li>
+                            <li>Skopírujte vygenerovaný kľúč (začína na sk-ant-...)</li>
+                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                        </ol>
+                        <p className="note">⚠️ Claude API vyžaduje platený účet.</p>
+                    </div>
+                )}
+                {fullProvider === 'mistral' && (
+                    <div className="instructions-box provider-instructions" data-provider="mistral">
+                        <h3>Ako získať Mistral API kľúč:</h3>
+                        <ol>
+                            <li>Navštívte <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
+                            <li>Prihláste sa alebo si vytvorte účet</li>
+                            <li>Prejdite do sekcie API Keys</li>
+                            <li>Kliknite na "Create new key"</li>
+                            <li>Skopírujte vygenerovaný kľúč</li>
+                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                        </ol>
+                        <p className="note">⚠️ Používanie Mistral API je spoplatnené na základe tokenov.</p>
+                    </div>
+                )}
+                {fullProvider === 'lmstudio' && (
+                    <div className="instructions-box provider-instructions" data-provider="lmstudio">
+                        <h3>Ako nastaviť LM Studio:</h3>
+                        <ol>
+                            <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank">lmstudio.ai</a></li>
+                            <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
+                            <li>Prejdite na kartu <b>Local Server</b> (ikona s dvoma šípkami)</li>
+                            <li>Načítajte model a kliknite na <b>Start Server</b></li>
+                            <li>Nižšie zadajte základnú URL (predvolená: http://localhost:1234/v1)</li>
+                        </ol>
+                        <p className="note">⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a slušné GPU/CPU.</p>
+                    </div>
+                )}
+                {fullProvider === 'ollama' && (
+                    <div className="instructions-box provider-instructions" data-provider="ollama">
+                        <h3>Ako nastaviť Ollama:</h3>
+                        <ol>
+                            <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                            <li>Otvorte terminál a spustite: <code>ollama run llama3</code></li>
+                            <li>Počkajte, kým sa sťahovanie dokončí a objaví sa výzva</li>
+                            <li>Nechajte Ollama bežať a zadajte základnú URL nižšie</li>
+                        </ol>
+                        <p className="note">⚠️ Na macOS/Linuxe Ollama zvyčajne beží automaticky na pozadí.</p>
+                    </div>
+                )}
+            </>
+        );
+    };
+
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
 
     return (
-        <div className="view">
+        <div id="settings-view" className="view">
             <div className="settings-content">
                 <h2>Vyžaduje sa nastavenie</h2>
                 <div className="input-group">
                     <label>Poskytovateľ AI</label>
                     <select 
+                        id="provider-select"
                         value={currentProvider} 
                         onChange={(e) => onProviderChange(e.target.value as ProviderType)}
                     >
@@ -132,11 +222,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <label htmlFor="global-theme-toggle" className="inline-label">Aplikovať tému aj na EduPage</label>
                 </div>
 
+                {renderInstructions(currentProvider)}
+
                 {isLocal && (
                     <div id="local-settings">
                          <div className="input-group">
                             <label>Základná URL</label>
                             <input 
+                                id="base-url"
                                 type="text" 
                                 value={baseUrl} 
                                 onChange={(e) => setBaseUrl(e.target.value)} 
@@ -146,12 +239,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         <div className="input-group">
                             <label>Model</label>
                             {availableModels.length > 0 ? (
-                                <select value={modelName} onChange={(e) => setModelName(e.target.value)}>
+                                <select id="model-select" value={modelName} onChange={(e) => setModelName(e.target.value)}>
                                     <option value="" disabled>Vyberte model</option>
                                     {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             ) : (
                                 <input 
+                                    id="model-name"
                                     type="text" 
                                     value={modelName} 
                                     onChange={(e) => setModelName(e.target.value)} 
@@ -173,6 +267,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <div className="input-group">
                     <label>API kľúč</label>
                     <input 
+                        id="api-key-input"
                         type="password" 
                         value={apiKey} 
                         onChange={(e) => setApiKey(e.target.value)} 
@@ -181,7 +276,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <p className="hint">Váš kľúč je uložený lokálne a nikdy sa nezdieľa.</p>
                 </div>
 
-                <button className="primary-btn" onClick={handleSave}>Uložiť kľúč</button>
+                <button id="save-key-btn" className="primary-btn" onClick={handleSave}>Uložiť kľúč</button>
                 <button className="secondary-btn" onClick={onClose}>Späť do chatu</button>
             </div>
         </div>

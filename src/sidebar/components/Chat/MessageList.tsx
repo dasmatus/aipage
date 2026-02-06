@@ -5,6 +5,7 @@ import { Message } from '../../types';
 interface MessageListProps {
     messages: Message[];
     onActionClick?: (action: string) => void;
+    disableActions?: boolean;
 }
 
 marked.setOptions({
@@ -12,7 +13,7 @@ marked.setOptions({
     breaks: true
 });
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClick }) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClick, disableActions }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -55,8 +56,10 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClic
                                     <button
                                         key={idx}
                                         className={`action-btn ${act.primary ? 'primary-btn' : 'secondary-btn'}`}
+                                        data-action={act.action}
                                         style={{ fontSize: '12px', padding: '4px 8px', cursor: 'pointer' }}
                                         onClick={() => onActionClick?.(act.action)}
+                                        disabled={disableActions}
                                     >
                                         {act.label}
                                     </button>

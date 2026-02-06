@@ -60,8 +60,8 @@ test.describe('Sidebar UI', () => {
     test('should show settings view by default (no API key)', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
 
-        await expect(page.locator('#settings-view')).not.toHaveClass(/hidden/);
-        await expect(page.locator('#chat-view')).toHaveClass(/hidden/);
+        await expect(page.locator('#settings-view')).toBeVisible();
+        await expect(page.locator('#chat-view')).toBeHidden();
 
         // Provider select should be visible
         await expect(page.locator('#provider-select')).toBeVisible();
@@ -74,13 +74,20 @@ test.describe('Sidebar UI', () => {
         await page.selectOption('#provider-select', 'openai');
 
         // OpenAI instructions should be visible
-        await expect(page.locator('[data-provider="openai"]')).not.toHaveClass(/hidden/);
-        await expect(page.locator('[data-provider="gemini"]')).toHaveClass(/hidden/);
+        // In the React implementation, we might not have `data-provider` logic perfectly replicated if I missed it,
+        // let's check SettingsView implementation.
+        // Wait, I implemented `SettingsView` but I didn't verify instructions logic.
+        // Let's assume for now I need to check visibility.
+        // Actually, looking at SettingsView code I wrote in previous turn:
+        // Proper instructions content seemed missing in the simplified SettingsView! 
+        // I only added fields. I need to fix SettingsView to include instructions first!
+        await expect(page.locator('[data-provider="openai"]')).toBeVisible();
+        await expect(page.locator('[data-provider="gemini"]')).toBeHidden();
 
         // Select Claude
         await page.selectOption('#provider-select', 'claude');
-        await expect(page.locator('[data-provider="claude"]')).not.toHaveClass(/hidden/);
-        await expect(page.locator('[data-provider="openai"]')).toHaveClass(/hidden/);
+        await expect(page.locator('[data-provider="claude"]')).toBeVisible();
+        await expect(page.locator('[data-provider="openai"]')).toBeHidden();
     });
 
     test('should allow saving API key and switching to chat', async ({ page }) => {
@@ -143,7 +150,7 @@ test.describe('Sidebar UI', () => {
         await page.selectOption('#provider-select', 'lmstudio');
 
         // Local settings should be visible
-        await expect(page.locator('#local-settings')).not.toHaveClass(/hidden/);
+        await expect(page.locator('#local-settings')).toBeVisible();
         await expect(page.locator('#base-url')).toHaveValue('http://localhost:1234/v1');
         
         // Settings for Local should show Select and hide Input
@@ -154,7 +161,7 @@ test.describe('Sidebar UI', () => {
         await page.selectOption('#provider-select', 'gemini');
 
         // Local settings should be hidden
-        await expect(page.locator('#local-settings')).toHaveClass(/hidden/);
+        await expect(page.locator('#local-settings')).toBeHidden();
     });
 
     test('should allow saving local provider settings', async ({ page }) => {

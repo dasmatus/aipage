@@ -91,7 +91,11 @@ const App: React.FC = () => {
 
             {view === 'chat' && (
                 <div id="chat-view" className="view" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)' }}>
-                    <MessageList messages={messages} onActionClick={handleActionClick} />
+                    <MessageList 
+                        messages={messages} 
+                        onActionClick={handleActionClick} 
+                        disableActions={isTyping}
+                    />
                     <InputArea 
                         onSend={handleSend} 
                         onScanPage={handleScanPage} 
