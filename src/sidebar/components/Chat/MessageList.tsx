@@ -6,6 +6,7 @@ interface MessageListProps {
     messages: Message[];
     onActionClick?: (action: string) => void;
     disableActions?: boolean;
+    userInitials?: string;
 }
 
 marked.setOptions({
@@ -13,7 +14,7 @@ marked.setOptions({
     breaks: true
 });
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClick, disableActions }) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClick, disableActions, userInitials }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -47,7 +48,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClic
         <div className="chat-history" id="chat-history">
             {messages.map((msg) => (
                 <div key={msg.id} className={`message ${msg.role}`}>
-                    <div className="avatar">{msg.role === 'user' ? 'U' : 'AI'}</div>
+                    <div className="avatar">{msg.role === 'user' ? (userInitials || 'U') : 'AI'}</div>
                     <div style={{ flex: 1 }}>
                         <MarkdownContent content={msg.content} />
                         {msg.actions && (

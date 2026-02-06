@@ -143,6 +143,22 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('.message.ai .content').last()).toContainText(/Rozmýšľam|Mocked/);
     });
 
+    test('should display user initials from URL hash', async ({ page }) => {
+        // Load with initials hash
+        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}#initials=XK`);
+
+        // Login to enable chat
+        await page.fill('#api-key-input', 'test-api-key');
+        await page.click('#save-key-btn');
+
+        // Send message
+        await page.fill('#chat-input', 'Test Initials');
+        await page.click('#send-btn');
+
+        // Check if user avatar displays "XK"
+        await expect(page.locator('.message.user .avatar')).toHaveText('XK');
+    });
+
     test('should show local settings for LM Studio and Ollama', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
 

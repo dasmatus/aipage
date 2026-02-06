@@ -13,6 +13,7 @@ const App: React.FC = () => {
     const [apiKey, setApiKey] = useState<string | null>(null);
     const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction } = useChat();
     const [isScanning, setIsScanning] = useState(false);
+    const [userInitials, setUserInitials] = useState<string>('U');
 
     // Initialization
     useEffect(() => {
@@ -25,6 +26,14 @@ const App: React.FC = () => {
              // Check theme
              const theme = await Storage.getThemePreference();
              document.body.dataset.theme = theme;
+
+             // Parse user initials from URL hash if present
+             if (window.location.hash.includes('initials=')) {
+                 const parts = window.location.hash.split('initials=');
+                 if (parts.length > 1) {
+                     setUserInitials(decodeURIComponent(parts[1]));
+                 }
+             }
         };
         init();
     }, []);
@@ -95,6 +104,7 @@ const App: React.FC = () => {
                         messages={messages} 
                         onActionClick={handleActionClick} 
                         disableActions={isTyping}
+                        userInitials={userInitials}
                     />
                     <InputArea 
                         onSend={handleSend} 

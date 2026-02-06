@@ -101,9 +101,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         <ol>
                             <li>Navštívte <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
                             <li>Prihláste sa pomocou svojho Google účtu</li>
-                            <li>Kliknite na "Get API Key" alebo "Create API Key"</li>
+                            <li>Kliknite na &quot;Get API Key&quot; alebo &quot;Create API Key&quot;</li>
                             <li>Skopírujte vygenerovaný kľúč (začína na AIzaSy...)</li>
-                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
                         </ol>
                         <p className="note">⚠️ Váš API kľúč je uložený lokálne a bezpečne vo vašom prehliadači.</p>
                     </div>
@@ -114,9 +114,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         <ol>
                             <li>Navštívte <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
-                            <li>Kliknite na "Create new secret key"</li>
+                            <li>Kliknite na &quot;Create new secret key&quot;</li>
                             <li>Skopírujte vygenerovaný kľúč (začína na sk-...)</li>
-                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
                         </ol>
                         <p className="note">⚠️ Používanie OpenAI API je spoplatnené na základe tokenov.</p>
                     </div>
@@ -128,9 +128,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <li>Navštívte <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
                             <li>Prejdite do sekcie API Keys</li>
-                            <li>Kliknite na "Create Key"</li>
+                            <li>Kliknite na &quot;Create Key&quot;</li>
                             <li>Skopírujte vygenerovaný kľúč (začína na sk-ant-...)</li>
-                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
                         </ol>
                         <p className="note">⚠️ Claude API vyžaduje platený účet.</p>
                     </div>
@@ -142,9 +142,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <li>Navštívte <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
                             <li>Prejdite do sekcie API Keys</li>
-                            <li>Kliknite na "Create new key"</li>
+                            <li>Kliknite na &quot;Create new key&quot;</li>
                             <li>Skopírujte vygenerovaný kľúč</li>
-                            <li>Vložte ho nižšie a kliknite na "Uložiť kľúč"</li>
+                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
                         </ol>
                         <p className="note">⚠️ Používanie Mistral API je spoplatnené na základe tokenov.</p>
                     </div>
@@ -153,7 +153,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <div className="instructions-box provider-instructions" data-provider="lmstudio">
                         <h3>Ako nastaviť LM Studio:</h3>
                         <ol>
-                            <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank">lmstudio.ai</a></li>
+                            <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
                             <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
                             <li>Prejdite na kartu <b>Local Server</b> (ikona s dvoma šípkami)</li>
                             <li>Načítajte model a kliknite na <b>Start Server</b></li>
@@ -166,7 +166,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <div className="instructions-box provider-instructions" data-provider="ollama">
                         <h3>Ako nastaviť Ollama:</h3>
                         <ol>
-                            <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                            <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
                             <li>Otvorte terminál a spustite: <code>ollama run llama3</code></li>
                             <li>Počkajte, kým sa sťahovanie dokončí a objaví sa výzva</li>
                             <li>Nechajte Ollama bežať a zadajte základnú URL nižšie</li>

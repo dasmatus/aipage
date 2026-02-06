@@ -346,14 +346,24 @@
         }
     }
 
+    function getUserInitials(): string {
+        const profileBox = document.getElementById('edubarProfileBox');
+        if (!profileBox) return '';
+        const name = profileBox.innerText || '';
+        const initials = name.match(/[A-Z]/g) || [];
+        return initials.join('');
+    }
+
     function createSidebarElements() {
         // Double check to prevent duplicates
         document.getElementById('gemini-sidebar-frame')?.remove();
         document.getElementById('gemini-sidebar-resizer')?.remove();
 
+        const initials = getUserInitials();
+
         iframe = document.createElement('iframe');
         iframe.id = 'gemini-sidebar-frame';
-        iframe.src = chrome.runtime.getURL('sidebar.html');
+        iframe.src = chrome.runtime.getURL('sidebar.html') + (initials ? `#initials=${initials}` : '');
         iframe.style.position = 'fixed';
         iframe.style.right = `-${currentSidebarWidth}px`;
         iframe.style.border = 'none';
