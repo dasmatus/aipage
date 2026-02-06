@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "outputs": ["dist/**"],
-      "inputs": ["src/**", "build.js", "tsconfig.json", "package.json"]
+      "inputs": ["src/**", "build.ts", "tsconfig.json", "package.json"]
     },
     "lint": {
       "outputs": []
