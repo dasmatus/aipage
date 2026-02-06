@@ -82,23 +82,66 @@ body[data-theme="gradient"] {
 /* Discord Theme */
 body[data-theme="discord"] {
     --bg-color: #313338;
-    --card-bg: #2b2d31;
+    --card-bg: #313338;
     --text-color: #dbdee1;
     --heading-color: #ffffff;
     --accent-color: #5865f2;
     --accent-text: #ffffff;
-    --message-user-bg: #35393e;
-    --message-ai-bg: #2b2d31;
-    --input-bg: #2b2d31;
-    --border-color: #1e1f22;
+    --message-user-bg: transparent;
+    --message-ai-bg: transparent;
+    --input-bg: #383a40;
+    --border-color: #26282d;
     --secondary-text: #949ba4;
     --instruction-bg: #2b2d31;
     --instruction-text: #dbdee1;
-    --avatar-bg: #1e2124;
-    --avatar-text: #949ba4;
+    --avatar-bg: #5865f2;
+    --avatar-text: #ffffff;
     --code-bg: #1e1f22;
-    --pre-bg: #1e1f22;
-    --scrollbar-thumb: #1e1f22;
+    --pre-bg: #2b2d31;
+    --scrollbar-thumb: #1a1b1e;
+    --bubble-radius: 0;
+
+    .message {
+        margin-bottom: 2px;
+        max-width: 100%;
+        padding: 4px 16px;
+
+        &:hover {
+            background-color: #2e3035;
+        }
+
+        &.user {
+            flex-direction: row; /* Force left align like Discord */
+            align-self: flex-start;
+            
+            .content {
+                color: var(--text-color);
+                padding: 0;
+            }
+
+            .avatar {
+                background-color: #5865f2;
+            }
+        }
+
+        .content {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            margin-top: 2px;
+            color: var(--text-color);
+        }
+
+        .avatar {
+            margin-top: 4px; /* Align with top of text */
+        }
+    }
+    
+    .chat-history {
+        padding: 16px 0;
+        gap: 0; /* Tight spacing like Discord */
+    }
 }
 
 /* Tokyo Night */
@@ -280,6 +323,28 @@ body {
         margin: 0;
         font-size: 12px;
         color: var(--secondary-text);
+    }
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .inline-label {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-color);
+        text-transform: none;
+        letter-spacing: normal;
+        cursor: pointer;
     }
 }
 

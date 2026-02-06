@@ -54,6 +54,11 @@
                 </select>
             </div>
 
+            <div class="input-group checkbox-group">
+                <input type="checkbox" id="global-theme-toggle">
+                <label for="global-theme-toggle" class="inline-label">Aplikovať tému aj na EduPage</label>
+            </div>
+
             <!-- Gemini Instructions -->
             <div class="instructions-box provider-instructions" data-provider="gemini">
                 <h3>Ako získať Gemini API kľúč:</h3>
@@ -143,12 +148,15 @@
 
             <div id="local-settings" class="hidden">
                 <div class="input-group">
-                    <label>Základná URL</label>
-                    <input type="text" id="base-url-input" placeholder="http://localhost:1234/v1">
+                    <label>Základná URL (Len lokálne)</label>
+                    <input type="text" id="base-url" placeholder="http://localhost:1234">
                 </div>
+
                 <div class="input-group">
-                    <label>Názov modelu</label>
-                    <input type="text" id="model-name-input" placeholder="napr. llama3">
+                    <label>Model</label>
+                    <input type="text" id="model-name" placeholder="napr. gpt-4o-mini">
+                    <select id="model-select" class="hidden"></select>
+                    <button id="refresh-models-btn" class="secondary-btn hidden" style="margin-top: 4px; padding: 4px; font-size: 11px; width: auto; align-self: flex-start;">↻ Obnoviť modely</button>
                 </div>
             </div>
 

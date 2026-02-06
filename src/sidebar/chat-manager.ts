@@ -88,14 +88,34 @@ export class ChatManager {
 
         try {
             const provider = getProvider(providerType);
-            const response = await provider.sendMessage(text, apiKey || '', options);
+            let accumulatedResponse = '';
 
-            // Render Markdown
-            const rendered = await marked.parse(response);
-            contentArea.innerHTML = rendered;
+            const response = await provider.sendMessage(text, apiKey || '', options, (chunk) => {
+                accumulatedResponse += chunk;
+                const result = marked.parse(accumulatedResponse);
+                if (result instanceof Promise) {
+                    result.then((rendered: string) => {
+                        contentArea.innerHTML = rendered;
+                        this.scrollToBottom();
+                    });
+                } else {
+                    contentArea.innerHTML = result;
+                    this.scrollToBottom();
+                }
+            });
+
+            // Final Render (ensure consistency)
+            const finalResult = marked.parse(response);
+            if (finalResult instanceof Promise) {
+                finalResult.then((rendered: string) => {
+                    contentArea.innerHTML = rendered;
+                });
+            } else {
+                contentArea.innerHTML = finalResult;
+            }
         } catch (error) {
             console.error('AI Error:', error);
-            contentArea.textContent = `Error: ${(error as Error).message}`;
+            contentArea.textContent = `Chyba: ${(error as Error).message}`;
         }
 
         this.scrollToBottom();

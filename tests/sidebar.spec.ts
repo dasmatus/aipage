@@ -27,7 +27,19 @@ test.describe('Sidebar UI', () => {
                     getURL: (path: string) => path,
                     sendMessage: (message: any, callback: (response: any) => void) => {
                         if (message.action === 'proxy_fetch') {
-                            // Mock successful response for tests
+                            const url = message.payload.url;
+                            
+                            // Mock Model Fetching
+                            if (url.includes('/v1/models')) {
+                                setTimeout(() => callback({ ok: true, data: { data: [{ id: 'mock-lmstudio-model' }] } }), 10);
+                                return;
+                            }
+                            if (url.includes('/api/tags')) {
+                                setTimeout(() => callback({ ok: true, data: { models: [{ name: 'mock-ollama-model' }] } }), 10);
+                                return;
+                            }
+
+                            // Mock successful chat response
                             setTimeout(() => {
                                 callback({
                                     ok: true,
@@ -132,7 +144,11 @@ test.describe('Sidebar UI', () => {
 
         // Local settings should be visible
         await expect(page.locator('#local-settings')).not.toHaveClass(/hidden/);
-        await expect(page.locator('#base-url-input')).toHaveValue('http://localhost:1234/v1');
+        await expect(page.locator('#base-url')).toHaveValue('http://localhost:1234/v1');
+        
+        // Settings for Local should show Select and hide Input
+        await expect(page.locator('#model-select')).not.toHaveClass(/hidden/);
+        await expect(page.locator('#model-name')).toHaveClass(/hidden/);
 
         // Select Gemini
         await page.selectOption('#provider-select', 'gemini');
@@ -147,9 +163,21 @@ test.describe('Sidebar UI', () => {
         // Select Ollama
         await page.selectOption('#provider-select', 'ollama');
 
+        // Wait for model fetch (triggered by selection)
+        await page.waitForTimeout(50);
+
         // Fill settings
-        await page.fill('#base-url-input', 'http://local-ollama:11434');
-        await page.fill('#model-name-input', 'phi3');
+        await page.fill('#base-url', 'http://local-ollama:11434');
+        
+        // Select a model from the mocked list
+        // Note: The mock returns 'mock-ollama-model'.
+        // We need to wait for populate to finish? The mock is async 10ms.
+        // Let's just force select it or use the default if logic picks header.
+        // Actually, logic is: populate -> render.
+        // We can just verify the dropdown and select.
+        await expect(page.locator('#model-select')).toContainText('mock-ollama-model');
+        await page.selectOption('#model-select', 'mock-ollama-model');
+        
         await page.click('#save-key-btn');
 
         // Should switch to chat view
