@@ -1,0 +1,22 @@
+export type Role = 'user' | 'ai';
+
+export interface Message {
+    id: string;
+    role: Role;
+    content: string;
+    timestamp: number;
+    actions?: ContextAction[];
+}
+
+export interface ContextAction {
+    label: string;
+    action: string; // 'answer' | 'summarize'
+    primary: boolean;
+}
+
+export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudio' | 'ollama';
+
+export interface ChatState {
+    messages: Message[];
+    isTyping: boolean;
+}

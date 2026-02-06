@@ -29,7 +29,7 @@ async function build() {
 
     // Build Sidebar Script
     await esbuild.build({
-        entryPoints: ['src/sidebar/sidebar.ts'],
+        entryPoints: ['src/sidebar/index.tsx'],
         bundle: true,
         outfile: 'dist/sidebar.js',
         platform: 'browser',

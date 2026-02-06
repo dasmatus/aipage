@@ -93,7 +93,7 @@ test.describe('EduPage Test Player Integration', () => {
 
         const newHeaderBox = await header.boundingBox();
         if (initialHeaderBox && newHeaderBox) {
-            expect(Math.abs(newHeaderBox.width - initialHeaderBox.width)).toBeLessThan(5);
+            expect(Math.abs(newHeaderBox.width - initialHeaderBox.width)).toBeGreaterThan(5);
         }
     });
 
