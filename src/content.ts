@@ -421,8 +421,46 @@
         document.body.appendChild(resizer);
     }
 
-    chrome.runtime.onMessage.addListener((msg) => {
-        if (msg.action === 'toggle_sidebar') toggleSidebar();
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+        if (msg.action === 'toggle_sidebar') {
+            toggleSidebar();
+        } else if (msg.action === 'get_page_content') {
+            // Prioritize test content if in test player
+            const testContent = document.querySelector('.etest-player-content') as HTMLElement;
+            let text = '';
+            
+            if (testContent && testContent.offsetParent) { 
+                 text = testContent.innerText;
+            } else {
+                 // Clone body to manipulate without affecting page
+                 const clone = document.body.cloneNode(true) as HTMLElement;
+                 
+                 // Remove known non-content elements to reduce noise
+                 const selectorsToRemove = [
+                     '#gemini-sidebar-frame', 
+                     '#gemini-sidebar-resizer', 
+                     '.edubar', 
+                     '#edubarHeader',
+                     'script',
+                     'style'
+                 ];
+                 
+                 selectorsToRemove.forEach(sel => {
+                     const els = clone.querySelectorAll(sel);
+                     els.forEach(el => el.remove());
+                 });
+
+                 text = clone.innerText;
+            }
+            
+            // Cleanup whitespace and limit length
+            text = text.replace(/\s+/g, ' ').trim();
+            // Cap at ~15k chars to fit reasonable context windows
+            if (text.length > 15000) text = text.substring(0, 15000);
+            
+            sendResponse({ content: text });
+        }
+        return true; // Required for async sendResponse
     });
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

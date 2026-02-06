@@ -222,22 +222,23 @@ body {
         font-size: 15px;
         color: var(--text-color);
     }
+}
 
-    .icon-btn {
-        background: none;
-        border: none;
-        color: var(--secondary-text);
-        cursor: pointer;
-        padding: 6px;
-        border-radius: 50%;
-        transition: background 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-text);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        &:hover {
-            background: rgba(0, 0, 0, 0.05);
-        }
+    &:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--text-color);
     }
 }
 

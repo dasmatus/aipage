@@ -26,6 +26,7 @@ const elements = {
     saveKeyBtn: document.getElementById('save-key-btn') as HTMLButtonElement,
     backBtn: document.getElementById('back-btn') as HTMLButtonElement,
     chatHistory: document.getElementById('chat-history') as HTMLDivElement,
+    scanPageBtn: document.getElementById('scan-page-btn') as HTMLButtonElement,
     chatInput: document.getElementById('chat-input') as HTMLTextAreaElement,
     sendBtn: document.getElementById('send-btn') as HTMLButtonElement,
     themeSelect: document.getElementById('theme-select') as HTMLSelectElement,
@@ -42,6 +43,7 @@ let chatManager: ChatManager;
  */
 async function initSidebar() {
     chatManager = new ChatManager(elements.chatHistory);
+    chatManager.onUserAction = (text) => handleSend(text);
 
     // 1. Load user preferences
     currentProvider = await Storage.getProviderPreference();
@@ -279,6 +281,36 @@ if (elements.saveKeyBtn) {
     });
 }
 
+// Scan Page Interaction
+if (elements.scanPageBtn) {
+    elements.scanPageBtn.addEventListener('click', async () => {
+        try {
+            elements.scanPageBtn.disabled = true;
+            elements.scanPageBtn.style.opacity = '0.5';
+            
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs[0]?.id) {
+                // Use a timeout or handle error if content script not ready
+                const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' }).catch(err => {
+                   console.error('Scan failed:', err);
+                   return null;
+                });
+
+                if (response && response.content) {
+                    await chatManager.handlePageContext(response.content);
+                } else {
+                    alert('Nepodarilo sa načítať obsah stránky. Skúste stránku obnoviť.');
+                }
+            }
+        } catch (error) {
+            console.error('Scan error:', error);
+        } finally {
+            elements.scanPageBtn.disabled = false;
+            elements.scanPageBtn.style.opacity = '1';
+        }
+    });
+}
+
 // Chat Interaction
 if (elements.chatInput) {
     elements.chatInput.addEventListener('input', () => {
@@ -295,11 +327,11 @@ if (elements.chatInput) {
 }
 
 if (elements.sendBtn) {
-    elements.sendBtn.addEventListener('click', handleSend);
+    elements.sendBtn.addEventListener('click', () => handleSend());
 }
 
-async function handleSend() {
-    const text = elements.chatInput.value.trim();
+async function handleSend(manualText?: string) {
+    const text = manualText || elements.chatInput.value.trim();
     if (!text) return;
 
     // Clear input immediately for UX
