@@ -83,4 +83,20 @@ test.describe('EduPage Test Player Integration', () => {
             expect(newHeaderBox.width).toBeLessThan(initialHeaderBox.width);
         }
     });
+
+    test('sidebar should adjust test player header right property when opened', async ({ page }) => {
+        const header = page.locator('.etest-player-header');
+
+        // Open sidebar
+        await page.locator('#edubar-ai-btn').click();
+
+        const sidebar = page.locator('#gemini-sidebar-frame');
+        await expect(sidebar).toBeVisible();
+
+        const sidebarBox = await sidebar.boundingBox();
+        const sidebarWidth = sidebarBox?.width || 0;
+
+        const headerRight = await header.evaluate((el) => (el as HTMLElement).style.right);
+        expect(headerRight).toBe(`${sidebarWidth}px`);
+    });
 });

@@ -25,7 +25,8 @@ const elements = {
     backBtn: document.getElementById('back-btn') as HTMLButtonElement,
     chatHistory: document.getElementById('chat-history') as HTMLDivElement,
     chatInput: document.getElementById('chat-input') as HTMLTextAreaElement,
-    sendBtn: document.getElementById('send-btn') as HTMLButtonElement
+    sendBtn: document.getElementById('send-btn') as HTMLButtonElement,
+    themeSelect: document.getElementById('theme-select') as HTMLSelectElement
 };
 
 // --- State ---
@@ -46,7 +47,12 @@ async function initSidebar() {
     // 2. Load keys and local settings
     await refreshProviderState();
 
-    // 3. Navigate to settings if first time (no key for cloud providers)
+    // 3. Load theme
+    const theme = await Storage.getThemePreference();
+    elements.themeSelect.value = theme;
+    document.body.dataset.theme = theme;
+
+    // 4. Navigate to settings if first time (no key for cloud providers)
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
     if (!apiKey && !isLocal) {
         UI.switchView(elements.settingsView, elements.chatView);
@@ -96,6 +102,12 @@ elements.providerSelect.addEventListener('change', async () => {
     currentProvider = elements.providerSelect.value as ProviderType;
     await Storage.saveProviderPreference(currentProvider);
     await refreshProviderState();
+});
+
+elements.themeSelect.addEventListener('change', async () => {
+    const theme = elements.themeSelect.value;
+    await Storage.saveThemePreference(theme);
+    document.body.dataset.theme = theme;
 });
 
 elements.saveKeyBtn.addEventListener('click', async () => {

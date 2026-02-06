@@ -21,7 +21,8 @@ export const STORAGE_KEYS = {
     LOCAL_SETTINGS: {
         lmstudio: { url: 'lmstudio_base_url', model: 'lmstudio_model' },
         ollama: { url: 'ollama_base_url', model: 'ollama_model' }
-    }
+    },
+    THEME: 'ai_sidebar_theme'
 };
 
 /**
@@ -83,4 +84,21 @@ export async function getLocalSettings(provider: ProviderType): Promise<{ url: s
         url: result[keys.url] || '',
         model: result[keys.model] || ''
     };
+}
+
+/**
+ * Retrieves the user's preferred theme.
+ * @returns {Promise<string>}
+ */
+export async function getThemePreference(): Promise<string> {
+    const result = await chrome.storage.local.get([STORAGE_KEYS.THEME]);
+    return result[STORAGE_KEYS.THEME] || 'default';
+}
+
+/**
+ * Saves the user's preferred theme.
+ * @param {string} theme 
+ */
+export async function saveThemePreference(theme: string): Promise<void> {
+    await chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
 }

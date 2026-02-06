@@ -15,6 +15,7 @@ $message-ai-bg: #ffffff;
 $font-family: Arial, Helvetica, sans-serif;
 $header-height: 43px;
 
+
 :root {
     --bg-color: #{$bg-color};
     --card-bg: #{$card-bg};
@@ -30,6 +31,108 @@ $header-height: 43px;
     --message-ai-bg: #{$message-ai-bg};
     --font-family: #{$font-family};
     --header-height: #{$header-height};
+    --bubble-radius: 12px;
+
+    /* Contrast Variables */
+    --heading-color: #222222;
+    --instruction-bg: #ffffff;
+    --instruction-text: #444444;
+    --instruction-border: var(--border-color);
+    --avatar-bg: #e0e0e0;
+    --avatar-text: #666666;
+    --code-bg: rgba(0, 0, 0, 0.05);
+    --pre-bg: #f8f9fa;
+    --scrollbar-thumb: #cccccc;
+}
+
+/* SMS Theme */
+body[data-theme="sms"] {
+    --bg-color: #ffffff;
+    --card-bg: #ffffff;
+    --accent-color: #007aff;
+    --message-user-bg: #007aff;
+    --message-ai-bg: #e9e9eb;
+    --text-color: #000000;
+    --accent-text: #ffffff;
+    --bubble-radius: 20px;
+}
+
+/* Gradient Pink-Purple */
+body[data-theme="gradient"] {
+    --bg-color: #000000;
+    --card-bg: #111111;
+    --text-color: $text-color;
+    --heading-color: #ffffff;
+    --accent-color: #f81ce5;
+    --accent-text: #ffffff;
+    --message-user-bg: linear-gradient(135deg, #7928ca, #ff0080);
+    --message-ai-bg: #222222;
+    --border-color: #333333;
+    --secondary-text: #888888;
+    --instruction-bg: #1a1a1a;
+    --instruction-text: #cccccc;
+    --avatar-bg: #333333;
+    --avatar-text: #aaaaaa;
+    --code-bg: rgba(255, 255, 255, 0.1);
+    --pre-bg: #1a1a1a;
+    --scrollbar-thumb: #444444;
+}
+
+/* Discord Theme */
+body[data-theme="discord"] {
+    --bg-color: #313338;
+    --card-bg: #2b2d31;
+    --text-color: var(--text-color);
+    --heading-color: #ffffff;
+    --accent-color: #5865f2;
+    --accent-text: #ffffff;
+    --message-user-bg: #35393e;
+    --message-ai-bg: #2b2d31;
+    --border-color: #1e1f22;
+    --secondary-text: #949ba4;
+    --instruction-bg: #2b2d31;
+    --instruction-text: #dbdee1;
+    --avatar-bg: #1e2124;
+    --avatar-text: #949ba4;
+    --code-bg: #1e1f22;
+    --pre-bg: #1e1f22;
+    --scrollbar-thumb: #1e1f22;
+}
+
+/* Tokyo Night */
+body[data-theme="tokyo"] {
+    --bg-color: #1a1b26;
+    --card-bg: #24283b;
+    --text-color: #c0caf5;
+    --heading-color: #7aa2f7;
+    --accent-color: #7aa2f7;
+    --accent-text: #ffffff;
+    --message-user-bg: #3b4261;
+    --message-ai-bg: #24283b;
+    --border-color: #15161e;
+    --secondary-text: #565f89;
+    --instruction-bg: #1f2335;
+    --instruction-text: #9aa5ce;
+    --avatar-bg: #1a1b26;
+    --avatar-text: #565f89;
+    --code-bg: #16161e;
+    --pre-bg: #16161e;
+    --scrollbar-thumb: #414868;
+}
+
+/* Monochromatic */
+body[data-theme="mono"] {
+    --bg-color: #ffffff;
+    --card-bg: #ffffff;
+    --text-color: #000000;
+    --heading-color: #000000;
+    --accent-color: #000000;
+    --message-user-bg: #000000;
+    --accent-text: #ffffff;
+    --message-ai-bg: #ffffff;
+    --border-color: #000000;
+    --bubble-radius: 0px;
+    --instruction-border: 1px solid #000000;
 }
 
 body {
@@ -42,6 +145,16 @@ body {
     flex-direction: column;
     height: 100vh;
     font-size: 14px;
+
+    &::selection {
+        background-color: var(--accent-color);
+        color: var(--accent-text, #000);
+    }
+}
+
+*::selection {
+    background-color: var(--accent-color);
+    color: var(--accent-text, #000);
 }
 
 /* Header with Nesting */
@@ -51,9 +164,8 @@ body {
     justify-content: space-between;
     padding: 0 16px;
     height: var(--header-height);
-    background: var(--header-bg);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
     z-index: 100;
 
     &-title {
@@ -62,13 +174,13 @@ body {
         gap: 8px;
         font-weight: 700;
         font-size: 15px;
-        color: var(--header-text);
+        color: var(--text-color);
     }
 
     .icon-btn {
         background: none;
         border: none;
-        color: var(--header-text);
+        color: var(--secondary-text);
         cursor: pointer;
         padding: 6px;
         border-radius: 50%;
@@ -78,7 +190,7 @@ body {
         justify-content: center;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.05);
         }
     }
 }
@@ -92,6 +204,7 @@ body {
 .view {
     flex: 1;
     display: flex;
+    /* Restored from grid to flex for column orientation */
     flex-direction: column;
     overflow: hidden;
 }
@@ -111,7 +224,7 @@ body {
             margin: 0 0 8px 0;
             font-size: 18px;
             font-weight: 700;
-            color: #222;
+            color: var(--heading-color);
         }
 
         .settings-description {
@@ -124,8 +237,8 @@ body {
 }
 
 .instructions-box {
-    background: #fff;
-    border: 1px solid var(--border-color);
+    background: var(--instruction-bg);
+    border: 1px solid var(--instruction-border);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
@@ -134,13 +247,13 @@ body {
         margin: 0 0 12px 0;
         font-size: 14px;
         font-weight: 700;
-        color: #333;
+        color: var(--text-color);
     }
 
     ol {
         margin: 0 0 12px 0;
         padding-left: 20px;
-        color: #444;
+        color: var(--instruction-text);
         font-size: 13px;
         line-height: 1.5;
     }
@@ -166,8 +279,8 @@ input[type="password"],
 textarea,
 select {
     background: var(--input-bg);
-    border: 1px solid #ccc;
-    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    color: #000;
     padding: 10px 12px;
     border-radius: 4px;
     font-family: inherit;
@@ -215,17 +328,17 @@ select {
 /* Chat History */
 .chat-history {
     flex: 1;
-    padding: 20px;
+    padding: 16px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
 }
 
 .message {
     display: flex;
-    gap: 12px;
-    max-width: 85%;
+    gap: 8px;
+    max-width: 90%;
 
     &.user {
         align-self: flex-end;
@@ -238,8 +351,15 @@ select {
 
         .content {
             background: var(--message-user-bg);
-            border-color: #bbdefb;
-            color: #0d47a1;
+            border-color: transparent;
+            color: var(--accent-text);
+
+            p,
+            li,
+            ul,
+            ol {
+                color: var(--secondary-text) !important;
+            }
         }
     }
 
@@ -255,20 +375,20 @@ select {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #e0e0e0;
+    background: var(--avatar-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
     font-weight: 700;
-    color: #666;
+    color: var(--avatar-text);
     flex-shrink: 0;
 }
 
 .content {
     background: var(--card-bg);
-    padding: 12px 16px;
-    border-radius: 12px;
+    padding: 10px 14px;
+    border-radius: var(--bubble-radius);
     font-size: 14px;
     line-height: 1.5;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -294,7 +414,7 @@ select {
     }
 
     code {
-        background: rgba(0, 0, 0, 0.05);
+        background: var(--code-bg);
         padding: 2px 4px;
         border-radius: 4px;
         font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
@@ -302,7 +422,7 @@ select {
     }
 
     pre {
-        background: #f8f9fa;
+        background: var(--pre-bg);
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 12px;
@@ -320,10 +440,10 @@ select {
 
 /* Chat Input Area */
 .chat-input-area {
-    padding: 16px;
+    padding: 12px;
     border-top: 1px solid var(--border-color);
     display: flex;
-    gap: 12px;
+    gap: 10px;
     background: var(--card-bg);
     align-items: flex-end;
 }
