@@ -9,9 +9,10 @@ interface InputAreaProps {
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
+    detectedImages?: string[];
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language, detectedImages }) => {
     const [text, setText] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,6 +66,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
                     
                     <OCRTool 
                         language={language} 
+                        detectedImages={detectedImages}
                         onTextRecognized={(newText) => {
                             setText((prev) => prev ? prev + '\n' + newText : newText);
                             setTimeout(autoResize, 0);

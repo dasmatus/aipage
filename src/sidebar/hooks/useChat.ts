@@ -8,6 +8,7 @@ export const useChat = () => {
     ]);
     const [isTyping, setIsTyping] = useState(false);
     const [lastPageContext, setLastPageContext] = useState('');
+    const [lastPageImages, setLastPageImages] = useState<string[]>([]);
 
     const addMessage = (role: Role, content: string, actions?: any[]) => {
         const msg: Message = {
@@ -63,8 +64,9 @@ export const useChat = () => {
         }
     };
 
-    const handlePageContext = (content: string, isSelection: boolean = false) => {
+    const handlePageContext = (content: string, isSelection: boolean = false, images: string[] = []) => {
         setLastPageContext(content);
+        setLastPageImages(images);
         const isQuestion = isQuestionLike(content);
         
         let actions: any[] = []; // Fix: define explicit type for actions
@@ -76,14 +78,24 @@ export const useChat = () => {
                     { label: 'Odpovedať', action: 'answer_selection', primary: true },
                     { label: 'Vyhľadať (DuckDuckGo)', action: 'search_ddg', primary: false }
                  ];
-                 addMessage('ai', `💡 Našiel som otázku vo výbere:\n"${content.substring(0, 100)}..."\n\nAko chceš postupovať?`, actions);
+                 let msg = `💡 Našiel som otázku vo výbere:\n"${content.substring(0, 100)}..."`;
+                 if (images.length > 0) {
+                     msg += `\n\n📷 Nájdených obrázkov: ${images.length}`;
+                 }
+                 msg += `\n\nAko chceš postupovať?`;
+                 addMessage('ai', msg, actions);
                  return;
             } else {
                  actions = [
                     { label: 'Vysvetliť', action: 'explain_selection', primary: true },
                     { label: 'Zhrnúť', action: 'summarize_selection', primary: false }
                  ];
-                 addMessage('ai', `📝 Mám text výberu (${content.length} znakov). Čo s ním?`, actions);
+                 let msg = `📝 Mám text výberu (${content.length} znakov).`;
+                 if (images.length > 0) {
+                     msg += `\n📷 Nájdených obrázkov: ${images.length}`;
+                 }
+                 msg += ` Čo s ním?`;
+                 addMessage('ai', msg, actions);
                  return;
             }
         }
@@ -135,6 +147,7 @@ export const useChat = () => {
         sendMessage,
         handlePageContext,
         generatePromptFromAction,
-        lastPageContext
+        lastPageContext,
+        lastPageImages
     };
 };

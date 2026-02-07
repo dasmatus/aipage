@@ -11,8 +11,8 @@ const App: React.FC = () => {
     // State
     const [view, setView] = useState<'chat' | 'settings'>('chat');
     const [provider, setProvider] = useState<ProviderType>('gemini');
-    const [apiKey, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext } = useChat();
+    const [, setApiKey] = useState<string | null>(null);
+    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, lastPageImages } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
@@ -67,7 +67,7 @@ const App: React.FC = () => {
             if (tabs[0]?.id) {
                 const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' });
                 if (response && response.content) {
-                    handlePageContext(response.content);
+                    handlePageContext(response.content, response.isSelection, response.images);
                 } else {
                     alert(t('alertContentLoadFailed', language));
                 }
@@ -152,6 +152,7 @@ const App: React.FC = () => {
                     disabled={isTyping} 
                     isScanning={isScanning}
                     language={language}
+                    detectedImages={lastPageImages}
                 />
             </div>
             

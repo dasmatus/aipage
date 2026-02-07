@@ -54,8 +54,19 @@ async function performRequest(url: string, method: string, headers: Record<strin
                 return;
             }
             if (response.ok) {
-                resolve(response.data);
+                let result = response.data;
+                console.log(`PerformRequest Success: ${url}, type: ${typeof result}`);
+                if (typeof result === 'string') {
+                    try {
+                        result = JSON.parse(result);
+                        console.log(`Parsed JSON result for ${url}`);
+                    } catch (e) {
+                        console.warn(`Failed to parse JSON for ${url}: ${result.substring(0, 100)}`);
+                    }
+                }
+                resolve(result);
             } else {
+                console.error(`PerformRequest Failed: ${url}`, response);
                 const errorMsg = typeof response.data === 'object' ?
                     (response.data.error?.message || response.data.message || JSON.stringify(response.data)) :
                     (response.data || response.error || 'Unknown error');

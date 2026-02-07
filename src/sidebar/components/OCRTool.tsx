@@ -1,13 +1,15 @@
 import React, { useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
+const TesseractLib = (typeof window !== 'undefined' && (window as any).Tesseract) ? (window as any).Tesseract : Tesseract;
 import { t } from '../i18n';
 
 interface OCRToolProps {
     onTextRecognized: (text: string) => void;
     language: string;
+    detectedImages?: string[];
 }
 
-export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language }) => {
+export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language, detectedImages }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -27,7 +29,7 @@ export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language }) 
         setProgress(0);
 
         try {
-            const result = await Tesseract.recognize(
+            const result = await TesseractLib.recognize(
                 image,
                 language === 'sk' ? 'slk' : 'eng', // rudimentary mapping, maybe expand later
                 {
@@ -72,6 +74,51 @@ export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language }) 
         }
     };
 
+    const processUrl = async (url: string) => {
+        setIsProcessing(true);
+        setProgress(0);
+        
+        try {
+            // Fetch image through background proxy to bypass CORS
+            const response: any = await chrome.runtime.sendMessage({
+                action: 'proxy_fetch',
+                payload: { url, method: 'GET' }
+            });
+
+            if (!response || !response.ok) throw new Error('Failed to fetch image');
+
+            // response.data should be base64 data URL for images now
+             await TesseractLib.recognize(
+                response.data,
+                language === 'sk' ? 'slk' : 'eng',
+                {
+                    logger: (m) => {
+                         if (m.status === 'recognizing text') {
+                              setProgress(Math.round(m.progress * 100));
+                         }
+                    }
+                }
+             ).then(result => {
+                  if (result.data.text.trim()) onTextRecognized(result.data.text.trim());
+                  else alert(t('alertOCRNoText', language));
+             });
+
+        } catch (e) {
+            console.error(e);
+            alert(t('alertOCRError', language));
+        } finally {
+            setIsProcessing(false);
+             setProgress(0);
+        }
+    };
+    
+    // Helper to process detected image
+    const handleDetectedClick = () => {
+        if (detectedImages && detectedImages.length > 0) {
+            processUrl(detectedImages[0]); // Process first one for now
+        }
+    };
+
     return (
         <div className="ocr-tool" style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <input 
@@ -95,10 +142,30 @@ export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language }) 
                 </svg>
             </button>
             
-             {/* Optional: Paste button if we want explicit paste action, though User usually expects Ctrl+V in input 
-                 For now, let's keep it simple with just upload button in the toolbar. 
-                 Or maybe a "Camera" icon implies capturing/uploading.
-             */}
+            {detectedImages && detectedImages.length > 0 && (
+                <button 
+                    className="icon-btn"
+                    onClick={handleDetectedClick}
+                    title="OCR Detected Image"
+                    style={{ position: 'relative' }}
+                    disabled={isProcessing}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                         <polyline points="17 8 12 3 7 8"></polyline>
+                         <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span style={{ 
+                        position: 'absolute', top: -4, right: -4, 
+                        background: 'red', color: 'white', 
+                        fontSize: '9px', borderRadius: '50%', 
+                        width: '12px', height: '12px', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                    }}>
+                        {detectedImages.length}
+                    </span>
+                </button>
+            )}
 
             {isProcessing && (
                 <span style={{ fontSize: '10px', color: 'var(--eduba-body-text)' }}>

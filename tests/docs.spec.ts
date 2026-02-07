@@ -66,6 +66,9 @@ test.describe('Documentation Link Checker', () => {
 
                 // Handle external links -> Collect for parallel check
                 if (href.startsWith('http://') || href.startsWith('https://')) {
+                    // Ignore GitLab edit links and specific generic repo links that might 403
+                    if (href.includes('/-/edit/') || href.includes('gitlab.com/TenTypekMatus/')) continue;
+                    
                     if (!checkedLinks.has(href)) {
                         checkedLinks.add(href);
                         externalLinksToCheck.add({ url: href, source: relativePath });

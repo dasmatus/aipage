@@ -113,6 +113,7 @@ export interface Translation {
     alertOCRNoText: string;
     alertOCRError: string;
     alertNoImageClipboard: string;
+    noModelsFound: string;
 }
 
 export const translations: Record<string, Translation> = {
@@ -218,6 +219,7 @@ export const translations: Record<string, Translation> = {
         alertOCRNoText: 'Na obrázku sa nenašiel žiadny text.',
         alertOCRError: 'Nepodarilo sa spracovať obrázok.',
         alertNoImageClipboard: 'V schránke sa nenašiel žiadny obrázok.',
+        noModelsFound: 'Nenašli sa žiadne modely.',
     },
     
     // English
@@ -323,6 +325,7 @@ export const translations: Record<string, Translation> = {
         alertOCRNoText: 'No text found in the image.',
         alertOCRError: 'Error processing OCR.',
         alertNoImageClipboard: 'No image found in clipboard.',
+        noModelsFound: 'No models found.',
     },
     
     // Czech
@@ -421,12 +424,13 @@ export const translations: Record<string, Translation> = {
         themeMessenger: 'Messenger',
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
-        themeMono: 'Monochromatic',
+        themeMono: 'Monochromatická',
 
         ocrUploadImage: 'Nahrát obrázek (OCR)',
         alertOCRNoText: 'V obrázku nebyl nalezen žádný text.',
         alertOCRError: 'Chyba při zpracování OCR.',
         alertNoImageClipboard: 'Ve schránce nebyl nalezen žádný obrázek.',
+        noModelsFound: 'Nebyly nalezeny žádné modely.',
     },
     
     // German
@@ -531,6 +535,7 @@ export const translations: Record<string, Translation> = {
         alertOCRNoText: 'Kein Text im Bild gefunden.',
         alertOCRError: 'Bild konnte nicht verarbeitet werden.',
         alertNoImageClipboard: 'Kein Bild in der Zwischenablage gefunden.',
+        noModelsFound: 'Keine Modelle gefunden.',
     },
     
     // Hungarian
@@ -635,6 +640,7 @@ export const translations: Record<string, Translation> = {
         alertOCRNoText: 'Nem található szöveg a képen.',
         alertOCRError: 'A kép feldolgozása sikertelen.',
         alertNoImageClipboard: 'Nem található kép a vágólapon.',
+        noModelsFound: 'Nem található modell.',
     },
 };
 

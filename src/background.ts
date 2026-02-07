@@ -22,21 +22,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'proxy_fetch') {
         const { url, method, headers, body } = message.payload;
 
-        fetch(url, { method, headers, body })
+            fetch(url, { method, headers, body })
             .then(async response => {
                 const contentType = response.headers.get('content-type');
                 let data;
+                
                 if (contentType && contentType.includes('application/json')) {
                     data = await response.json();
+                    sendResponse({
+                        ok: response.ok,
+                        status: response.status,
+                        data
+                    });
+                } else if (contentType && contentType.startsWith('image/')) {
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        sendResponse({
+                            ok: response.ok,
+                            status: response.status,
+                            data: reader.result // Base64 string
+                        });
+                    };
+                    reader.onerror = () => {
+                        sendResponse({ ok: false, error: 'Failed to read blob' });
+                    };
+                    reader.readAsDataURL(blob);
                 } else {
                     data = await response.text();
+                    sendResponse({
+                        ok: response.ok,
+                        status: response.status,
+                        data
+                    });
                 }
-
-                sendResponse({
-                    ok: response.ok,
-                    status: response.status,
-                    data
-                });
             })
             .catch(error => {
                 sendResponse({ ok: false, error: error.message });

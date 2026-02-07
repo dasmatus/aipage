@@ -421,9 +421,30 @@
             (async () => {
                 try {
                     // Prioritize selection
-                    const selection = window.getSelection()?.toString().trim();
-                    if (selection) {
-                        sendResponse({ content: selection, isSelection: true });
+                    const selection = window.getSelection();
+                    const selectionText = selection?.toString().trim();
+                    const images: string[] = [];
+
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        const container = document.createElement('div');
+                        container.appendChild(range.cloneContents());
+                        
+                        const imgElements = container.querySelectorAll('img');
+                        imgElements.forEach((img: HTMLImageElement) => {
+                            if (img.src && !img.src.startsWith('data:')) { // Avoid huge data URIs for now, or maybe include them?
+                                // Let's include everything for now, but filter out tiny icons maybe?
+                                if (img.width > 20 && img.height > 20) {
+                                    images.push(img.src);
+                                }
+                            } else if (img.src) {
+                                images.push(img.src);
+                            }
+                        });
+                    }
+
+                    if (selectionText) {
+                        sendResponse({ content: selectionText, isSelection: true, images });
                         return;
                     }
 
