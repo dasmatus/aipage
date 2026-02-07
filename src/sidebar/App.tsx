@@ -19,34 +19,42 @@ const App: React.FC = () => {
     const [language, setLanguage] = useState('sk');
 
     // Initialization
+    const [isInitialized, setIsInitialized] = useState(false);
+
     useEffect(() => {
         const init = async () => {
-             const p = await Storage.getProviderPreference();
-             setProvider(p);
-             const k = await Storage.getApiKey(p);
-             setApiKey(k);
-             
-             // Load language
-             const lang = await getCurrentLanguage();
-             setLanguage(lang);
-             
-             // Show settings if no API key for non-local providers
-             const isLocal = p === 'lmstudio' || p === 'ollama';
-             if (!k && !isLocal) {
-                 setView('settings');
-             }
-             
-             // Check theme
-             const theme = await Storage.getThemePreference();
-             document.body.dataset.theme = theme;
+            try {
+                const p = await Storage.getProviderPreference();
+                setProvider(p);
+                const k = await Storage.getApiKey(p);
+                setApiKey(k);
+                
+                // Load language
+                const lang = await getCurrentLanguage();
+                setLanguage(lang);
+                
+                // Show settings if no API key for non-local providers
+                const isLocal = p === 'lmstudio' || p === 'ollama';
+                if (!k && !isLocal) {
+                    setView('settings');
+                }
+                
+                // Check theme
+                const theme = await Storage.getThemePreference();
+                document.body.dataset.theme = theme;
 
-             // Parse user initials from URL hash if present
-             if (window.location.hash.includes('initials=')) {
-                 const parts = window.location.hash.split('initials=');
-                 if (parts.length > 1) {
-                     setUserInitials(decodeURIComponent(parts[1]));
-                 }
-             }
+                // Parse user initials from URL hash if present
+                if (window.location.hash.includes('initials=')) {
+                    const parts = window.location.hash.split('initials=');
+                    if (parts.length > 1) {
+                        setUserInitials(decodeURIComponent(parts[1]));
+                    }
+                }
+            } catch (e) {
+                console.error("Initialization error:", e);
+            } finally {
+                setIsInitialized(true);
+            }
         };
         init();
     }, []);
@@ -64,7 +72,7 @@ const App: React.FC = () => {
     const handleScanPage = async () => {
         try {
             setIsScanning(true);
-            const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+            const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
             if (tabs[0]?.id) {
                 const response = (await browser.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' })) as PageContentResponse;
                 if (response && response.content) {
@@ -72,6 +80,8 @@ const App: React.FC = () => {
                 } else {
                     alert(t('alertContentLoadFailed', language));
                 }
+            } else {
+                console.warn("No active tab found");
             }
         } catch (e) {
             console.error(e);
@@ -83,18 +93,6 @@ const App: React.FC = () => {
 
     const handleActionClick = (action: string) => {
         if (action === 'search_ddg') {
-            // content is in useChat's lastPageContext or we need to extract the query
-            // Actually, generatePromptFromAction doesn't return the query for search.
-            // We need the context text.
-            // But handleActionClick only gets the action string.
-            // We can access `messages` but finding the context might be tricky without state.
-            // However, we have `handleSend` which processes prompts.
-            // Let's modify logic to open DDG.
-            
-            // We need the extraction.
-            // Let's rely on useChat to give us valid prompt or we find the context.
-            // Better yet, ask standard provider to extract keywords? No, too slow.
-            // Just search the whole selection if short, or ask user.
              const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_ddg') 
                 ? messages[messages.length - 1].content.match(/"([^"]+)"/)?.[1] || lastPageContext 
                 : lastPageContext;
@@ -125,6 +123,9 @@ const App: React.FC = () => {
         setLanguage(newLang);
         await saveLanguage(newLang);
     };
+
+    if (!isInitialized) return null;
+
 
     return (
         <div className="app-container">

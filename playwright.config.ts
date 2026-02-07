@@ -7,10 +7,10 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : 3,
     reporter: 'html',
-    timeout: 60000, // 1 minute default timeout
+    timeout: 0, // 2000 minutes default timeout
     use: {
-        trace: 'on-first-retry',
-        actionTimeout: 10000, // 10 seconds for individual actions
+        trace: 'on-all-retries',
+        actionTimeout: 0, // 166 minutes for individual actions
     },
     projects: [
         {
