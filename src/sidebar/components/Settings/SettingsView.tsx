@@ -4,6 +4,7 @@ import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
 // i18n imports removed as we use props now
 import { t } from '../../i18n';
+import browser from '../../../polyfills/browser-polyfill';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
@@ -40,7 +41,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         const t = await Storage.getThemePreference();
         setTheme(t);
 
-        const g = await chrome.storage.local.get('ai_sidebar_global');
+        const g = await browser.storage.local.get('ai_sidebar_global');
         setGlobalTheme(!!g.ai_sidebar_global);
 
         if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
@@ -81,7 +82,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             return;
         }
 
-        await chrome.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: apiKey });
+        await browser.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: apiKey });
         
         if (isLocal) {
             await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
@@ -101,7 +102,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const handleGlobalThemeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;
         setGlobalTheme(checked);
-        await chrome.storage.local.set({ ai_sidebar_global: checked });
+        await browser.storage.local.set({ ai_sidebar_global: checked });
     };
 
     const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {

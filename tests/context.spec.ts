@@ -4,7 +4,7 @@ import path from 'path';
 test.describe('Page Context Analysis', () => {
     test.beforeEach(async ({ page }) => {
         // Calculate absolute path for sidebar.html
-        const sidebarUrl = `file://${path.resolve(__dirname, '../dist/sidebar.html')}`;
+        const sidebarUrl = `file://${path.resolve(__dirname, '../dist-chrome/sidebar.html')}`;
 
         // Mock chrome API
         await page.addInitScript((url) => {

@@ -5,7 +5,7 @@ import fs from 'fs';
 test.describe('EduPage Test Player Integration', () => {
     test.beforeEach(async ({ page }) => {
         // Calculate absolute path for sidebar.html
-        const sidebarUrl = `file://${path.resolve(__dirname, '../dist/sidebar.html')}`;
+        const sidebarUrl = `file://${path.resolve(__dirname, '../dist-chrome/sidebar.html')}`;
 
         // Mock chrome API
         await page.addInitScript((url) => {
@@ -35,7 +35,7 @@ test.describe('EduPage Test Player Integration', () => {
         await page.goto(`file://${testHtmlPath}`);
 
         // Inject the built content script
-        const contentScriptPath = path.resolve(__dirname, '../dist/content.js');
+        const contentScriptPath = path.resolve(__dirname, '../dist-chrome/content.js');
         const contentScript = fs.readFileSync(contentScriptPath, 'utf8');
         await page.addScriptTag({ content: contentScript });
     });

@@ -25,7 +25,7 @@ test.describe('EduPage Navbar Integration', () => {
         const edupagePath = path.resolve(__dirname, '../../edupage.html');
         await page.goto(`file://${edupagePath}`);
 
-        const contentScriptPath = path.resolve(__dirname, '../dist/content.js');
+        const contentScriptPath = path.resolve(__dirname, '../dist-chrome/content.js');
         const contentScript = fs.readFileSync(contentScriptPath, 'utf8');
         await page.addScriptTag({ content: contentScript });
     });

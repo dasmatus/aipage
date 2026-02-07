@@ -109,7 +109,7 @@ test.describe('Sidebar UI', () => {
     test('should persist API key for each provider separately', async ({ page }, testInfo) => {
         // Pre-seed storage with multiple provider keys
         await page.addInitScript(() => {
-            (window as any).chrome.storage.local.set({
+            (window as any).browser.storage.local.set({
                 'ai_provider': 'gemini',
                 'gemini_api_key': 'gemini-key-123',
                 'openai_api_key': 'openai-key-456'

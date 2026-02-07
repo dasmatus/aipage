@@ -30,7 +30,7 @@ export const STORAGE_KEYS = {
  * @returns {Promise<ProviderType>}
  */
 export async function getProviderPreference(): Promise<ProviderType> {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.PROVIDER]);
+    const result = await chrome.storage.local.get([STORAGE_KEYS.PROVIDER]) as Record<string, any>;
     return (result[STORAGE_KEYS.PROVIDER] || 'gemini') as ProviderType;
 }
 
@@ -50,8 +50,8 @@ export async function saveProviderPreference(provider: ProviderType): Promise<vo
 export async function getApiKey(provider: ProviderType): Promise<string | null> {
     const key = STORAGE_KEYS.API_KEYS[provider as keyof typeof STORAGE_KEYS.API_KEYS];
     if (!key) return null;
-    const result = await chrome.storage.local.get([key]);
-    return result[key] || null;
+    const result = await chrome.storage.local.get([key]) as Record<string, any>;
+    return (result[key] as string) || null;
 }
 
 /**
@@ -79,10 +79,10 @@ export async function getLocalSettings(provider: ProviderType): Promise<{ url: s
         return { url: '', model: '' };
     }
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
-    const result = await chrome.storage.local.get([keys.url, keys.model]);
+    const result = await chrome.storage.local.get([keys.url, keys.model]) as Record<string, any>;
     return {
-        url: result[keys.url] || '',
-        model: result[keys.model] || ''
+        url: (result[keys.url] as string) || '',
+        model: (result[keys.model] as string) || ''
     };
 }
 
@@ -91,8 +91,8 @@ export async function getLocalSettings(provider: ProviderType): Promise<{ url: s
  * @returns {Promise<string>}
  */
 export async function getThemePreference(): Promise<string> {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.THEME]);
-    return result[STORAGE_KEYS.THEME] || 'default';
+    const result = await chrome.storage.local.get([STORAGE_KEYS.THEME]) as Record<string, any>;
+    return (result[STORAGE_KEYS.THEME] as string) || 'default';
 }
 
 /**

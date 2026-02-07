@@ -8,6 +8,9 @@ const checkedLinks = new Set<string>();
 test.describe('Documentation Link Checker', () => {
     // Increase timeout for link checking (5 minutes)
     test.setTimeout(300000);
+    
+    // Skip on non-Chromium browsers to avoid redundant link checking
+    test.skip(({ browserName }) => browserName !== 'chromium', 'Link checking only needs to run once');
 
     test.beforeAll(async () => {
         if (!fs.existsSync(DOCS_DIR)) {
@@ -67,7 +70,7 @@ test.describe('Documentation Link Checker', () => {
                 // Handle external links -> Collect for parallel check
                 if (href.startsWith('http://') || href.startsWith('https://')) {
                     // Ignore GitLab edit links and specific generic repo links that might 403
-                    if (href.includes('/-/edit/') || href.includes('gitlab.com/TenTypekMatus/')) continue;
+                    if (href.includes('/-/edit/') || href.includes('gitlab.com/TenTypekMatus/') || href.includes('gitlab.com/your-username/')) continue;
                     
                     if (!checkedLinks.has(href)) {
                         checkedLinks.add(href);

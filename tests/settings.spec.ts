@@ -12,13 +12,10 @@ test.describe('Settings & Model Selection', () => {
             window.chrome = {
                 storage: {
                     local: {
-                        get: (keys: any, cb: any) => {
-                            const res = {};
-                            if (cb) cb(res);
-                            return Promise.resolve(res);
+                        get: async (keys: any) => {
+                            return Promise.resolve({});
                         },
-                        set: (items: any, cb: any) => {
-                            if (cb) cb();
+                        set: async (items: any) => {
                             return Promise.resolve();
                         }
                     }

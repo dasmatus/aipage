@@ -1,5 +1,7 @@
 // i18n - Internationalization for AiPage Sidebar
 
+import browser from "../polyfills/browser-polyfill";
+
 export interface Translation {
     // Settings
     settingsTitle: string;
@@ -653,7 +655,7 @@ export function t(key: keyof Translation, lang: string = 'sk'): string {
 // Get current language from storage or default
 export async function getCurrentLanguage(): Promise<string> {
     try {
-        const result = await chrome.storage.local.get('language');
+        const result = await browser.storage.local.get('language') as { language?: string };
         return result.language || 'sk';
     } catch (error) {
         console.error('Failed to get language:', error);
@@ -664,7 +666,7 @@ export async function getCurrentLanguage(): Promise<string> {
 // Set language in storage
 export async function setLanguage(lang: string): Promise<void> {
     try {
-        await chrome.storage.local.set({ language: lang });
+        await browser.storage.local.set({ language: lang });
     } catch (error) {
         console.error('Failed to set language:', error);
     }

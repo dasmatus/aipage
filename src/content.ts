@@ -22,7 +22,7 @@
     // Helper for robust storage access (handles both callback and promise versions for test/real environments)
     function getStorage(keys: string[]): Promise<any> {
         return new Promise((resolve) => {
-            const promise = (chrome.storage.local.get as any)(keys, (result: any) => {
+            const promise = (browser.storage.local.get as any)(keys, (result: any) => {
                 if (result) resolve(result);
             });
             // Handle Manifest V3 Promise return
@@ -133,7 +133,7 @@
         applyGlobalOverrides(result.ai_sidebar_theme || 'default', globalThemeEnabled);
 
         // Listen for theme changes from storage
-        chrome.storage.onChanged.addListener((changes) => {
+        browser.storage.onChanged.addListener((changes) => {
             if (changes.ai_sidebar_theme || changes.ai_sidebar_global) {
                 // We need both current values to update correctly
                 getStorage(['ai_sidebar_theme', 'ai_sidebar_global']).then((res) => {
@@ -397,7 +397,7 @@
                 document.body.style.userSelect = '';
                 if (iframe) iframe.style.transition = 'right 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
                 overlay.remove();
-                chrome.storage.local.set({ sidebarWidth: currentSidebarWidth });
+                browser.storage.local.set({ sidebarWidth: currentSidebarWidth });
                 window.removeEventListener('mousemove', onMouseMove);
                 window.removeEventListener('mouseup', onMouseUp);
                 if (resizer) resizer.style.background = 'transparent';
