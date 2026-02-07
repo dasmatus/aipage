@@ -1,7 +1,7 @@
 # GitLab CI/CD Pipeline for AIPage Extension
 # Builds and tests the extension for Chrome, Firefox, and Safari
 
-image: dhi.io/bun:1-debian13-dev
+image: oven/bun:latest
 
 stages:
   - install
