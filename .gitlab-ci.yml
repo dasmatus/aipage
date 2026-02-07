@@ -3,7 +3,7 @@
 
 image: oven/bun:canary-debian
 before_script:
-  -  apt-get update &&  apt-get install -y nodejs npm
+  - apt-get update &&  apt-get install -y nodejs npm
 
 stages:
   - install
@@ -37,6 +37,12 @@ install_dependencies:
     paths:
       - node_modules/
     expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+    - tags
+    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Lint the TypeScript code
 lint:
@@ -46,6 +52,12 @@ lint:
   script:
     - bun run lint
   allow_failure: false
+  only:
+    - main
+    - develop
+    - merge_requests
+    - tags
+    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Chrome
 build:chrome:
@@ -62,6 +74,7 @@ build:chrome:
     - main
     - develop
     - merge_requests
+    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Firefox
 build:firefox:
@@ -79,6 +92,7 @@ build:firefox:
     - main
     - develop
     - merge_requests
+    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Safari
 build:safari:
@@ -95,6 +109,7 @@ build:safari:
     - main
     - develop
     - merge_requests
+    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Run Playwright tests
 test:
@@ -172,7 +187,7 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    -  apt-get update &&  apt-get install -y curl  nodejs npm
+    - apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
