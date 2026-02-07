@@ -10,12 +10,13 @@ build-dir = "public"
 create-missing = true
 
 [output.html]
-default-theme = "navy"
+default-theme = "light"
 preferred-dark-theme = "navy"
 git-repository-url = "https://gitlab.com/TenTypekMatus/aipage"
 edit-url-template = "https://gitlab.com/TenTypekMatus/aipage/-/edit/main/{path}"
 site-url = "/edupage-ai-sidebar/"
 cname = ""
+additional-css = ["docs/mdbook-theme.css"]
 
 [output.html.search]
 enable = true

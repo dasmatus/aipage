@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProviderType } from '../../types';
 import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
+import { t, getCurrentLanguage, setLanguage as saveLanguage } from '../../i18n';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
@@ -13,6 +14,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [apiKey, setApiKey] = useState('');
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
+    const [language, setLanguage] = useState('sk');
     
     // Local settings
     const [baseUrl, setBaseUrl] = useState('');
@@ -22,7 +24,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     useEffect(() => {
         loadSettings();
+        loadLanguage();
     }, [currentProvider]);
+
+    const loadLanguage = async () => {
+        const lang = await getCurrentLanguage();
+        setLanguage(lang);
+    };
 
     const loadSettings = async () => {
         const key = await Storage.getApiKey(currentProvider);
@@ -90,6 +98,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         const checked = e.target.checked;
         setGlobalTheme(checked);
         await chrome.storage.local.set({ ai_sidebar_global: checked });
+    };
+
+    const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newLang = e.target.value;
+        setLanguage(newLang);
+        await saveLanguage(newLang);
+        // Trigger re-render by changing state
+        loadSettings();
     };
 
 
@@ -222,6 +238,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         onChange={handleGlobalThemeChange}
                     />
                     <label htmlFor="global-theme-toggle" className="inline-label">Aplikovať tému aj na EduPage</label>
+                </div>
+
+                <div className="input-group">
+                    <label htmlFor="language-select">{t('language', language).toUpperCase()}</label>
+                    <select id="language-select" value={language} onChange={handleLanguageChange}>
+                        <option value="sk">Slovenčina</option>
+                        <option value="en">English</option>
+                        <option value="cs">Čeština</option>
+                        <option value="de">Deutsch</option>
+                        <option value="hu">Magyar</option>
+                    </select>
                 </div>
 
                 {renderInstructions(currentProvider)}

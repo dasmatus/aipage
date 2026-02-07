@@ -1,0 +1,114 @@
+/* Custom MDBook Theme - Matching Sidebar Colors */
+
+:root {
+    /* Extracted from sidebar.scss */
+    --bg: #f4f6f8;
+    --fg: #333333;
+    --sidebar-bg: #ffffff;
+    --sidebar-fg: #333333;
+    --sidebar-non-existant: #666666;
+    --sidebar-active: #2e7d32;
+    --sidebar-spacer: #e0e0e0;
+    
+    --scrollbar: #cccccc;
+    
+    --icons: #666666;
+    --icons-hover: #2e7d32;
+    
+    --links: rgb(44, 112, 163);
+    
+    --inline-code-color: #333333;
+    
+    --theme-popup-bg: #ffffff;
+    --theme-popup-border: #e0e0e0;
+    --theme-hover: #f4f6f8;
+    
+    --quote-bg: #f4f6f8;
+    --quote-border: #2e7d32;
+    
+    --table-border-color: #e0e0e0;
+    --table-header-bg: #f4f6f8;
+    --table-alternate-bg: #fafafa;
+    
+    --searchbar-border-color: #e0e0e0;
+    --searchbar-bg: #ffffff;
+    --searchbar-fg: #333333;
+    --search-mark-bg: #2e7d32;
+    
+    --sidebar-resize-indicator: rgb(44, 112, 163);
+}
+
+/* Headers */
+.content h1,
+.content h2 {
+    color: rgb(44, 112, 163);
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.3em;
+}
+
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+    color: #2e7d32;
+}
+
+/* Links */
+.content a {
+    color: rgb(44, 112, 163);
+    text-decoration: none;
+}
+
+.content a:hover {
+    text-decoration: underline;
+}
+
+/* Code blocks */
+.content pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.content code {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333333;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.content pre > code {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* Buttons */
+.nav-chapters {
+    color: rgb(44, 112, 163);
+}
+
+.nav-chapters:hover {
+    text-decoration: none;
+    background-color: #f4f6f8;
+    color: #2e7d32;
+}
+
+/* Search */
+#searchresults {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+.search-results mark {
+    background-color: #2e7d32;
+    color: #ffffff;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Sidebar active item */
+.sidebar .active {
+    background-color: #f4f6f8;
+    color: #2e7d32;
+    font-weight: 700;
+}
