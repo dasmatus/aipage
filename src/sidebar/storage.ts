@@ -3,6 +3,7 @@
  * Handles all browser storage interactions for the extension.
  */
 
+import browser from 'webextension-polyfill';
 import { ProviderType } from './providers';
 
 /**
@@ -30,7 +31,7 @@ export const STORAGE_KEYS = {
  * @returns {Promise<ProviderType>}
  */
 export async function getProviderPreference(): Promise<ProviderType> {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.PROVIDER]) as Record<string, any>;
+    const result = await browser.storage.local.get([STORAGE_KEYS.PROVIDER]) as Record<string, any>;
     return (result[STORAGE_KEYS.PROVIDER] || 'gemini') as ProviderType;
 }
 
@@ -39,7 +40,7 @@ export async function getProviderPreference(): Promise<ProviderType> {
  * @param {ProviderType} provider 
  */
 export async function saveProviderPreference(provider: ProviderType): Promise<void> {
-    await chrome.storage.local.set({ [STORAGE_KEYS.PROVIDER]: provider });
+    await browser.storage.local.set({ [STORAGE_KEYS.PROVIDER]: provider });
 }
 
 /**
@@ -50,7 +51,7 @@ export async function saveProviderPreference(provider: ProviderType): Promise<vo
 export async function getApiKey(provider: ProviderType): Promise<string | null> {
     const key = STORAGE_KEYS.API_KEYS[provider as keyof typeof STORAGE_KEYS.API_KEYS];
     if (!key) return null;
-    const result = await chrome.storage.local.get([key]) as Record<string, any>;
+    const result = await browser.storage.local.get([key]) as Record<string, any>;
     return (result[key] as string) || null;
 }
 
@@ -63,7 +64,7 @@ export async function getApiKey(provider: ProviderType): Promise<string | null> 
 export async function saveLocalSettings(provider: ProviderType, url: string, model: string): Promise<void> {
     if (provider !== 'lmstudio' && provider !== 'ollama') return;
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
         [keys.url]: url,
         [keys.model]: model
     });
@@ -79,7 +80,7 @@ export async function getLocalSettings(provider: ProviderType): Promise<{ url: s
         return { url: '', model: '' };
     }
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
-    const result = await chrome.storage.local.get([keys.url, keys.model]) as Record<string, any>;
+    const result = await browser.storage.local.get([keys.url, keys.model]) as Record<string, any>;
     return {
         url: (result[keys.url] as string) || '',
         model: (result[keys.model] as string) || ''
@@ -91,7 +92,7 @@ export async function getLocalSettings(provider: ProviderType): Promise<{ url: s
  * @returns {Promise<string>}
  */
 export async function getThemePreference(): Promise<string> {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.THEME]) as Record<string, any>;
+    const result = await browser.storage.local.get([STORAGE_KEYS.THEME]) as Record<string, any>;
     return (result[STORAGE_KEYS.THEME] as string) || 'default';
 }
 
@@ -100,5 +101,5 @@ export async function getThemePreference(): Promise<string> {
  * @param {string} theme 
  */
 export async function saveThemePreference(theme: string): Promise<void> {
-    await chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
+    await browser.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
 }

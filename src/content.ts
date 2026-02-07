@@ -1,3 +1,5 @@
+import browser from "./polyfills/browser-polyfill";
+
 // Inject AI Button and Manage Sidebar Iframe
 (function () {
     // 0. Extended Singleton guard and top-window check
@@ -19,17 +21,9 @@
 
     let observer: MutationObserver | null = null;
 
-    // Helper for robust storage access (handles both callback and promise versions for test/real environments)
+    // Helper for robust storage access using Promise-based webextension-polyfill API
     function getStorage(keys: string[]): Promise<any> {
-        return new Promise((resolve) => {
-            const promise = (browser.storage.local.get as any)(keys, (result: any) => {
-                if (result) resolve(result);
-            });
-            // Handle Manifest V3 Promise return
-            if (promise && promise.then) {
-                promise.then(resolve);
-            }
-        });
+        return browser.storage.local.get(keys);
     }
 
     function sync() {
@@ -73,8 +67,12 @@
         btn.setAttribute('title', 'AI Asistent');
 
         btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
             <p style="margin: 0;">AI</p>
         `;
+
 
         container.insertBefore(btn, container.firstChild);
         btn.addEventListener('click', onAiButtonClick);
