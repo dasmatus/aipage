@@ -37,18 +37,13 @@ install_dependencies:
     paths:
       - node_modules/
     expire_in: 1 hour
-  only:
-    - main
-    - develop
-    - merge_requests
-    - tags
-    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Lint the TypeScript code
 lint:
   stage: lint
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      optional: true
   script:
     - bun run lint
   allow_failure: false
@@ -63,7 +58,8 @@ lint:
 build:chrome:
   stage: build
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      optional: true
   script:
     - bun run build:chrome
   artifacts:
@@ -80,7 +76,8 @@ build:chrome:
 build:firefox:
   stage: build
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      optional: true
   script:
     - bun run build:firefox
     - npx web-ext lint -s dist-firefox
@@ -98,7 +95,8 @@ build:firefox:
 build:safari:
   stage: build
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      optional: true
   script:
     - bun run build:safari
   artifacts:
@@ -185,7 +183,8 @@ package:safari:
 pages:
   stage: pages
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      optional: true
   before_script:
     - apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
