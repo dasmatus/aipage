@@ -9,6 +9,7 @@ import { ProviderType } from './providers';
 import * as Storage from './storage';
 import * as UI from './ui-utils';
 import { ChatManager } from './chat-manager';
+import browser from '../polyfills/browser-polyfill';
 
 // --- Elements ---
 // (We cast to specific HTML types for better IDE support and type-safety)

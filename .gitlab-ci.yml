@@ -2,9 +2,6 @@
 # Builds and tests the extension for Chrome, Firefox, and Safari
 
 image: oven/bun:canary-debian
-before_script:
-  - apt-get update && apt-get install -y nodejs npm
-
 stages:
   - cache
   - lint
@@ -68,7 +65,7 @@ build:firefox:
     - install_dependencies
   script:
     - bun run build:firefox
-    - npx web-ext lint -s dist-firefox
+    - bunx web-ext lint -s dist-firefox
   artifacts:
     paths:
       - dist-firefox/
@@ -115,7 +112,7 @@ test:
   needs:
     - build:test
   before_script:
-    - npx playwright install --with-deps chromium
+    - bunx playwright install --with-deps chromium
   script:
     - bun test
   artifacts:
@@ -156,7 +153,7 @@ package:firefox:
   before_script:
     - mkdir -p packages
   script:
-    - npx web-ext build -s dist-firefox -a packages
+    - bunx web-ext build -s dist-firefox -a packages
   artifacts:
     paths:
       - packages/*.xpi
@@ -185,7 +182,6 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    - apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/

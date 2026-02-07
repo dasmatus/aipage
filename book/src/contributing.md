@@ -51,7 +51,7 @@ We use **Playwright** for End-to-End (E2E) testing.
 
 - **Run a specific test file:**
   ```bash
-  npx playwright test tests/sidebar.spec.ts
+  bunx playwright test tests/sidebar.spec.ts
   ```
 
 ### Documentation

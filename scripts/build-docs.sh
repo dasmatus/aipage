@@ -38,6 +38,6 @@ mdbook build
 
 # Generate API documentation with TypeDoc
 echo "Generating API documentation..."
-npx typedoc || echo "TypeDoc generation failed, skipping API docs"
+bunx typedoc || echo "TypeDoc generation failed, skipping API docs"
 
 echo "Documentation built successfully in public/"

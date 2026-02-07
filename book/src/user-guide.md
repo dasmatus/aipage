@@ -193,10 +193,10 @@ bun run build:all
 bun test
 
 # Run specific test file
-npx playwright test tests/sidebar.spec.ts
+bunx playwright test tests/sidebar.spec.ts
 
 # View test report
-npx playwright show-report
+bunx playwright show-report
 ```
 
 ### Packaging for Distribution

@@ -57,7 +57,7 @@ async function build() {
     });
 
     // Compile Sass to CSS using sass CLI  
-    const sassProcess = Bun.spawn(['npx', 'sass', 'src/sidebar/sidebar.scss', `${distDir}/sidebar.css`, '--style=compressed', '--no-source-map']);
+    const sassProcess = Bun.spawn(['bunx', 'sass', 'src/sidebar/sidebar.scss', `${distDir}/sidebar.css`, '--style=compressed', '--no-source-map']);
     await sassProcess.exited;
 
     // Copy static files
@@ -74,7 +74,7 @@ async function build() {
     
     // Browser-specific post-build steps
     if (target === 'firefox') {
-        console.log('🦊 Firefox build ready. Run `npx web-ext lint -s ${distDir}` to validate.');
+        console.log('🦊 Firefox build ready. Run `bunx web-ext lint -s ${distDir}` to validate.');
     } else if (target === 'safari') {
         console.log('🧭 Safari build ready. Run setup script to create Xcode project.');
     }
