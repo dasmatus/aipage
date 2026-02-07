@@ -59,9 +59,7 @@ build:chrome:
       - dist-chrome/
     expire_in: 7 days
   only:
-    - main
-    - develop
-    - merge_requests
+    - tags
 
 # Build for Firefox
 build:firefox:
@@ -76,9 +74,7 @@ build:firefox:
       - dist-firefox/
     expire_in: 7 days
   only:
-    - main
-    - develop
-    - merge_requests
+    - tags
 
 # Build for Safari
 build:safari:
@@ -92,6 +88,22 @@ build:safari:
       - dist-safari/
     expire_in: 7 days
   only:
+    - tags
+
+# Build for Playwright tests (only on branches/MRs)
+build:test:
+  stage: build
+  needs:
+    - install_dependencies
+  script:
+    - bun run build:all
+  artifacts:
+    paths:
+      - dist-chrome/
+      - dist-firefox/
+      - dist-safari/
+    expire_in: 5 hours
+  only:
     - main
     - develop
     - merge_requests
@@ -100,7 +112,7 @@ build:safari:
 test:
   stage: test
   needs:
-    - build:chrome
+    - build:test
   before_script:
     - npx playwright install --with-deps chromium
   script:
