@@ -20,3 +20,10 @@ export interface ChatState {
     messages: Message[];
     isTyping: boolean;
 }
+
+export interface PageContentResponse {
+    content: string | null;
+    isSelection?: boolean;
+    images?: string[];
+    error?: string;
+}

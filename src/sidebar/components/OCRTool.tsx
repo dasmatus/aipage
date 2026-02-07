@@ -33,7 +33,7 @@ export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language, de
                 image,
                 language === 'sk' ? 'slk' : 'eng', // rudimentary mapping, maybe expand later
                 {
-                    logger: (m) => {
+                    logger: (m: { status: string; progress: number; }) => {
                         if (m.status === 'recognizing text') {
                             setProgress(Math.round(m.progress * 100));
                         }
@@ -92,13 +92,13 @@ export const OCRTool: React.FC<OCRToolProps> = ({ onTextRecognized, language, de
                 response.data,
                 language === 'sk' ? 'slk' : 'eng',
                 {
-                    logger: (m) => {
+                    logger: (m: { status: string; progress: number; }) => {
                          if (m.status === 'recognizing text') {
                               setProgress(Math.round(m.progress * 100));
                          }
                     }
                 }
-             ).then(result => {
+             ).then((result: { data: { text: string; }; }) => {
                   if (result.data.text.trim()) onTextRecognized(result.data.text.trim());
                   else alert(t('alertOCRNoText', language));
              });

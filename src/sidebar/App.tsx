@@ -3,7 +3,7 @@ import { MessageList } from './components/Chat/MessageList';
 import { InputArea } from './components/Chat/InputArea';
 import { SettingsView } from './components/Settings/SettingsView';
 import { useChat } from './hooks/useChat';
-import { ProviderType } from './types';
+import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
 import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
 import browser from 'webextension-polyfill';
@@ -66,7 +66,7 @@ const App: React.FC = () => {
             setIsScanning(true);
             const tabs = await browser.tabs.query({ active: true, currentWindow: true });
             if (tabs[0]?.id) {
-                const response = await browser.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' });
+                const response = (await browser.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' })) as PageContentResponse;
                 if (response && response.content) {
                     handlePageContext(response.content, response.isSelection, response.images);
                 } else {
