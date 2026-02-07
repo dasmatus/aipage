@@ -1,6 +1,6 @@
 {
     "name": "aipage",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "packageManager": "bun@1.3.8",
     "description": "Vercel-style Multi-Provider AI Sidebar for EduPage with Anti-Cheat",
     "repository": {
@@ -25,29 +25,28 @@
         "docs:serve": "mdbook serve --open"
     },
     "devDependencies": {
-        "@types/bun": "^1.3.8",
         "@eslint/js": "^9.39.2",
         "@playwright/test": "^1.58.1",
+        "@types/bun": "^1.3.8",
         "@types/chrome": "^0.0.260",
-        "@types/webextension-polyfill": "^0.12.1",
         "@types/eslint": "^9.6.1",
         "@types/marked": "^5.0.2",
-        "@types/node": "^25.2.1",
         "@types/react": "^18.2.48",
         "@types/react-dom": "^18.2.18",
+        "@types/webextension-polyfill": "^0.12.1",
         "@typescript-eslint/eslint-plugin": "^8.54.0",
         "@typescript-eslint/parser": "^8.54.0",
         "eslint": "^9.39.2",
         "eslint-plugin-react": "^7.37.5",
         "eslint-plugin-react-hooks": "^7.0.1",
         "globals": "^17.3.0",
+        "marked": "^17.0.1",
         "sass": "^1.97.3",
+        "standard-version": "^9.5.0",
+        "typedoc": "^0.27.0",
         "typescript": "^5.3.3",
         "typescript-eslint": "^8.54.0",
-        "web-ext": "^8.4.0",
-        "standard-version": "^9.5.0",
-        "marked": "^17.0.1",
-        "typedoc": "^0.27.0"
+        "web-ext": "^8.4.0"
     },
     "dependencies": {
         "marked": "^17.0.1",
