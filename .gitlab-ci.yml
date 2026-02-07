@@ -13,7 +13,11 @@ stages:
   - package
   - pages
 
-# Cache node_modules for faster builds
+# Global environment variables
+variables:
+  PLAYWRIGHT_BROWSERS_PATH: ".playwright"
+
+# Cache node_modules and Playwright binaries
 cache:
   key:
     files:
@@ -21,6 +25,7 @@ cache:
       - bun.lock
   paths:
     - node_modules/
+    - .playwright/
 
 # Install dependencies
 install_dependencies:
