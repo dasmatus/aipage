@@ -42,7 +42,7 @@ install_dependencies:
 lint:
   stage: lint
   needs:
-    - install_dependencies
+    - cache
   script:
     - bun run lint
   allow_failure: false
@@ -51,7 +51,7 @@ lint:
 build:chrome:
   stage: build
   needs:
-    - install_dependencies
+    - cache
   script:
     - bun run build:chrome
   artifacts:
@@ -67,7 +67,7 @@ build:chrome:
 build:firefox:
   stage: build
   needs:
-    - install_dependencies
+    - cache
   script:
     - bun run build:firefox
     - npx web-ext lint -s dist-firefox
