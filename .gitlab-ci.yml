@@ -67,6 +67,7 @@ build:chrome:
 build:firefox:
   stage: build
   needs:
+    - test
     - install_dependencies
   script:
     - bun run build:firefox
@@ -84,6 +85,7 @@ build:firefox:
 build:safari:
   stage: build
   needs:
+    - test
     - install_dependencies
   script:
     - bun run build:safari
