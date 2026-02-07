@@ -141,7 +141,6 @@ package:chrome:
       - aipage-chrome.zip
     expire_in: 30 days
   only:
-    - main
     - tags
 
 # Package Firefox extension
@@ -159,7 +158,6 @@ package:firefox:
       - packages/*.xpi
     expire_in: 30 days
   only:
-    - main
     - tags
 
 # Package Safari extension (creates distributable directory)
@@ -175,7 +173,6 @@ package:safari:
       - aipage-safari.zip
     expire_in: 30 days
   only:
-    - main
     - tags
 
 # Deploy documentation to GitLab Pages
