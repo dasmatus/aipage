@@ -260,16 +260,13 @@ These features run automatically and require no configuration.
 
 ## License
 
-This project is for educational purposes.
-
-## Contribution
-
-Feel free to do that. We still need some package formats and rough out the edges,
-so now is the best time to get on the bandwagon.
-
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+## Contribution
+
+See [the contribution guide](./contributing.md).
 
 ## Credits
 
