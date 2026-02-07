@@ -169,9 +169,12 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('#local-settings')).toBeVisible();
         await expect(page.locator('#base-url')).toHaveValue('http://localhost:1234/v1');
         
-        // Settings for Local should show Select and hide Input
-        await expect(page.locator('#model-select')).not.toHaveClass(/hidden/);
-        await expect(page.locator('#model-name')).toHaveClass(/hidden/);
+        // Wait for models to load (the mock takes 10ms)
+        await page.waitForTimeout(100);
+        
+        // After models load, should show select dropdown
+        await expect(page.locator('#model-select')).toBeVisible();
+        await expect(page.locator('#model-name')).not.toBeVisible();
 
         // Select Gemini
         await page.selectOption('#provider-select', 'gemini');
@@ -186,18 +189,14 @@ test.describe('Sidebar UI', () => {
         // Select Ollama
         await page.selectOption('#provider-select', 'ollama');
 
-        // Wait for model fetch (triggered by selection)
-        await page.waitForTimeout(50);
+        // Wait for model fetch (triggered by selection) - mock takes 10ms
+        await page.waitForTimeout(100);
 
         // Fill settings
         await page.fill('#base-url', 'http://local-ollama:11434');
         
-        // Select a model from the mocked list
-        // Note: The mock returns 'mock-ollama-model'.
-        // We need to wait for populate to finish? The mock is async 10ms.
-        // Let's just force select it or use the default if logic picks header.
-        // Actually, logic is: populate -> render.
-        // We can just verify the dropdown and select.
+        // After models load, dropdown should appear with mocked model
+        await expect(page.locator('#model-select')).toBeVisible();
         await expect(page.locator('#model-select')).toContainText('mock-ollama-model');
         await page.selectOption('#model-select', 'mock-ollama-model');
         

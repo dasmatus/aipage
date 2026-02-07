@@ -67,19 +67,8 @@ test.describe('Page Context Analysis', () => {
         const summarizeBtn = page.locator('button[data-action="summarize"]').first();
         await summarizeBtn.click();
 
-        // We can't easily check the internal `handleSend` call without mocking ChatManager.sendMessage
-        // But we can check if the button gets disabled (UI feedback)
-        await expect(summarizeBtn).toBeDisabled();
-        
-        // Or check if a User message appeared (simulating the send)
-        // Wait, `handleSend` sends it, so `ChatManager.sendMessage` appends "user" message.
-        // But `sendMessage` requires provider. If generic provider is mocked/default...
-        // In `sidebar.ts`, `handleSend` calls `chatManager.sendMessage`.
-        // `ChatManager.sendMessage` appends user message first.
-        
+        // Check if a User message appeared with the context and task
         const userMsgs = page.locator('.message.user');
-        // Initial state has 0 user messages? Or maybe 1 if init?
-        // Actually `ChatManager` init doesn't add user messages, only AI welcome.
         
         // Wait for the prompt to appear in chat
         await expect(userMsgs.last()).toContainText('Context:');

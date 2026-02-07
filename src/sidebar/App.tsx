@@ -23,6 +23,12 @@ const App: React.FC = () => {
              const k = await Storage.getApiKey(p);
              setApiKey(k);
              
+             // Show settings if no API key for non-local providers
+             const isLocal = p === 'lmstudio' || p === 'ollama';
+             if (!k && !isLocal) {
+                 setView('settings');
+             }
+             
              // Check theme
              const theme = await Storage.getThemePreference();
              document.body.dataset.theme = theme;
@@ -90,7 +96,7 @@ const App: React.FC = () => {
             {/* Header */}
             <div className="header">
                  <div className="header-title"><span>EduPage AI</span></div>
-                 <button className="icon-btn" onClick={() => setView('settings')}>
+                 <button id="settings-btn" className="icon-btn" onClick={() => setView('settings')}>
                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -98,30 +104,29 @@ const App: React.FC = () => {
                  </button>
             </div>
 
-            {view === 'chat' && (
-                <div id="chat-view" className="view" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)' }}>
-                    <MessageList 
-                        messages={messages} 
-                        onActionClick={handleActionClick} 
-                        disableActions={isTyping}
-                        userInitials={userInitials}
-                    />
-                    <InputArea 
-                        onSend={handleSend} 
-                        onScanPage={handleScanPage} 
-                        disabled={isTyping} 
-                        isScanning={isScanning}
-                    />
-                </div>
-            )}
+
+            <div id="chat-view" className={view === 'chat' ? 'view' : 'view hidden'} style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)' }}>
+                <MessageList 
+                    messages={messages} 
+                    onActionClick={handleActionClick} 
+                    disableActions={isTyping}
+                    userInitials={userInitials}
+                />
+                <InputArea 
+                    onSend={handleSend} 
+                    onScanPage={handleScanPage} 
+                    disabled={isTyping} 
+                    isScanning={isScanning}
+                />
+            </div>
             
-            {view === 'settings' && (
+            <div id="settings-view" className={view === 'settings' ? 'view' : 'view hidden'}>
                 <SettingsView 
                     currentProvider={provider} 
                     onProviderChange={handleProviderChange} 
                     onClose={handleSettingsClose} 
                 />
-            )}
+            </div>
         </div>
     );
 };

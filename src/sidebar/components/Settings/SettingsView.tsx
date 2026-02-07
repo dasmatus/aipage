@@ -36,9 +36,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
         if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
             const local = await Storage.getLocalSettings(currentProvider);
-            setBaseUrl(local.url || (currentProvider === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434'));
+            const defaultUrl = currentProvider === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434';
+            const url = local.url || defaultUrl;
+            setBaseUrl(url);
             setModelName(local.model);
-            if (local.url) fetchModels(local.url);
+            // Always try to fetch models with the URL (even if it's the default)
+            fetchModels(url);
         }
     };
 
@@ -156,7 +159,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
                             <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
                             <li>Prejdite na kartu <b>Local Server</b> (ikona s dvoma šípkami)</li>
-                            <li>Načítajte model a kliknite na <b>Start Server</b></li>
+                            <li>Kliknite na <b>Start Server</b></li>
                             <li>Nižšie zadajte základnú URL (predvolená: http://localhost:1234/v1)</li>
                         </ol>
                         <p className="note">⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a slušné GPU/CPU.</p>
@@ -181,8 +184,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
 
     return (
-        <div id="settings-view" className="view">
-            <div className="settings-content">
+        <div className="settings-content">
                 <h2>Vyžaduje sa nastavenie</h2>
                 <div className="input-group">
                     <label>Poskytovateľ AI</label>
@@ -279,6 +281,5 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <button id="save-key-btn" className="primary-btn" onClick={handleSave}>Uložiť kľúč</button>
                 <button className="secondary-btn" onClick={onClose}>Späť do chatu</button>
             </div>
-        </div>
     );
 };
