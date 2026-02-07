@@ -1,7 +1,7 @@
 # GitLab CI/CD Pipeline for AIPage Extension
 # Builds and tests the extension for Chrome, Firefox, and Safari
 
-image: node:20
+image: dhi.io/bun:1-debian13-dev
 
 stages:
   - install
@@ -23,8 +23,6 @@ cache:
 # Install dependencies
 install_dependencies:
   stage: install
-  before_script:
-    - npm install -g bun
   script:
     - bun install
   artifacts:
@@ -46,8 +44,6 @@ build:chrome:
   stage: build
   needs:
     - install_dependencies
-  before_script:
-    - npm install -g bun
   script:
     - bun run build:chrome
   artifacts:
@@ -64,8 +60,6 @@ build:firefox:
   stage: build
   needs:
     - install_dependencies
-  before_script:
-    - npm install -g bun
   script:
     - bun run build:firefox
     - npx web-ext lint -s dist-firefox
@@ -83,8 +77,6 @@ build:safari:
   stage: build
   needs:
     - install_dependencies
-  before_script:
-    - npm install -g bun
   script:
     - bun run build:safari
   artifacts:
@@ -102,7 +94,6 @@ test:
   needs:
     - build:chrome
   before_script:
-    - npm install -g bun
     - npx playwright install --with-deps chromium
   script:
     - bun test
@@ -173,7 +164,7 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    - apt-get update && apt-get install -y curl
+    - sudo apt-get update && sudo apt-get install -y curl
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
