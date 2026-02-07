@@ -1,7 +1,9 @@
 # GitLab CI/CD Pipeline for AIPage Extension
 # Builds and tests the extension for Chrome, Firefox, and Safari
 
-image: oven/bun:latest
+image: oven/bun:canary-debian
+before_script:
+  - sudo apt-get update && sudo apt-get install -y nodejs npm
 
 stages:
   - install
