@@ -63,14 +63,36 @@ export const useChat = () => {
         }
     };
 
-    const handlePageContext = (content: string) => {
+    const handlePageContext = (content: string, isSelection: boolean = false) => {
         setLastPageContext(content);
         const isQuestion = isQuestionLike(content);
         
+        let actions: any[] = []; // Fix: define explicit type for actions
+
+        if (isSelection) {
+            // Context is just the selection
+            if (isQuestion) {
+                 actions = [
+                    { label: 'Odpovedať', action: 'answer_selection', primary: true },
+                    { label: 'Vyhľadať (DuckDuckGo)', action: 'search_ddg', primary: false }
+                 ];
+                 addMessage('ai', `💡 Našiel som otázku vo výbere:\n"${content.substring(0, 100)}..."\n\nAko chceš postupovať?`, actions);
+                 return;
+            } else {
+                 actions = [
+                    { label: 'Vysvetliť', action: 'explain_selection', primary: true },
+                    { label: 'Zhrnúť', action: 'summarize_selection', primary: false }
+                 ];
+                 addMessage('ai', `📝 Mám text výberu (${content.length} znakov). Čo s ním?`, actions);
+                 return;
+            }
+        }
+        
+        // Full page context
         const action = isQuestion ? 'answer' : 'summarize';
         const label = isQuestion ? 'Odpovedať na otázku' : 'Zhrnúť obsah';
         
-        const actions = [
+        actions = [
              { label, action, primary: true },
         ];
         if (isQuestion) {
@@ -83,15 +105,27 @@ export const useChat = () => {
     const isQuestionLike = (text: string): boolean => {
         if (text.length < 1000 && (text.includes('?') || text.includes('Otázka'))) return true;
         if (text.includes('Vyberte správnu') || text.includes('Určite')) return true;
+        
+        // Heuristics for question words at start (Slovak/English)
+        const questionWords = /^(who|what|where|when|why|how|ako|prečo|kde|kedy|koľko|čom|aký|aká|aké)\s/i;
+        if (questionWords.test(text)) return true;
+
         if (text.match(/^\d+\./m)) return true;
         return false;
     };
 
     const generatePromptFromAction = (action: string) => {
-        if (action === 'answer') {
-            return `Context: \`\`\`${lastPageContext}\`\`\`\n\nQuestion: Based on the context above, provide the correct answer or solution. Answer in Slovak. Explain briefly.`;
-        } else {
-            return `Context: \`\`\`${lastPageContext}\`\`\`\n\nTask: Summarize the key points of this page content in Slovak. Use bullet points.`;
+        switch (action) {
+            case 'answer':
+            case 'answer_selection':
+                return `Context: \`\`\`${lastPageContext}\`\`\`\n\nQuestion: Based on the context above, answer the question or solve the problem. Answer in Slovak. Explain the solution step-by-step if needed.`;
+            case 'explain_selection':
+                return `Context: \`\`\`${lastPageContext}\`\`\`\n\nTask: Explain this text to me in Slovak. Simplify complex concepts.`;
+            case 'summarize_selection':
+                return `Context: \`\`\`${lastPageContext}\`\`\`\n\nTask: Summarize this text in Slovak.`;
+            case 'summarize':
+            default:
+                return `Context: \`\`\`${lastPageContext}\`\`\`\n\nTask: Summarize the key points of this page content in Slovak. Use bullet points.`;
         }
     };
 
@@ -100,6 +134,7 @@ export const useChat = () => {
         isTyping,
         sendMessage,
         handlePageContext,
-        generatePromptFromAction
+        generatePromptFromAction,
+        lastPageContext
     };
 };

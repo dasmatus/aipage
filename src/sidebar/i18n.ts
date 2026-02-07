@@ -107,6 +107,12 @@ export interface Translation {
     themeDiscord: string;
     themeTokyo: string;
     themeMono: string;
+
+    // OCR
+    ocrUploadImage: string;
+    alertOCRNoText: string;
+    alertOCRError: string;
+    alertNoImageClipboard: string;
 }
 
 export const translations: Record<string, Translation> = {
@@ -207,6 +213,11 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatická',
+
+        ocrUploadImage: 'Nahrať obrázok (OCR)',
+        alertOCRNoText: 'Na obrázku sa nenašiel žiadny text.',
+        alertOCRError: 'Nepodarilo sa spracovať obrázok.',
+        alertNoImageClipboard: 'V schránke sa nenašiel žiadny obrázok.',
     },
     
     // English
@@ -306,6 +317,12 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatic',
+
+        // OCR
+        ocrUploadImage: 'Upload Image for OCR',
+        alertOCRNoText: 'No text found in the image.',
+        alertOCRError: 'Error processing OCR.',
+        alertNoImageClipboard: 'No image found in clipboard.',
     },
     
     // Czech
@@ -404,7 +421,12 @@ export const translations: Record<string, Translation> = {
         themeMessenger: 'Messenger',
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
-        themeMono: 'Monochromatická',
+        themeMono: 'Monochromatic',
+
+        ocrUploadImage: 'Nahrát obrázek (OCR)',
+        alertOCRNoText: 'V obrázku nebyl nalezen žádný text.',
+        alertOCRError: 'Chyba při zpracování OCR.',
+        alertNoImageClipboard: 'Ve schránce nebyl nalezen žádný obrázek.',
     },
     
     // German
@@ -504,6 +526,11 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochrom',
+
+        ocrUploadImage: 'Bild hochladen (OCR)',
+        alertOCRNoText: 'Kein Text im Bild gefunden.',
+        alertOCRError: 'Bild konnte nicht verarbeitet werden.',
+        alertNoImageClipboard: 'Kein Bild in der Zwischenablage gefunden.',
     },
     
     // Hungarian
@@ -603,6 +630,11 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monokróm',
+
+        ocrUploadImage: 'Kép feltöltése (OCR)',
+        alertOCRNoText: 'Nem található szöveg a képen.',
+        alertOCRError: 'A kép feldolgozása sikertelen.',
+        alertNoImageClipboard: 'Nem található kép a vágólapon.',
     },
 };
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AIPage",
-  "version": "1.1",
+  "version": "1.2.3",
   "description": "EduPage AI for the rest of us with some neat features.",
   "permissions": [
     "storage",
@@ -37,7 +37,8 @@
       "resources": [
         "sidebar.html",
         "sidebar.css",
-        "sidebar.js"
+        "sidebar.js",
+        "anti_cheat.js"
       ],
       "matches": [
         "*://*.edupage.org/*"

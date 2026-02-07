@@ -100,31 +100,11 @@
     function injectAntiCheat() {
         console.log('[Gemini Sidebar] Injecting anti-cheat protection');
         const script = document.createElement('script');
-        script.textContent = `
-            (() => {
-                // Override Visibility API
-                Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
-                Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-                
-                // Block events that report inactivity or switching
-                const blockEvents = ['visibilitychange', 'webkitvisibilitychange', 'blur', 'focusout', 'pagehide'];
-                blockEvents.forEach(evt => {
-                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                });
-
-                // Block events used for copy/paste detection/prevention
-                const cpEvents = ['copy', 'cut', 'paste', 'contextmenu'];
-                cpEvents.forEach(evt => {
-                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                });
-                
-                console.log('[EduPage AI] Anti-cheat active: Tab switch & Copy/Paste detection blocked.');
-            })();
-        `;
+        script.src = chrome.runtime.getURL('anti_cheat.js');
         (document.head || document.documentElement).appendChild(script);
-        script.remove();
+        script.onload = () => {
+            script.remove();
+        };
     }
 
     async function init() {
@@ -440,6 +420,13 @@
         if (msg.action === 'get_page_content') {
             (async () => {
                 try {
+                    // Prioritize selection
+                    const selection = window.getSelection()?.toString().trim();
+                    if (selection) {
+                        sendResponse({ content: selection, isSelection: true });
+                        return;
+                    }
+
                     // Prioritize test content if in test player
                     const testContent = document.querySelector('.etest-player-content') as HTMLElement;
                     let text = '';
@@ -475,7 +462,7 @@
                     // Cap at ~15k chars to fit reasonable context windows
                     if (text.length > 15000) text = text.substring(0, 15000);
                     
-                    sendResponse({ content: text });
+                    sendResponse({ content: text, isSelection: false });
                 } catch (e) {
                     console.error('[Gemini Sidebar] Content scan failed:', e);
                     sendResponse({ content: null, error: (e as Error).toString() });

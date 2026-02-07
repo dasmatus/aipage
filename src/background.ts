@@ -6,7 +6,8 @@
 /**
  * Listen for extension icon clicks to toggle sidebar if needed.
  */
-chrome.action.onClicked.addListener((tab) => {
+const actionAPI = chrome.action || chrome.browserAction;
+actionAPI.onClicked.addListener((tab) => {
     if (tab.id) {
         chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" });
     }

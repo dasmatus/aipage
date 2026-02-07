@@ -12,7 +12,7 @@ const App: React.FC = () => {
     const [view, setView] = useState<'chat' | 'settings'>('chat');
     const [provider, setProvider] = useState<ProviderType>('gemini');
     const [apiKey, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction } = useChat();
+    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
@@ -81,6 +81,29 @@ const App: React.FC = () => {
     };
 
     const handleActionClick = (action: string) => {
+        if (action === 'search_ddg') {
+            // content is in useChat's lastPageContext or we need to extract the query
+            // Actually, generatePromptFromAction doesn't return the query for search.
+            // We need the context text.
+            // But handleActionClick only gets the action string.
+            // We can access `messages` but finding the context might be tricky without state.
+            // However, we have `handleSend` which processes prompts.
+            // Let's modify logic to open DDG.
+            
+            // We need the extraction.
+            // Let's rely on useChat to give us valid prompt or we find the context.
+            // Better yet, ask standard provider to extract keywords? No, too slow.
+            // Just search the whole selection if short, or ask user.
+             const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_ddg') 
+                ? messages[messages.length - 1].content.match(/"([^"]+)"/)?.[1] || lastPageContext 
+                : lastPageContext;
+
+             if (query) {
+                 window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
+             }
+             return;
+        }
+
         const prompt = generatePromptFromAction(action);
         handleSend(prompt);
     };
