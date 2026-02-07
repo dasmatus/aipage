@@ -12,7 +12,7 @@ import browser from "./polyfills/browser-polyfill";
     let sidebarOpen = false;
     let iframe: HTMLIFrameElement | null = null;
     let resizer: HTMLDivElement | null = null;
-    let currentSidebarWidth = 260;
+    let currentSidebarWidth = 320;
     let isResizing = false;
 
     const NAVBAR_ID = 'edubar';
@@ -381,7 +381,7 @@ import browser from "./polyfills/browser-polyfill";
             const onMouseMove = (moveEvent: MouseEvent) => {
                 if (!isResizing) return;
                 const deltaX = startX - moveEvent.clientX;
-                const newWidth = Math.max(200, Math.min(800, startWidth + deltaX));
+                const newWidth = Math.max(250, Math.min(450, startWidth + deltaX));
 
                 currentSidebarWidth = newWidth;
                 if (iframe) iframe.style.width = `${newWidth}px`;
