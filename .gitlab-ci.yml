@@ -6,7 +6,6 @@ before_script:
   - apt-get update &&  apt-get install -y nodejs npm
 
 stages:
-  - install
   - lint
   - build
   - test
@@ -28,23 +27,11 @@ cache:
     - node_modules/
     - .playwright/
 
-# Install dependencies
-install_dependencies:
-  stage: install
-  script:
-    - bun install
-  artifacts:
-    paths:
-      - node_modules/
-    expire_in: 1 hour
-
 # Lint the TypeScript code
 lint:
   stage: lint
-  needs:
-    - job: install_dependencies
-      optional: true
   script:
+    - bun install
     - bun run lint
   allow_failure: false
   only:
@@ -57,10 +44,8 @@ lint:
 # Build for Chrome
 build:chrome:
   stage: build
-  needs:
-    - job: install_dependencies
-      optional: true
   script:
+    - bun install
     - bun run build:chrome
   artifacts:
     paths:
@@ -75,10 +60,8 @@ build:chrome:
 # Build for Firefox
 build:firefox:
   stage: build
-  needs:
-    - job: install_dependencies
-      optional: true
   script:
+    - bun install
     - bun run build:firefox
     - npx web-ext lint -s dist-firefox
   artifacts:
@@ -94,10 +77,8 @@ build:firefox:
 # Build for Safari
 build:safari:
   stage: build
-  needs:
-    - job: install_dependencies
-      optional: true
   script:
+    - bun install
     - bun run build:safari
   artifacts:
     paths:
@@ -182,11 +163,9 @@ package:safari:
 # Deploy documentation to GitLab Pages
 pages:
   stage: pages
-  needs:
-    - job: install_dependencies
-      optional: true
   before_script:
-    - apt-get update &&  apt-get install -y curl  nodejs npm
+    - bun install
+    - apt-get update && apt-get install -y curl nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
