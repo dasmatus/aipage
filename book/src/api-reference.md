@@ -2,7 +2,7 @@
 
 The full TypeScript API documentation is generated using TypeDoc and available separately.
 
-**[View API Documentation](../api/index.html)**
+**[View API Documentation](/api/index.html)**
 
 The API reference includes:
 
@@ -20,7 +20,7 @@ The extension supports multiple AI providers through a unified interface:
 
 - `AIProvider` - Base interface for all providers
 - Provider implementations for Gemini, ChatGPT, Claude, etc.
-- See [providers.ts API docs](../api/modules/sidebar_providers.html) for details
+- See [providers.ts API docs](/api/modules/sidebar_providers.html) for details
 
 ### Storage
 
@@ -28,7 +28,7 @@ Local storage management for API keys and settings:
 
 - `storage` module from browser polyfill
 - Persistent settings across browser restarts
-- See [storage API docs](../api/modules/polyfills_browser_polyfill.html) for details
+- See [storage API docs](/api/modules/polyfills_browser_polyfill.html) for details
 
 ### Chat Manager
 
@@ -37,7 +37,7 @@ Handles AI chat interactions and response streaming:
 - Message management
 - Markdown rendering
 - Streaming responses
-- See [chat-manager.ts API docs](../api/modules/sidebar_chat_manager.html) for details
+- See [chat-manager.ts API docs](/api/modules/sidebar_chat_manager.html) for details
 
 ## Documentation Format
 
@@ -48,4 +48,4 @@ The API documentation uses TypeDoc to generate comprehensive references from:
 - Interface definitions
 - Code examples
 
-For the complete API reference with all classes, interfaces, and functions, visit the [TypeDoc documentation](../api/index.html).
+For the complete API reference with all classes, interfaces, and functions, visit the [TypeDoc documentation](/api/index.html).
