@@ -5,6 +5,23 @@ All notable changes to the AIPage extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://gitlab.com/TenTypekMatus/aipage/compare/v1.3.0...v1.4.0) (2026-02-07)
+
+
+### 📚 Documentation
+
+* add changelog file. ([691e6bc](https://gitlab.com/TenTypekMatus/aipage/commit/691e6bc0f533d7e009e39cc5a97d29272ee3159c))
+
+
+### ✨ Features
+
+* Add changelog generation and version bumping job, and enable pages deployment on tags. ([5f12e01](https://gitlab.com/TenTypekMatus/aipage/commit/5f12e01a1cb7bd5ec7a6faca754d3e2d7d7fb1a5))
+
+
+### 👷 CI/CD
+
+* add rule to prevent Chrome extension packaging on `chore(release):` commits. ([6208108](https://gitlab.com/TenTypekMatus/aipage/commit/6208108923afb6c7579d6f1d0de3228c4ed40621))
+
 ## 1.3.0 (2026-02-07)
 
 
