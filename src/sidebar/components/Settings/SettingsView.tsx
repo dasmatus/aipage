@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { ProviderType } from '../../types';
 import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
-import { t, getCurrentLanguage, setLanguage as saveLanguage } from '../../i18n';
+// i18n imports removed as we use props now
+import { t } from '../../i18n';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
     onClose: () => void;
     onProviderChange: (p: ProviderType) => void;
+    language: string;
+    onLanguageChange: (lang: string) => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onClose, onProviderChange }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onClose, onProviderChange, language, onLanguageChange }) => {
     const [apiKey, setApiKey] = useState('');
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
-    const [language, setLanguage] = useState('sk');
+    // language state removed
     
     // Local settings
     const [baseUrl, setBaseUrl] = useState('');
@@ -24,13 +27,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     useEffect(() => {
         loadSettings();
-        loadLanguage();
+        // loadLanguage removed
     }, [currentProvider]);
 
-    const loadLanguage = async () => {
-        const lang = await getCurrentLanguage();
-        setLanguage(lang);
-    };
+    // loadLanguage removed
 
     const loadSettings = async () => {
         const key = await Storage.getApiKey(currentProvider);
@@ -73,7 +73,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const handleSave = async () => {
         const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
         if (!apiKey && !isLocal) {
-            alert('Prosím, zadajte API kľúč');
+            alert(t('alertPleaseEnterKey', language));
             return;
         }
 
@@ -83,7 +83,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
         }
 
-        alert('Nastavenia uložené!');
+        alert(t('alertSettingsSaved', language));
         onClose();
     };
 
@@ -102,10 +102,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLang = e.target.value;
-        setLanguage(newLang);
-        await saveLanguage(newLang);
-        // Trigger re-render by changing state
-        loadSettings();
+        onLanguageChange(newLang);
     };
 
 
@@ -116,7 +113,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             <>
                 {fullProvider === 'gemini' && (
                     <div className="instructions-box provider-instructions" data-provider="gemini">
-                        <h3>Ako získať Gemini API kľúč:</h3>
+                        <h3>{t('geminiInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Navštívte <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
                             <li>Prihláste sa pomocou svojho Google účtu</li>
@@ -129,7 +126,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 )}
                 {fullProvider === 'openai' && (
                     <div className="instructions-box provider-instructions" data-provider="openai">
-                        <h3>Ako získať OpenAI API kľúč:</h3>
+                        <h3>{t('openaiInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Navštívte <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
@@ -142,7 +139,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 )}
                 {fullProvider === 'claude' && (
                     <div className="instructions-box provider-instructions" data-provider="claude">
-                        <h3>Ako získať Claude API kľúč:</h3>
+                        <h3>{t('claudeInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Navštívte <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
@@ -156,7 +153,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 )}
                 {fullProvider === 'mistral' && (
                     <div className="instructions-box provider-instructions" data-provider="mistral">
-                        <h3>Ako získať Mistral API kľúč:</h3>
+                        <h3>{t('mistralInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Navštívte <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
                             <li>Prihláste sa alebo si vytvorte účet</li>
@@ -170,7 +167,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 )}
                 {fullProvider === 'lmstudio' && (
                     <div className="instructions-box provider-instructions" data-provider="lmstudio">
-                        <h3>Ako nastaviť LM Studio:</h3>
+                        <h3>{t('lmstudioInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
                             <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
@@ -183,7 +180,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 )}
                 {fullProvider === 'ollama' && (
                     <div className="instructions-box provider-instructions" data-provider="ollama">
-                        <h3>Ako nastaviť Ollama:</h3>
+                        <h3>{t('ollamaInstructionsTitle', language)}</h3>
                         <ol>
                             <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
                             <li>Otvorte terminál a spustite: <code>ollama run llama3</code></li>
@@ -201,32 +198,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     return (
         <div className="settings-content">
-                <h2>Vyžaduje sa nastavenie</h2>
+                <h2>{t('settingsTitle', language)}</h2>
                 <div className="input-group">
-                    <label>Poskytovateľ AI</label>
+                    <label>{t('aiProvider', language)}</label>
                     <select 
                         id="provider-select"
                         value={currentProvider} 
                         onChange={(e) => onProviderChange(e.target.value as ProviderType)}
                     >
-                        <option value="gemini">Google Gemini</option>
-                        <option value="openai">OpenAI ChatGPT</option>
-                        <option value="claude">Anthropic Claude</option>
-                        <option value="mistral">Mistral AI</option>
-                        <option value="ollama">Ollama (Lokálne)</option>
-                        <option value="lmstudio">LM Studio (Lokálne)</option>
+                        <option value="gemini">{t('providerGemini', language)}</option>
+                        <option value="openai">{t('providerChatGPT', language)}</option>
+                        <option value="claude">{t('providerClaude', language)}</option>
+                        <option value="mistral">{t('providerMistral', language)}</option>
+                        <option value="ollama">{t('providerOllama', language)}</option>
+                        <option value="lmstudio">{t('providerLMStudio', language)}</option>
                     </select>
                 </div>
 
                 <div className="input-group">
-                    <label>Téma rozhrania</label>
+                    <label>{t('themeInterface', language)}</label>
                     <select value={theme} onChange={handleThemeChange}>
-                        <option value="default">EduPage</option>
-                        <option value="sms">iMessage</option>
-                        <option value="gradient">Messenger</option>
-                        <option value="discord">Discord</option>
-                        <option value="tokyo">Tokyo Night</option>
-                        <option value="mono">Monochromatická</option>
+                        <option value="default">{t('themeEduPage', language)}</option>
+                        <option value="sms">{t('themeImessage', language)}</option>
+                        <option value="gradient">{t('themeMessenger', language)}</option>
+                        <option value="discord">{t('themeDiscord', language)}</option>
+                        <option value="tokyo">{t('themeTokyo', language)}</option>
+                        <option value="mono">{t('themeMono', language)}</option>
                     </select>
                 </div>
 
@@ -237,7 +234,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         checked={globalTheme} 
                         onChange={handleGlobalThemeChange}
                     />
-                    <label htmlFor="global-theme-toggle" className="inline-label">Aplikovať tému aj na EduPage</label>
+                    <label htmlFor="global-theme-toggle" className="inline-label">{t('applyThemeGlobal', language)}</label>
                 </div>
 
                 <div className="input-group">
@@ -256,7 +253,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 {isLocal && (
                     <div id="local-settings">
                          <div className="input-group">
-                            <label>Základná URL</label>
+                            <label>{t('baseUrl', language)}</label>
                             <input 
                                 id="base-url"
                                 type="text" 
@@ -266,10 +263,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             />
                         </div>
                         <div className="input-group">
-                            <label>Model</label>
+                            <label>{t('model', language)}</label>
                             {availableModels.length > 0 ? (
                                 <select id="model-select" value={modelName} onChange={(e) => setModelName(e.target.value)}>
-                                    <option value="" disabled>Vyberte model</option>
+                                    <option value="" disabled>{t('selectModel', language)}</option>
                                     {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             ) : (
@@ -287,26 +284,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                 onClick={() => fetchModels(baseUrl)}
                                 disabled={isLoadingModels}
                             >
-                                {isLoadingModels ? 'Načítavam...' : '↻ Obnoviť modely'}
+                                {isLoadingModels ? t('loading', language) : t('refreshModels', language)}
                             </button>
                         </div>
                     </div>
                 )}
 
                 <div className="input-group">
-                    <label>API kľúč</label>
+                    <label>{t('apiKey', language)}</label>
                     <input 
                         id="api-key-input"
                         type="password" 
                         value={apiKey} 
                         onChange={(e) => setApiKey(e.target.value)} 
-                        placeholder="Zadajte svoj API kľúč" 
+                        placeholder={t('apiKeyPlaceholder', language)} 
                     />
-                    <p className="hint">Váš kľúč je uložený na vašom zariadení a nikdy sa nezdieľa.</p>
+                    <p className="hint">{t('apiKeyHint', language)}</p>
                 </div>
 
-                <button id="save-key-btn" className="primary-btn" onClick={handleSave}>Uložiť kľúč</button>
-                <button className="secondary-btn" onClick={onClose}>Späť do chatu</button>
+                <button id="save-key-btn" className="primary-btn" onClick={handleSave}>{t('saveKey', language)}</button>
+                <button className="secondary-btn" onClick={onClose}>{t('backToChat', language)}</button>
             </div>
     );
 };

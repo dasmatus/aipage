@@ -1,6 +1,6 @@
 # ♊ Gemini CLI & AI Developer Guide
 
-This guide describes how to use Gemini (and other agentic AI) via the CLI to maintain and extend the EduPage AI Sidebar.
+This guide describes how to use Gemini (and other agentic AI) via the CLI to maintain and extend the AIPage.
 
 ## 🚀 CLI Commands
 

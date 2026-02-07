@@ -1,0 +1,66 @@
+import { test, expect } from '@playwright/test';
+import path from 'path';
+
+test.describe('Language Localization', () => {
+    test.beforeEach(async ({ page }) => {
+        // Mock the chrome API
+        await page.addInitScript(() => {
+            const storage: Record<string, any> = {};
+            (window as any).chrome = {
+                storage: {
+                    local: {
+                        get: async (keys: string | string[]) => {
+                            if (typeof keys === 'string') {
+                                return { [keys]: storage[keys] };
+                            }
+                            const result: Record<string, any> = {};
+                             if (Array.isArray(keys)) {
+                                for (const key of keys) {
+                                    if (storage[key]) {
+                                        result[key] = storage[key];
+                                    }
+                                }
+                            }
+                            return result;
+                        },
+                        set: async (items: Record<string, any>) => {
+                            Object.assign(storage, items);
+                        }
+                    }
+                },
+                runtime: {
+                    getURL: (path: string) => path,
+                    sendMessage: (message: any, callback: (response: any) => void) => {
+                         // Mock simple response for any message
+                         if (callback) callback({ ok: true });
+                    }
+                }
+            };
+        });
+
+        // Load the extension sidebar directly via file protocol
+        // We use ../src/sidebar/sidebar.html because dist might not be up to date with loc changes?
+        // Wait, the previous test used ../dist/sidebar.html.
+        // But my changes are in src. Creating dist usually requires build.
+        // User said `bun run build:chrome` is required. I haven't run build since I changed i18n.ts!
+        // THIS IS CRITICAL. I need to build before testing if I test dist.
+        // OR I can test src if it works without transpilation (unlikely due to .ts files).
+        // Actually, if I test `src/sidebar/sidebar.html`, it refers to `sidebar.js`.
+        // The `sidebar.html` in src likely points to `sidebar.js` which is TS? No, usually in vite it points to tsx.
+        // But this is a chrome extension. i18n is imported.
+        // I MUST RUN BUILD before testing if testing dist.
+        // And I should test dist to be sure.
+        
+        // Let's assume I need to run build.
+        
+        // But first, let's write the test file to use dist.
+        await page.goto(`file://${path.resolve(__dirname, '../dist-chrome/sidebar.html')}`);
+        // Note: The user said `dist-chrome`. `sidebar.spec.ts` used `../dist/sidebar.html`.
+        // I should check if `dist` exists or `dist-chrome`.
+        // The `GEMINI.md` says `dist-chrome`.
+        // `sidebar.spec.ts` used `../dist/sidebar.html`. Maybe that was old?
+        // Let's check the directories.
+    });
+
+    // ... (rest of tests)
+});

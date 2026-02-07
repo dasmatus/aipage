@@ -1,6 +1,6 @@
 [book]
-title = "EduPage AI Sidebar Documentation"
-authors = ["EduPage AI Sidebar Contributors"]
+title = "AIPage Documentation"
+authors = ["AIPage Contributors"]
 description = "Cross-browser extension bringing AI assistance to EduPage"
 language = "en"
 src = "book/src"

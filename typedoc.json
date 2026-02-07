@@ -7,7 +7,7 @@
   "excludeProtected": false,
   "excludeExternals": true,
   "readme": "none",
-  "name": "EduPage AI Sidebar API",
+  "name": "AIPage API",
   "navigationLinks": {
     "Documentation": "../index.html",
     "GitHub": "https://gitlab.com/your-username/edupage-ai-sidebar"

@@ -1,4 +1,4 @@
-# GitLab CI/CD Pipeline for EduPage AI Sidebar Extension
+# GitLab CI/CD Pipeline for AIPage Extension
 # Builds and tests the extension for Chrome, Firefox, and Safari
 
 image: node:20

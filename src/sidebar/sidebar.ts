@@ -1,5 +1,5 @@
 /**
- * EduPage AI Sidebar - Main Entry Point
+ * AIPage - Main Entry Point
  * 
  * This file orchestrates the sidebar logic by connecting UI components,
  * storage management, and AI chat functionality.

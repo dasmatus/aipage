@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+import { t } from '../../i18n';
+
 interface InputAreaProps {
     onSend: (text: string) => void;
     onScanPage: () => void;
     disabled?: boolean;
     isScanning?: boolean;
+    language: string;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language }) => {
     const [text, setText] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,7 +46,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
             <button 
                 id="scan-page-btn" 
                 className="icon-btn" 
-                title="Analyzovať stránku" 
+                title={t('analyzePage', language)} 
                 style={{ marginRight: '4px', padding: '6px', opacity: isScanning ? 0.5 : 1 }}
                 onClick={onScanPage}
                 disabled={isScanning || disabled}
@@ -59,7 +62,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
             <textarea 
                 id="chat-input" 
                 ref={textareaRef}
-                placeholder="Spýtaj sa na čokoľvek..." 
+                placeholder={t('askAnything', language)} 
                 rows={1}
                 value={text}
                 onChange={handleInput}

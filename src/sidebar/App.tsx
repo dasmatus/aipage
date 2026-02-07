@@ -5,6 +5,7 @@ import { SettingsView } from './components/Settings/SettingsView';
 import { useChat } from './hooks/useChat';
 import { ProviderType } from './types';
 import * as Storage from './storage';
+import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
 
 const App: React.FC = () => {
     // State
@@ -14,6 +15,7 @@ const App: React.FC = () => {
     const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
+    const [language, setLanguage] = useState('sk');
 
     // Initialization
     useEffect(() => {
@@ -22,6 +24,10 @@ const App: React.FC = () => {
              setProvider(p);
              const k = await Storage.getApiKey(p);
              setApiKey(k);
+             
+             // Load language
+             const lang = await getCurrentLanguage();
+             setLanguage(lang);
              
              // Show settings if no API key for non-local providers
              const isLocal = p === 'lmstudio' || p === 'ollama';
@@ -63,12 +69,12 @@ const App: React.FC = () => {
                 if (response && response.content) {
                     handlePageContext(response.content);
                 } else {
-                    alert('Nepodarilo sa načítať obsah.');
+                    alert(t('alertContentLoadFailed', language));
                 }
             }
         } catch (e) {
             console.error(e);
-            alert('Chyba pri skenovaní.');
+            alert(t('alertScanError', language));
         } finally {
             setIsScanning(false);
         }
@@ -89,6 +95,11 @@ const App: React.FC = () => {
         const k = await Storage.getApiKey(provider);
         setApiKey(k);
         setView('chat');
+    };
+
+    const handleLanguageChange = async (newLang: string) => {
+        setLanguage(newLang);
+        await saveLanguage(newLang);
     };
 
     return (
@@ -117,6 +128,7 @@ const App: React.FC = () => {
                     onScanPage={handleScanPage} 
                     disabled={isTyping} 
                     isScanning={isScanning}
+                    language={language}
                 />
             </div>
             
@@ -125,6 +137,8 @@ const App: React.FC = () => {
                     currentProvider={provider} 
                     onProviderChange={handleProviderChange} 
                     onClose={handleSettingsClose} 
+                    language={language}
+                    onLanguageChange={handleLanguageChange}
                 />
             </div>
         </div>

@@ -1,4 +1,4 @@
-# EduPage AI Sidebar Extension
+# AIPage Extension
 
 A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powered sidebar to EduPage, featuring a clean interface and integration with multiple AI providers.
 

@@ -31,7 +31,7 @@ mkdir -p safari
 echo "Generating Xcode project..."
 xcrun safari-web-extension-converter \
     dist-safari \
-    --app-name "EduPage AI Sidebar" \
+    --app-name "AIPage" \
     --bundle-identifier "dev.hesburger.edupage-ai-sidebar" \
     --macos-only \
     --project-location safari \

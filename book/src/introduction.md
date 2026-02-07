@@ -1,6 +1,6 @@
 # Introduction
 
-Welcome to the **EduPage AI Sidebar** documentation!
+Welcome to the **AIPage** documentation!
 
 This is a cross-browser extension that brings AI assistance directly to EduPage. The extension works seamlessly on Chrome, Firefox, and Safari, providing a clean sidebar interface for interacting with multiple AI providers.
 
