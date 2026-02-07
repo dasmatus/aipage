@@ -1,14 +1,11 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "AIPage",
-  "version": "1.1",
+  "version": "1.2.4",
   "description": "EduPage AI for the rest of us with some neat features.",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
     "*://*.edupage.org/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
@@ -17,8 +14,10 @@
     "https://api.mistral.ai/*",
     "https://generativelanguage.googleapis.com/*"
   ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "content_scripts": [
     {
@@ -32,18 +31,12 @@
     }
   ],
   "web_accessible_resources": [
-    {
-      "resources": [
-        "sidebar.html",
-        "sidebar.css",
-        "sidebar.js"
-      ],
-      "matches": [
-        "*://*.edupage.org/*"
-      ]
-    }
+    "sidebar.html",
+    "sidebar.css",
+    "sidebar.js",
+    "anti_cheat.js"
   ],
-  "action": {
+  "browser_action": {
     "default_title": "Open AI Sidebar"
   }
 }

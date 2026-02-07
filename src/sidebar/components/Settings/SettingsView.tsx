@@ -4,6 +4,7 @@ import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
 // i18n imports removed as we use props now
 import { t } from '../../i18n';
+import browser from '../../../polyfills/browser-polyfill';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
@@ -24,6 +25,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [modelName, setModelName] = useState('');
     const [availableModels, setAvailableModels] = useState<string[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
         loadSettings();
@@ -39,7 +41,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         const t = await Storage.getThemePreference();
         setTheme(t);
 
-        const g = await chrome.storage.local.get('ai_sidebar_global');
+        const g = await browser.storage.local.get('ai_sidebar_global');
         setGlobalTheme(!!g.ai_sidebar_global);
 
         if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
@@ -56,15 +58,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const fetchModels = async (url: string) => {
         if (!url) return;
         setIsLoadingModels(true);
+        setFetchError(null);
         try {
             const p = getProvider(currentProvider);
             if (p.getModels) {
                 const models = await p.getModels('', { baseUrl: url });
                 setAvailableModels(models);
+                if (models.length === 0) setFetchError(t('noModelsFound', language) || 'No models found');
             }
         } catch (e) {
             console.warn('Failed to fetch models', e);
             setAvailableModels([]);
+            setFetchError((e as Error).message || 'Failed to fetch models');
         } finally {
             setIsLoadingModels(false);
         }
@@ -77,7 +82,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             return;
         }
 
-        await chrome.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: apiKey });
+        await browser.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: apiKey });
         
         if (isLocal) {
             await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
@@ -97,7 +102,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const handleGlobalThemeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;
         setGlobalTheme(checked);
-        await chrome.storage.local.set({ ai_sidebar_global: checked });
+        await browser.storage.local.set({ ai_sidebar_global: checked });
     };
 
     const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -262,19 +267,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         </div>
                         <div className="input-group">
                             <label>{t('model', language)}</label>
-                            {availableModels.length > 0 ? (
-                                <select id="model-select" value={modelName} onChange={(e) => setModelName(e.target.value)}>
-                                    <option value="" disabled>{t('selectModel', language)}</option>
+                            {isLoadingModels ? (
+                                <div style={{ fontSize: '12px', color: 'var(--eduba-body-text)', padding: '8px 0' }}>
+                                    {t('loading', language)}
+                                </div>
+                            ) : (
+                                <select 
+                                    id="model-select" 
+                                    value={modelName} 
+                                    onChange={(e) => setModelName(e.target.value)}
+                                    className={availableModels.length === 0 ? 'error-border' : ''}
+                                >
+                                    <option value="" disabled>{availableModels.length > 0 ? t('selectModel', language) : t('noModelsFound', language)}</option>
                                     {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
-                            ) : (
-                                <input 
-                                    id="model-name"
-                                    type="text" 
-                                    value={modelName} 
-                                    onChange={(e) => setModelName(e.target.value)} 
-                                    placeholder="napr. llama3"
-                                />
                             )}
                             <button 
                                 className="secondary-btn" 
@@ -284,6 +290,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             >
                                 {isLoadingModels ? t('loading', language) : t('refreshModels', language)}
                             </button>
+                            {fetchError && <p className="error-text" style={{ fontSize: '11px', color: 'var(--eduba-danger)', marginTop: '4px' }}>{fetchError}</p>}
                         </div>
                     </div>
                 )}

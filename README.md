@@ -4,14 +4,14 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 
 ## Features
 
-- 🤖 AI chat assistant integrated directly into EduPage
-- 🌐 **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
-- 🎨 Clean, responsive design that matches EduPage's aesthetic
-- 💬 Real-time conversations with multiple AI providers (Gemini, ChatGPT, Claude, Mistral, LM Studio, Ollama)
-- 🔒 Secure local storage of API credentials
-- 📱 Responsive sidebar that doesn't obscure important UI elements
-- 🛡️ **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
-- 🧠 **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly
+- AI chat assistant integrated directly into EduPage
+- **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
+- Clean, responsive design that matches EduPage's aesthetic
+- Real-time conversations with multiple AI providers (Gemini, ChatGPT, Claude, Mistral, LM Studio, Ollama)
+- Secure local storage of API credentials
+- Responsive sidebar that doesn't obscure important UI elements
+- **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
+- **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly
 
 ## Installation
 

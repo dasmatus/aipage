@@ -1,3 +1,5 @@
+import browser from "./polyfills/browser-polyfill";
+
 // Inject AI Button and Manage Sidebar Iframe
 (function () {
     // 0. Extended Singleton guard and top-window check
@@ -10,7 +12,7 @@
     let sidebarOpen = false;
     let iframe: HTMLIFrameElement | null = null;
     let resizer: HTMLDivElement | null = null;
-    let currentSidebarWidth = 260;
+    let currentSidebarWidth = 320;
     let isResizing = false;
 
     const NAVBAR_ID = 'edubar';
@@ -19,17 +21,9 @@
 
     let observer: MutationObserver | null = null;
 
-    // Helper for robust storage access (handles both callback and promise versions for test/real environments)
+    // Helper for robust storage access using Promise-based webextension-polyfill API
     function getStorage(keys: string[]): Promise<any> {
-        return new Promise((resolve) => {
-            const promise = (chrome.storage.local.get as any)(keys, (result: any) => {
-                if (result) resolve(result);
-            });
-            // Handle Manifest V3 Promise return
-            if (promise && promise.then) {
-                promise.then(resolve);
-            }
-        });
+        return browser.storage.local.get(keys);
     }
 
     function sync() {
@@ -73,8 +67,12 @@
         btn.setAttribute('title', 'AI Asistent');
 
         btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
             <p style="margin: 0;">AI</p>
         `;
+
 
         container.insertBefore(btn, container.firstChild);
         btn.addEventListener('click', onAiButtonClick);
@@ -100,31 +98,11 @@
     function injectAntiCheat() {
         console.log('[Gemini Sidebar] Injecting anti-cheat protection');
         const script = document.createElement('script');
-        script.textContent = `
-            (() => {
-                // Override Visibility API
-                Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
-                Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-                
-                // Block events that report inactivity or switching
-                const blockEvents = ['visibilitychange', 'webkitvisibilitychange', 'blur', 'focusout', 'pagehide'];
-                blockEvents.forEach(evt => {
-                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                });
-
-                // Block events used for copy/paste detection/prevention
-                const cpEvents = ['copy', 'cut', 'paste', 'contextmenu'];
-                cpEvents.forEach(evt => {
-                    window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                    document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
-                });
-                
-                console.log('[EduPage AI] Anti-cheat active: Tab switch & Copy/Paste detection blocked.');
-            })();
-        `;
+        script.src = chrome.runtime.getURL('anti_cheat.js');
         (document.head || document.documentElement).appendChild(script);
-        script.remove();
+        script.onload = () => {
+            script.remove();
+        };
     }
 
     async function init() {
@@ -153,7 +131,7 @@
         applyGlobalOverrides(result.ai_sidebar_theme || 'default', globalThemeEnabled);
 
         // Listen for theme changes from storage
-        chrome.storage.onChanged.addListener((changes) => {
+        browser.storage.onChanged.addListener((changes) => {
             if (changes.ai_sidebar_theme || changes.ai_sidebar_global) {
                 // We need both current values to update correctly
                 getStorage(['ai_sidebar_theme', 'ai_sidebar_global']).then((res) => {
@@ -403,7 +381,7 @@
             const onMouseMove = (moveEvent: MouseEvent) => {
                 if (!isResizing) return;
                 const deltaX = startX - moveEvent.clientX;
-                const newWidth = Math.max(200, Math.min(800, startWidth + deltaX));
+                const newWidth = Math.max(250, Math.min(450, startWidth + deltaX));
 
                 currentSidebarWidth = newWidth;
                 if (iframe) iframe.style.width = `${newWidth}px`;
@@ -417,7 +395,7 @@
                 document.body.style.userSelect = '';
                 if (iframe) iframe.style.transition = 'right 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
                 overlay.remove();
-                chrome.storage.local.set({ sidebarWidth: currentSidebarWidth });
+                browser.storage.local.set({ sidebarWidth: currentSidebarWidth });
                 window.removeEventListener('mousemove', onMouseMove);
                 window.removeEventListener('mouseup', onMouseUp);
                 if (resizer) resizer.style.background = 'transparent';
@@ -440,6 +418,34 @@
         if (msg.action === 'get_page_content') {
             (async () => {
                 try {
+                    // Prioritize selection
+                    const selection = window.getSelection();
+                    const selectionText = selection?.toString().trim();
+                    const images: string[] = [];
+
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        const container = document.createElement('div');
+                        container.appendChild(range.cloneContents());
+                        
+                        const imgElements = container.querySelectorAll('img');
+                        imgElements.forEach((img: HTMLImageElement) => {
+                            if (img.src && !img.src.startsWith('data:')) { // Avoid huge data URIs for now, or maybe include them?
+                                // Let's include everything for now, but filter out tiny icons maybe?
+                                if (img.width > 20 && img.height > 20) {
+                                    images.push(img.src);
+                                }
+                            } else if (img.src) {
+                                images.push(img.src);
+                            }
+                        });
+                    }
+
+                    if (selectionText) {
+                        sendResponse({ content: selectionText, isSelection: true, images });
+                        return;
+                    }
+
                     // Prioritize test content if in test player
                     const testContent = document.querySelector('.etest-player-content') as HTMLElement;
                     let text = '';
@@ -475,7 +481,7 @@
                     // Cap at ~15k chars to fit reasonable context windows
                     if (text.length > 15000) text = text.substring(0, 15000);
                     
-                    sendResponse({ content: text });
+                    sendResponse({ content: text, isSelection: false });
                 } catch (e) {
                     console.error('[Gemini Sidebar] Content scan failed:', e);
                     sendResponse({ content: null, error: (e as Error).toString() });

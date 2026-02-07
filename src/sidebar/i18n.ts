@@ -1,5 +1,7 @@
 // i18n - Internationalization for AiPage Sidebar
 
+import browser from "../polyfills/browser-polyfill";
+
 export interface Translation {
     // Settings
     settingsTitle: string;
@@ -107,6 +109,13 @@ export interface Translation {
     themeDiscord: string;
     themeTokyo: string;
     themeMono: string;
+
+    // OCR
+    ocrUploadImage: string;
+    alertOCRNoText: string;
+    alertOCRError: string;
+    alertNoImageClipboard: string;
+    noModelsFound: string;
 }
 
 export const translations: Record<string, Translation> = {
@@ -207,6 +216,12 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatická',
+
+        ocrUploadImage: 'Nahrať obrázok (OCR)',
+        alertOCRNoText: 'Na obrázku sa nenašiel žiadny text.',
+        alertOCRError: 'Nepodarilo sa spracovať obrázok.',
+        alertNoImageClipboard: 'V schránke sa nenašiel žiadny obrázok.',
+        noModelsFound: 'Nenašli sa žiadne modely.',
     },
     
     // English
@@ -306,6 +321,13 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatic',
+
+        // OCR
+        ocrUploadImage: 'Upload Image for OCR',
+        alertOCRNoText: 'No text found in the image.',
+        alertOCRError: 'Error processing OCR.',
+        alertNoImageClipboard: 'No image found in clipboard.',
+        noModelsFound: 'No models found.',
     },
     
     // Czech
@@ -405,6 +427,12 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatická',
+
+        ocrUploadImage: 'Nahrát obrázek (OCR)',
+        alertOCRNoText: 'V obrázku nebyl nalezen žádný text.',
+        alertOCRError: 'Chyba při zpracování OCR.',
+        alertNoImageClipboard: 'Ve schránce nebyl nalezen žádný obrázek.',
+        noModelsFound: 'Nebyly nalezeny žádné modely.',
     },
     
     // German
@@ -504,6 +532,12 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochrom',
+
+        ocrUploadImage: 'Bild hochladen (OCR)',
+        alertOCRNoText: 'Kein Text im Bild gefunden.',
+        alertOCRError: 'Bild konnte nicht verarbeitet werden.',
+        alertNoImageClipboard: 'Kein Bild in der Zwischenablage gefunden.',
+        noModelsFound: 'Keine Modelle gefunden.',
     },
     
     // Hungarian
@@ -603,6 +637,12 @@ export const translations: Record<string, Translation> = {
         themeDiscord: 'Discord',
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monokróm',
+
+        ocrUploadImage: 'Kép feltöltése (OCR)',
+        alertOCRNoText: 'Nem található szöveg a képen.',
+        alertOCRError: 'A kép feldolgozása sikertelen.',
+        alertNoImageClipboard: 'Nem található kép a vágólapon.',
+        noModelsFound: 'Nem található modell.',
     },
 };
 
@@ -615,7 +655,7 @@ export function t(key: keyof Translation, lang: string = 'sk'): string {
 // Get current language from storage or default
 export async function getCurrentLanguage(): Promise<string> {
     try {
-        const result = await chrome.storage.local.get('language');
+        const result = await browser.storage.local.get('language') as { language?: string };
         return result.language || 'sk';
     } catch (error) {
         console.error('Failed to get language:', error);
@@ -626,7 +666,7 @@ export async function getCurrentLanguage(): Promise<string> {
 // Set language in storage
 export async function setLanguage(lang: string): Promise<void> {
     try {
-        await chrome.storage.local.set({ language: lang });
+        await browser.storage.local.set({ language: lang });
     } catch (error) {
         console.error('Failed to set language:', error);
     }

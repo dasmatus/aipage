@@ -58,7 +58,7 @@ async function initSidebar() {
     document.body.dataset.theme = theme;
 
     // Global override defaults to disabled (false)
-    const stored = await chrome.storage.local.get('ai_sidebar_global');
+    const stored = await browser.storage.local.get('ai_sidebar_global');
     if (elements.globalThemeToggle) {
         elements.globalThemeToggle.checked = !!stored.ai_sidebar_global;
     }
@@ -123,7 +123,7 @@ async function populateModelSelect(provider: ProviderType, selectedModel: string
     // Try fetching from storage first
     let models: string[] = [];
     const storageKey = `cached_models_${provider}`;
-    const stored = await chrome.storage.local.get(storageKey);
+    const stored = await browser.storage.local.get(storageKey);
     
     if (stored[storageKey] && Array.isArray(stored[storageKey]) && stored[storageKey].length > 0) {
         models = stored[storageKey];
@@ -145,7 +145,7 @@ async function fetchModelsFromProvider(provider: ProviderType): Promise<string[]
             const models = await providerInstance.getModels('', { baseUrl });
             
             // Save to storage
-            await chrome.storage.local.set({ [`cached_models_${provider}`]: models });
+            await browser.storage.local.set({ [`cached_models_${provider}`]: models });
             return models; 
         }
     } catch (e) {
@@ -220,7 +220,7 @@ if (elements.themeSelect) {
 
 if (elements.globalThemeToggle) {
     elements.globalThemeToggle.addEventListener('change', async () => {
-        await chrome.storage.local.set({ ai_sidebar_global: elements.globalThemeToggle.checked });
+        await browser.storage.local.set({ ai_sidebar_global: elements.globalThemeToggle.checked });
     });
 }
 
@@ -259,7 +259,7 @@ if (elements.saveKeyBtn) {
         }
 
         // Save common API key
-        await chrome.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: key });
+        await browser.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: key });
         apiKey = key;
 
         // Save local-only settings

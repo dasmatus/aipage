@@ -47,6 +47,15 @@ async function build() {
         minify: true,
     });
 
+    // Build Anti-Cheat Script
+    await Bun.build({
+        entrypoints: ['src/anti_cheat.ts'],
+        outdir: distDir,
+        naming: 'anti_cheat.js',
+        target: 'browser',
+        minify: true,
+    });
+
     // Compile Sass to CSS using sass CLI  
     const sassProcess = Bun.spawn(['npx', 'sass', 'src/sidebar/sidebar.scss', `${distDir}/sidebar.css`, '--style=compressed', '--no-source-map']);
     await sassProcess.exited;

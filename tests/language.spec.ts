@@ -242,7 +242,7 @@ test.describe('Language Localization', () => {
         
         // Verify storage (mocked)
         const storage = await page.evaluate(() => {
-            return chrome.storage.local.get('language');
+            return browser.storage.local.get('language');
         });
         expect(storage.language).toBe('en');
         
