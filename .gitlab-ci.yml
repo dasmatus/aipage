@@ -7,8 +7,8 @@ before_script:
 
 stages:
   - cache
-  - lint
   - test
+  - lint
   - build
   - package
   - pages
@@ -125,10 +125,10 @@ package:chrome:
     - build:chrome
     - test
   script:
-    - cd dist-chrome && zip -r ../edupage-ai-sidebar-chrome.zip .
+    - cd dist-chrome && zip -r ../aipage-chrome.zip .
   artifacts:
     paths:
-      - edupage-ai-sidebar-chrome.zip
+      - aipage-chrome.zip
     expire_in: 30 days
   only:
     - main
@@ -159,10 +159,10 @@ package:safari:
     - build:safari
     - test
   script:
-    - cd dist-safari && zip -r ../edupage-ai-sidebar-safari.zip .
+    - cd dist-safari && zip -r ../aipage-safari.zip .
   artifacts:
     paths:
-      - edupage-ai-sidebar-safari.zip
+      - aipage-safari.zip
     expire_in: 30 days
   only:
     - main
@@ -198,6 +198,6 @@ release:
     - package:safari
   script:
     - glab auth login --token $GLAB_TOKEN
-    - glab release create $CI_COMMIT_TAG --name "Release $CI_COMMIT_TAG" --notes "Release $CI_COMMIT_TAG" edupage-ai-sidebar-chrome.zip packages/*.xpi edupage-ai-sidebar-safari.zip
+    - glab release create $CI_COMMIT_TAG --name "Release $CI_COMMIT_TAG" --notes "Release $CI_COMMIT_TAG" aipage-chrome.zip packages/*.xpi aipage-safari.zip
   only:
     - tags
