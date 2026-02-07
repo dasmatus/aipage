@@ -107,6 +107,7 @@ build:test:
     - main
     - develop
     - merge_requests
+    - tags
 
 # Run Playwright tests
 test:
@@ -194,6 +195,26 @@ pages:
       - public
   only:
     - main
+
+# Generate Changelog and version bump
+changelog:
+  stage: release
+  needs:    
+    - build:test
+  script:
+    - apt-get update && apt-get install -y git
+    - git config --global user.email "${GITLAB_USER_EMAIL}"
+    - git config --global user.name "${GITLAB_USER_NAME}"
+    - git remote set-url origin https://oauth2:${GITLAB_ACCESS_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git
+    - git checkout $CI_COMMIT_REF_NAME
+    - git pull origin $CI_COMMIT_REF_NAME
+    - 'bun run release -- --message "chore(release): %s [skip ci]"'
+    - git push origin HEAD:$CI_COMMIT_REF_NAME --follow-tags
+  only:
+    - main
+  except:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /^chore\(release\):/
 
 # Automatic Release Publishing
 release:
