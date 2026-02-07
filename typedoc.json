@@ -10,7 +10,7 @@
   "name": "AIPage API",
   "navigationLinks": {
     "Documentation": "../index.html",
-    "GitHub": "https://gitlab.com/your-username/edupage-ai-sidebar"
+    "GitLab": "https://gitlab.com/TenTypekMatus/aipage"
   },
   "customCss": "./docs/typedoc-theme.css",
   "sort": ["source-order"],
