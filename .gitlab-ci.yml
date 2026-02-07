@@ -3,9 +3,10 @@
 
 image: oven/bun:canary-debian
 before_script:
-  - apt-get update &&  apt-get install -y nodejs npm
+  -  apt-get update &&  apt-get install -y nodejs npm
 
 stages:
+  - install
   - lint
   - build
   - test
@@ -27,25 +28,31 @@ cache:
     - node_modules/
     - .playwright/
 
+# Install dependencies
+install_dependencies:
+  stage: install
+  script:
+    - bun install
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
 # Lint the TypeScript code
 lint:
   stage: lint
+  needs:
+    - install_dependencies
   script:
-    - bun install
     - bun run lint
   allow_failure: false
-  only:
-    - main
-    - develop
-    - merge_requests
-    - tags
-    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Chrome
 build:chrome:
   stage: build
+  needs:
+    - install_dependencies
   script:
-    - bun install
     - bun run build:chrome
   artifacts:
     paths:
@@ -55,13 +62,13 @@ build:chrome:
     - main
     - develop
     - merge_requests
-    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Firefox
 build:firefox:
   stage: build
+  needs:
+    - install_dependencies
   script:
-    - bun install
     - bun run build:firefox
     - npx web-ext lint -s dist-firefox
   artifacts:
@@ -72,13 +79,13 @@ build:firefox:
     - main
     - develop
     - merge_requests
-    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Build for Safari
 build:safari:
   stage: build
+  needs:
+    - install_dependencies
   script:
-    - bun install
     - bun run build:safari
   artifacts:
     paths:
@@ -88,7 +95,6 @@ build:safari:
     - main
     - develop
     - merge_requests
-    - /^\d+\.\d+\.\d+$/ # Allow version branches like 1.2.0
 
 # Run Playwright tests
 test:
@@ -163,9 +169,10 @@ package:safari:
 # Deploy documentation to GitLab Pages
 pages:
   stage: pages
+  needs:
+    - install_dependencies
   before_script:
-    - bun install
-    - apt-get update && apt-get install -y curl nodejs npm
+    -  apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
