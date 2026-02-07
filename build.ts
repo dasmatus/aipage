@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
