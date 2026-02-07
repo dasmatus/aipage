@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to the EduPage AI Sidebar! This project aims to bring powerful AI assistance directly into the EduPage experience with a focus on privacy, choice, and professional design.
 
-## 🏗 Architecture Overview
+## Architecture Overview
 
 The extension is built with Manifest V3 and supports Chrome, Firefox, and Safari:
 
@@ -74,14 +74,14 @@ Before submitting changes, ensure compatibility across browsers:
    - Settings save/load correctly
    - Anti-cheat protection activates during tests
 
-## 🛠 Coding Standards
+## Coding Standards
 
 - **TypeScript**: Use strict-ish types. Avoid `any` where possible.
 - **JSDoc**: Document all exported functions and classes.
 - **CSS**: Use the variables defined in `sidebar.css` (:root) to ensure consistency with the theme.
 - **Privacy**: Never store API keys outside of `chrome.storage.local`.
 
-## 🎨 Adding New Providers
+## Adding New Providers
 
 To add a new AI provider:
 
@@ -161,5 +161,3 @@ This project uses GitLab CI for automated builds and testing:
 - **Package**: Creates distribution packages for all browsers
 
 The pipeline runs on all merge requests and commits to `main`/`develop` branches.
-
-Happy coding!
