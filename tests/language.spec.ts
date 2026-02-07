@@ -177,12 +177,20 @@ test.describe('Language Localization', () => {
         const instructionsTitle = await page.locator('.provider-instructions[data-provider="gemini"] h3').textContent();
         expect(instructionsTitle).toContain('Ako získať Gemini API kľúč:');
         
+        const firstStepSk = await page.locator('.provider-instructions[data-provider="gemini"] li').first().textContent();
+        expect(firstStepSk).toContain('Navštívte');
+        expect(firstStepSk).toContain('Google AI Studio'); // Link text remains same, but prefix changes
+
         // Switch to English
         await page.selectOption('#language-select', 'en');
         await page.waitForTimeout(500);
         
         const instructionsTitleEn = await page.locator('.provider-instructions[data-provider="gemini"] h3').textContent();
         expect(instructionsTitleEn).toContain('How to get a Gemini API key:');
+        
+        const firstStepEn = await page.locator('.provider-instructions[data-provider="gemini"] li').first().textContent();
+        expect(firstStepEn).toContain('Visit');
+        expect(firstStepEn).toContain('Google AI Studio');
     });
 
     test('all labels and hints should be localized', async ({ page }) => {

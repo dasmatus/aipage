@@ -107,87 +107,85 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
 
     const renderInstructions = (fullProvider: ProviderType) => {
-        // Simple mapping or conditional return
-        // We use data-provider attribute for tests
         return (
             <>
                 {fullProvider === 'gemini' && (
                     <div className="instructions-box provider-instructions" data-provider="gemini">
                         <h3>{t('geminiInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Navštívte <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
-                            <li>Prihláste sa pomocou svojho Google účtu</li>
-                            <li>Kliknite na &quot;Get API Key&quot; alebo &quot;Create API Key&quot;</li>
-                            <li>Skopírujte vygenerovaný kľúč (začína na AIzaSy...)</li>
-                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
+                            <li>{t('geminiStep1', language)} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
+                            <li>{t('geminiStep2', language)}</li>
+                            <li>{t('geminiStep3', language)}</li>
+                            <li>{t('geminiStep4', language)}</li>
+                            <li>{t('geminiStep5', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Váš API kľúč je uložený lokálne a bezpečne vo vašom prehliadači.</p>
+                        <p className="note">{t('geminiNote', language)}</p>
                     </div>
                 )}
                 {fullProvider === 'openai' && (
                     <div className="instructions-box provider-instructions" data-provider="openai">
                         <h3>{t('openaiInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Navštívte <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
-                            <li>Prihláste sa alebo si vytvorte účet</li>
-                            <li>Kliknite na &quot;Create new secret key&quot;</li>
-                            <li>Skopírujte vygenerovaný kľúč (začína na sk-...)</li>
-                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
+                            <li>{t('openaiStep1', language)} <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
+                            <li>{t('openaiStep2', language)}</li>
+                            <li>{t('openaiStep3', language)}</li>
+                            <li>{t('openaiStep4', language)}</li>
+                            <li>{t('openaiStep5', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Používanie OpenAI API je spoplatnené na základe tokenov.</p>
+                        <p className="note">{t('openaiNote', language)}</p>
                     </div>
                 )}
                 {fullProvider === 'claude' && (
                     <div className="instructions-box provider-instructions" data-provider="claude">
                         <h3>{t('claudeInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Navštívte <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
-                            <li>Prihláste sa alebo si vytvorte účet</li>
-                            <li>Prejdite do sekcie API Keys</li>
-                            <li>Kliknite na &quot;Create Key&quot;</li>
-                            <li>Skopírujte vygenerovaný kľúč (začína na sk-ant-...)</li>
-                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
+                            <li>{t('claudeStep1', language)} <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
+                            <li>{t('claudeStep2', language)}</li>
+                            <li>{t('claudeStep3', language)}</li>
+                            <li>{t('claudeStep4', language)}</li>
+                            <li>{t('claudeStep5', language)}</li>
+                            <li>{t('claudeStep6', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Claude API vyžaduje platený účet.</p>
+                        <p className="note">{t('claudeNote', language)}</p>
                     </div>
                 )}
                 {fullProvider === 'mistral' && (
                     <div className="instructions-box provider-instructions" data-provider="mistral">
                         <h3>{t('mistralInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Navštívte <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
-                            <li>Prihláste sa alebo si vytvorte účet</li>
-                            <li>Prejdite do sekcie API Keys</li>
-                            <li>Kliknite na &quot;Create new key&quot;</li>
-                            <li>Skopírujte vygenerovaný kľúč</li>
-                            <li>Vložte ho nižšie a kliknite na &quot;Uložiť kľúč&quot;</li>
+                            <li>{t('mistralStep1', language)} <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
+                            <li>{t('mistralStep2', language)}</li>
+                            <li>{t('mistralStep3', language)}</li>
+                            <li>{t('mistralStep4', language)}</li>
+                            <li>{t('mistralStep5', language)}</li>
+                            <li>{t('mistralStep6', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Používanie Mistral API je spoplatnené na základe tokenov.</p>
+                        <p className="note">{t('mistralNote', language)}</p>
                     </div>
                 )}
                 {fullProvider === 'lmstudio' && (
                     <div className="instructions-box provider-instructions" data-provider="lmstudio">
                         <h3>{t('lmstudioInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Stiahnite a nainštalujte z <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
-                            <li>Otvorte LM Studio a stiahnite si model (napr. Meta Llama 3)</li>
-                            <li>Prejdite na kartu <b>Local Server</b> (ikona s dvoma šípkami)</li>
-                            <li>Kliknite na <b>Start Server</b></li>
-                            <li>Nižšie zadajte základnú URL (predvolená: http://localhost:1234/v1)</li>
+                            <li>{t('lmstudioStep1', language)} <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
+                            <li>{t('lmstudioStep2', language)}</li>
+                            <li>{t('lmstudioStep3', language)}</li>
+                            <li>{t('lmstudioStep4', language)}</li>
+                            <li>{t('lmstudioStep5', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a slušné GPU/CPU.</p>
+                        <p className="note">{t('lmstudioNote', language)}</p>
                     </div>
                 )}
                 {fullProvider === 'ollama' && (
                     <div className="instructions-box provider-instructions" data-provider="ollama">
                         <h3>{t('ollamaInstructionsTitle', language)}</h3>
                         <ol>
-                            <li>Stiahnite a nainštalujte z <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
-                            <li>Otvorte terminál a spustite: <code>ollama run llama3</code></li>
-                            <li>Počkajte, kým sa sťahovanie dokončí a objaví sa výzva</li>
-                            <li>Nechajte Ollama bežať a zadajte základnú URL nižšie</li>
+                            <li>{t('ollamaStep1', language)} <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
+                            <li>{t('ollamaStep2', language)} <code>ollama run llama3</code></li>
+                            <li>{t('ollamaStep3', language)}</li>
+                            <li>{t('ollamaStep4', language)}</li>
                         </ol>
-                        <p className="note">⚠️ Na macOS/Linuxe Ollama zvyčajne beží automaticky na pozadí.</p>
+                        <p className="note">{t('ollamaNote', language)}</p>
                     </div>
                 )}
             </>
