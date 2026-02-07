@@ -6,6 +6,7 @@ before_script:
   -  apt-get update &&  apt-get install -y nodejs npm
 
 stages:
+  - cache
   - lint
   - build
   - test
@@ -29,6 +30,7 @@ cache:
 
 # Install dependencies
 install_dependencies:
+  stage: cache
   script:
     - bun install
   artifacts:
