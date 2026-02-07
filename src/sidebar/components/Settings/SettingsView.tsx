@@ -275,7 +275,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         onChange={(e) => setApiKey(e.target.value)} 
                         placeholder="Zadajte svoj API kľúč" 
                     />
-                    <p className="hint">Váš kľúč je uložený lokálne a nikdy sa nezdieľa.</p>
+                    <p className="hint">Váš kľúč je uložený na vašom zariadení a nikdy sa nezdieľa.</p>
                 </div>
 
                 <button id="save-key-btn" className="primary-btn" onClick={handleSave}>Uložiť kľúč</button>

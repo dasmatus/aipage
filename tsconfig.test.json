@@ -1,0 +1,10 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["bun-types", "chrome", "node", "@playwright/test"],
+        "moduleResolution": "node"
+    },
+    "include": [
+        "tests/**/*"
+    ]
+}

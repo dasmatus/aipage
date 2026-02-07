@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "EduPage AI Sidebar",
+  "version": "1.1",
+  "description": "Vercel-style AI Sidebar for EduPage with Anti-Cheat Protection",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.edupage.org/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.mistral.ai/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.edupage.org/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidebar.html",
+        "sidebar.css",
+        "sidebar.js"
+      ],
+      "matches": [
+        "*://*.edupage.org/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "Open AI Sidebar"
+  }
+}

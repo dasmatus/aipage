@@ -4,7 +4,13 @@
     "packageManager": "bun@1.3.8",
     "description": "Vercel-style Multi-Provider AI Sidebar for EduPage with Anti-Cheat",
     "scripts": {
-        "build": "bun run build.ts",
+        "build": "bun run build.ts --target=chrome",
+        "build:chrome": "bun run build.ts --target=chrome",
+        "build:firefox": "bun run build.ts --target=firefox",
+        "build:safari": "bun run build.ts --target=safari",
+        "build:all": "bun run build:chrome && bun run build:firefox && bun run build:safari",
+        "package:chrome": "cd dist-chrome && zip -r ../edupage-ai-sidebar-chrome.zip .",
+        "package:firefox": "npx web-ext build -s dist-firefox -a packages",
         "lint": "eslint 'src/**/*.{ts,tsx}' --quiet",
         "test": "bun run build && npx playwright test --reporter=list"
     },
@@ -26,11 +32,13 @@
         "globals": "^17.3.0",
         "sass": "^1.97.3",
         "typescript": "^5.3.3",
-        "typescript-eslint": "^8.54.0"
+        "typescript-eslint": "^8.54.0",
+        "web-ext": "^8.4.0"
     },
     "dependencies": {
         "marked": "^17.0.1",
         "react": "^18.2.0",
-        "react-dom": "^18.2.0"
+        "react-dom": "^18.2.0",
+        "webextension-polyfill": "^0.12.0"
     }
 }

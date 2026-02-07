@@ -1,33 +1,67 @@
 # EduPage AI Sidebar Extension
 
-A Chrome extension that adds an AI-powered sidebar to EduPage, featuring a clean interface and integration with Google's Gemini AI.
+A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powered sidebar to EduPage, featuring a clean interface and integration with multiple AI providers.
 
 ## Features
 
 - 🤖 AI chat assistant integrated directly into EduPage
+- 🌐 **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
 - 🎨 Clean, responsive design that matches EduPage's aesthetic
-- 💬 Real-time conversations with Gemini AI
+- 💬 Real-time conversations with multiple AI providers (Gemini, ChatGPT, Claude, Mistral, LM Studio, Ollama)
 - 🔒 Secure local storage of API credentials
 - 📱 Responsive sidebar that doesn't obscure important UI elements
-- 🛡️ **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests.
-- 🧠 **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly.
+- 🛡️ **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
+- 🧠 **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly
 
 ## Installation
+
+### Prerequisites
 
 1. Clone or download this repository
 2. Install dependencies:
    ```bash
-   npm install
+   bun install
    ```
-3. Build the extension:
+
+### Chrome
+
+1. Build the extension:
    ```bash
-   npm run build
+   bun run build:chrome
    ```
-4. Load the extension in Chrome:
+2. Load the extension in Chrome:
    - Open Chrome and navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
    - Click "Load unpacked"
-   - Select the `dist` folder from this project
+   - Select the `dist-chrome` folder from this project
+
+### Firefox
+
+1. Build the extension:
+   ```bash
+   bun run build:firefox
+   ```
+2. Load the extension in Firefox:
+   - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+   - Click "Load Temporary Add-on"
+   - Navigate to the `dist-firefox` folder and select the `manifest.json` file
+
+### Safari (macOS only)
+
+1. Build the extension:
+   ```bash
+   bun run build:safari
+   ```
+2. Generate the Xcode project:
+   ```bash
+   ./scripts/setup-safari.sh
+   ```
+3. Open the generated Xcode project:
+   ```bash
+   open safari/EduPage\ AI\ Sidebar.xcodeproj
+   ```
+4. Build and run from Xcode
+5. Enable the extension in Safari Preferences → Extensions
 
 ## Setting Up Your AI Provider
 
@@ -86,6 +120,7 @@ Your API key is stored locally in your browser and is never sent anywhere except
 ### Step 4: Start Chatting
 
 Once your API key is saved:
+
 - The sidebar will automatically switch to the chat view
 - Type your question in the input field at the bottom
 - Press Enter or click the send button
@@ -94,6 +129,7 @@ Once your API key is saved:
 ### Switching Providers
 
 You can switch between providers at any time:
+
 1. Click the settings icon (gear) in the sidebar header
 2. Select a different provider from the dropdown
 3. Enter the API key for that provider (if not already saved)
@@ -114,25 +150,47 @@ Each provider's API key is stored separately, so you can switch between them wit
 ```
 extension/
 ├── src/
-│   ├── manifest.json       # Extension manifest
-│   ├── background.ts       # Background service worker
-│   ├── content.ts          # Content script (injects sidebar)
+│   ├── manifest.json           # Chrome manifest
+│   ├── manifest.firefox.json   # Firefox manifest
+│   ├── manifest.safari.json    # Safari manifest
+│   ├── background.ts            # Background service worker
+│   ├── content.ts               # Content script (injects sidebar)
+│   ├── polyfills/
+│   │   └── browser-polyfill.ts  # Cross-browser compatibility
 │   └── sidebar/
-│       ├── sidebar.html    # Sidebar UI
-│       ├── sidebar.css     # Sidebar styles
-│       └── sidebar.ts      # Sidebar logic
+│       ├── sidebar.html         # Sidebar UI
+│       ├── sidebar.scss         # Sidebar styles
+│       └── index.tsx            # Sidebar logic (React)
+├── scripts/
+│   └── setup-safari.sh          # Safari Xcode project generator
 ├── tests/
-│   ├── sidebar.spec.ts     # Sidebar UI tests
-│   └── navbar.spec.ts      # Integration tests
-├── dist/                   # Built extension (generated)
-└── build.js               # Build script
+│   ├── sidebar.spec.ts          # Sidebar UI tests
+│   ├── navbar.spec.ts           # Integration tests
+│   ├── test-player.spec.ts      # Anti-cheat tests
+│   └── context.spec.ts          # Context menu tests
+├── dist-chrome/                 # Chrome build output
+├── dist-firefox/                # Firefox build output
+├── dist-safari/                 # Safari build output
+└── build.ts                     # Multi-browser build script
+```
+
+### Building
+
+```bash
+# Build for a specific browser
+bun run build:chrome
+bun run build:firefox
+bun run build:safari
+
+# Build for all browsers
+bun run build:all
 ```
 
 ### Running Tests
 
 ```bash
-# Run all tests
-npx playwright test
+# Run all tests (builds Chrome first)
+bun test
 
 # Run specific test file
 npx playwright test tests/sidebar.spec.ts
@@ -141,13 +199,29 @@ npx playwright test tests/sidebar.spec.ts
 npx playwright show-report
 ```
 
-### Building
+### Packaging for Distribution
 
 ```bash
-npm run build
+# Package Chrome extension (.zip)
+bun run package:chrome
+
+# Package Firefox extension (.xpi)
+bun run package:firefox
+
+# Outputs:
+# - edupage-ai-sidebar-chrome.zip (for Chrome Web Store)
+# - packages/*.xpi (for Firefox Add-ons)
+# - Safari requires App Store submission via Xcode
 ```
 
-This compiles TypeScript files and copies static assets to the `dist` folder.
+### CI/CD Pipeline
+
+This project uses GitLab CI for automated building and testing:
+
+- **Lint Stage**: Runs ESLint on all TypeScript files
+- **Build Stage**: Builds extensions for Chrome, Firefox, and Safari in parallel
+- **Test Stage**: Runs Playwright tests on Chrome build
+- **Package Stage**: Creates distribution packages for all browsers
 
 ## Troubleshooting
 
@@ -178,6 +252,7 @@ This compiles TypeScript files and copies static assets to the `dist` folder.
 ## Anti-Cheat Protection
 
 When a test is active (detected via `.etest-player-header`), the extension automatically:
+
 1.  **Prevents Tab Switch Detection**: Overrides the Visibility API (`document.hidden`, `visibilityState`) and blocks `blur`/`focusout` events.
 2.  **Blocks Copy-Paste Detection**: Prevents the site from detecting or blocking `copy`, `cut`, `paste`, and `contextmenu` actions.
 
@@ -190,6 +265,7 @@ This project is for educational purposes.
 ## Credits
 
 Built with:
+
 - [Google Gemini API](https://ai.google.dev/)
 - [Playwright](https://playwright.dev/) for testing
 - TypeScript & esbuild

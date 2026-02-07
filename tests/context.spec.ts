@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
-import fs from 'fs';
 
 test.describe('Page Context Analysis', () => {
     test.beforeEach(async ({ page }) => {

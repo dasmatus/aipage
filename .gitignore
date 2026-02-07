@@ -3,6 +3,13 @@ node_modules/
 
 # Build
 dist/
+dist-chrome/
+dist-firefox/
+dist-safari/
+packages/
+*.zip
+*.xpi
+safari/
 
 # Bun
 bun.lockb
