@@ -16,7 +16,7 @@ The extension is built with Manifest V3 and supports Chrome, Firefox, and Safari
   - `chat-manager.ts`: Handles markdown rendering and message flow
   - `ui-utils.ts`: Shared DOM helpers
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -93,7 +93,7 @@ To add a new AI provider:
    - `src/manifest.safari.json` (Safari)
 4. Update `src/sidebar/sidebar.html` with relevant instructions
 
-## 📝 Conventional Commits
+## Conventional Commits
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automatic changelog generation.
 
@@ -151,7 +151,7 @@ This will:
 3. Create a git tag
 4. Push changes and tags to Git
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 This project uses GitLab CI for automated builds and testing:
 

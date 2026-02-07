@@ -1,0 +1,39 @@
+[book]
+title = "EduPage AI Sidebar Documentation"
+authors = ["EduPage AI Sidebar Contributors"]
+description = "Cross-browser extension bringing AI assistance to EduPage"
+language = "en"
+src = "book/src"
+
+[build]
+build-dir = "public"
+create-missing = true
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://gitlab.com/TenTypekMatus/aipage"
+edit-url-template = "https://gitlab.com/TenTypekMatus/aipage/-/edit/main/{path}"
+site-url = "/edupage-ai-sidebar/"
+cname = ""
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+
+[output.html.playground]
+editable = false
+copyable = true
+copy-js = true
+line-numbers = false
+
+[output.html.fold]
+enable = true
+level = 0

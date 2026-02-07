@@ -9,6 +9,7 @@ stages:
   - build
   - test
   - package
+  - pages
 
 # Cache node_modules for faster builds
 cache:
@@ -165,3 +166,23 @@ package:safari:
   only:
     - main
     - tags
+
+# Deploy documentation to GitLab Pages
+pages:
+  stage: pages
+  needs:
+    - install_dependencies
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+    - chmod +x mdbook
+    - mv mdbook /usr/local/bin/
+    - npm install -g bun marked
+  script:
+    - chmod +x scripts/build-docs.sh
+    - ./scripts/build-docs.sh
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

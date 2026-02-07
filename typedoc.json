@@ -1,0 +1,27 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "public/api",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "readme": "none",
+  "name": "EduPage AI Sidebar API",
+  "navigationLinks": {
+    "Documentation": "../index.html",
+    "GitHub": "https://gitlab.com/your-username/edupage-ai-sidebar"
+  },
+  "customCss": "./docs/typedoc-theme.css",
+  "sort": ["source-order"],
+  "categorizeByGroup": true,
+  "defaultCategory": "Core",
+  "categoryOrder": [
+    "Core",
+    "Sidebar",
+    "Providers",
+    "Storage",
+    "Utilities",
+    "*"
+  ]
+}

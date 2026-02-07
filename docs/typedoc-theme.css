@@ -1,0 +1,32 @@
+/* TypeDoc custom theme to match documentation site */
+
+:root {
+    --color-background: #0f172a;
+    --color-background-secondary: #1e293b;
+    --color-text: #f1f5f9;
+    --color-text-aside: #94a3b8;
+    --color-link: #667eea;
+    --color-accent: #667eea;
+}
+
+body {
+    background: var(--color-background);
+    color: var(--color-text);
+}
+
+.tsd-page-toolbar {
+    background: var(--color-background-secondary);
+    border-bottom: 1px solid #334155;
+}
+
+.tsd-navigation a {
+    color: var(--color-text-aside);
+}
+
+.tsd-navigation a:hover {
+    color: var(--color-text);
+}
+
+.tsd-navigation a.current {
+    color: var(--color-accent);
+}
