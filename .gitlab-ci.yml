@@ -57,7 +57,7 @@ build:chrome:
   artifacts:
     paths:
       - dist-chrome/
-    expire_in: 30 days
+    expire_in: 7 days
   only:
     - main
     - develop
@@ -74,7 +74,7 @@ build:firefox:
   artifacts:
     paths:
       - dist-firefox/
-    expire_in: 30 days
+    expire_in: 7 days
   only:
     - main
     - develop
@@ -90,7 +90,7 @@ build:safari:
   artifacts:
     paths:
       - dist-safari/
-    expire_in: 30 days
+    expire_in: 7 days
   only:
     - main
     - develop
