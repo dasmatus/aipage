@@ -59,7 +59,7 @@ build:chrome:
       - dist-chrome/
     expire_in: 7 days
   only:
-    - tags
+    
 
 # Build for Firefox
 build:firefox:
@@ -74,7 +74,7 @@ build:firefox:
       - dist-firefox/
     expire_in: 7 days
   only:
-    - tags
+    
 
 # Build for Safari
 build:safari:
@@ -88,7 +88,7 @@ build:safari:
       - dist-safari/
     expire_in: 7 days
   only:
-    - tags
+    
 
 # Build for Playwright tests (only on branches/MRs)
 build:test:
@@ -107,7 +107,7 @@ build:test:
     - main
     - develop
     - merge_requests
-    - tags
+    
 
 # Run Playwright tests
 test:
@@ -145,7 +145,7 @@ package:chrome:
       - aipage-chrome.zip
     expire_in: 30 days
   only:
-    - tags
+    - main
 
 # Package Firefox extension
 package:firefox:
@@ -162,7 +162,7 @@ package:firefox:
       - packages/*.xpi
     expire_in: 30 days
   only:
-    - tags
+    - main
 
 # Package Safari extension (creates distributable directory)
 package:safari:
@@ -177,7 +177,7 @@ package:safari:
       - aipage-safari.zip
     expire_in: 30 days
   only:
-    - tags
+    - main
 
 # Deploy documentation to GitLab Pages
 pages:
@@ -231,4 +231,4 @@ release:
     - glab auth login --token $GLAB_TOKEN
     - glab release create $CI_COMMIT_TAG --name "Release $CI_COMMIT_TAG" --notes "Release $CI_COMMIT_TAG" aipage-chrome.zip packages/*.xpi aipage-safari.zip
   only:
-    - tags
+    - main    
