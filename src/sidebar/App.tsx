@@ -6,6 +6,7 @@ import { useChat } from './hooks/useChat';
 import { ProviderType } from './types';
 import * as Storage from './storage';
 import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
+import browser from 'webextension-polyfill';
 
 const App: React.FC = () => {
     // State
@@ -63,9 +64,9 @@ const App: React.FC = () => {
     const handleScanPage = async () => {
         try {
             setIsScanning(true);
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tabs = await browser.tabs.query({ active: true, currentWindow: true });
             if (tabs[0]?.id) {
-                const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' });
+                const response = await browser.tabs.sendMessage(tabs[0].id, { action: 'get_page_content' });
                 if (response && response.content) {
                     handlePageContext(response.content, response.isSelection, response.images);
                 } else {
