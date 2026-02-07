@@ -3,13 +3,13 @@
 
 image: oven/bun:canary-debian
 before_script:
-  -  apt-get update &&  apt-get install -y nodejs npm
+  - apt-get update &&  apt-get install -y nodejs npm
 
 stages:
   - cache
   - lint
-  - build
   - test
+  - build
   - package
   - pages
   - release
@@ -174,7 +174,7 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    -  apt-get update &&  apt-get install -y curl  nodejs npm
+    - apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
