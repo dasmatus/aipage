@@ -1,6 +1,17 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
+const getDistPath = (projectName: string) => {
+    switch (projectName) {
+        case 'firefox':
+            return '../dist-firefox/sidebar.html';
+        case 'webkit':
+            return '../dist-safari/sidebar.html';
+        default:
+            return '../dist-chrome/sidebar.html';
+    }
+};
+
 test.describe('Sidebar UI', () => {
     test.beforeEach(async ({ page }) => {
         // Mock the chrome API
@@ -57,8 +68,8 @@ test.describe('Sidebar UI', () => {
         });
     });
 
-    test('should show settings view by default (no API key)', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should show settings view by default (no API key)', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         await expect(page.locator('#settings-view')).toBeVisible();
         await expect(page.locator('#chat-view')).toBeHidden();
@@ -67,20 +78,13 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('#provider-select')).toBeVisible();
     });
 
-    test('should allow selecting different providers', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should allow selecting different providers', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Select OpenAI
         await page.selectOption('#provider-select', 'openai');
 
         // OpenAI instructions should be visible
-        // In the React implementation, we might not have `data-provider` logic perfectly replicated if I missed it,
-        // let's check SettingsView implementation.
-        // Wait, I implemented `SettingsView` but I didn't verify instructions logic.
-        // Let's assume for now I need to check visibility.
-        // Actually, looking at SettingsView code I wrote in previous turn:
-        // Proper instructions content seemed missing in the simplified SettingsView! 
-        // I only added fields. I need to fix SettingsView to include instructions first!
         await expect(page.locator('[data-provider="openai"]')).toBeVisible();
         await expect(page.locator('[data-provider="gemini"]')).toBeHidden();
 
@@ -90,8 +94,8 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('[data-provider="openai"]')).toBeHidden();
     });
 
-    test('should allow saving API key and switching to chat', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should allow saving API key and switching to chat', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Enter API key for Gemini (default)
         await page.fill('#api-key-input', 'test-gemini-key');
@@ -102,7 +106,7 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('#chat-view')).not.toHaveClass(/hidden/);
     });
 
-    test('should persist API key for each provider separately', async ({ page }) => {
+    test('should persist API key for each provider separately', async ({ page }, testInfo) => {
         // Pre-seed storage with multiple provider keys
         await page.addInitScript(() => {
             (window as any).chrome.storage.local.set({
@@ -112,7 +116,7 @@ test.describe('Sidebar UI', () => {
             });
         });
 
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Should show chat view immediately (has Gemini key)
         await expect(page.locator('#chat-view')).not.toHaveClass(/hidden/);
@@ -125,8 +129,8 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('#api-key-input')).toHaveValue('openai-key-456');
     });
 
-    test('should display sent messages', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should display sent messages', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Login first
         await page.fill('#api-key-input', 'test-api-key');
@@ -143,9 +147,9 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('.message.ai .content').last()).toContainText(/Rozmýšľam|Mocked/);
     });
 
-    test('should display user initials from URL hash', async ({ page }) => {
+    test('should display user initials from URL hash', async ({ page }, testInfo) => {
         // Load with initials hash
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}#initials=XK`);
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}#initials=XK`);
 
         // Login to enable chat
         await page.fill('#api-key-input', 'test-api-key');
@@ -159,8 +163,8 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('.message.user .avatar')).toHaveText('XK');
     });
 
-    test('should show local settings for LM Studio and Ollama', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should show local settings for LM Studio and Ollama', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Select LM Studio
         await page.selectOption('#provider-select', 'lmstudio');
@@ -183,8 +187,8 @@ test.describe('Sidebar UI', () => {
         await expect(page.locator('#local-settings')).toBeHidden();
     });
 
-    test('should allow saving local provider settings', async ({ page }) => {
-        await page.goto(`file://${path.resolve(__dirname, '../dist/sidebar.html')}`);
+    test('should allow saving local provider settings', async ({ page }, testInfo) => {
+        await page.goto(`file://${path.resolve(__dirname, getDistPath(testInfo.project.name))}`);
 
         // Select Ollama
         await page.selectOption('#provider-select', 'ollama');

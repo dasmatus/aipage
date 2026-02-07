@@ -12,6 +12,7 @@ stages:
   - test
   - package
   - pages
+  - release
 
 # Global environment variables
 variables:
@@ -171,11 +172,11 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    -  apt-get update &&  apt-get install -y curl
+    -  apt-get update &&  apt-get install -y curl  nodejs npm
     - curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
     - chmod +x mdbook
     - mv mdbook /usr/local/bin/
-    - npm install -g bun marked
+    - npm install -g marked
   script:
     - chmod +x scripts/build-docs.sh
     - ./scripts/build-docs.sh
@@ -184,3 +185,17 @@ pages:
       - public
   only:
     - main
+
+# Automatic Release Publishing
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs:
+    - package:chrome
+    - package:firefox
+    - package:safari
+  script:
+    - glab auth login --token $GLAB_TOKEN
+    - glab release create $CI_COMMIT_TAG --name "Release $CI_COMMIT_TAG" --notes "Release $CI_COMMIT_TAG" edupage-ai-sidebar-chrome.zip packages/*.xpi edupage-ai-sidebar-safari.zip
+  only:
+    - tags
