@@ -15,11 +15,19 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 
 ## Installation
 
-To install the extension, download the latest release from the [GitLab Releases](https://gitlab.com/TenTypekMatus/aipage/-/releases) page.
+To install the extension, download the latest build artifacts directly from our GitLab CI pipelines.
+
+1.  Visit the [GitLab Pipelines](https://gitlab.com/TenTypekMatus/aipage/-/pipelines) page.
+2.  Locate the latest successful pipeline for the `main` branch (status: Passed).
+3.  Click the **Download artifacts** icon (or access the pipeline details).
+4.  Download the artifact for your specific browser job:
+    - **Chrome**: Look for the `package:chrome` job artifact (contains `aipage-chrome.zip`).
+    - **Firefox**: Look for the `package:firefox` job artifact (contains `.xpi` file).
+    - **Safari**: Look for the `package:safari` job artifact (contains `aipage-safari.zip`).
 
 ### Chrome
 
-1.  Download `edupage-ai-sidebar-chrome.zip` from the latest release.
+1.  Download `aipage-chrome.zip` (from the `package:chrome` job artifact).
 2.  Unzip the file to a folder on your computer.
 3.  Open Chrome and navigate to `chrome://extensions/`.
 4.  Enable **"Developer mode"** (toggle in the top-right corner).
@@ -28,14 +36,14 @@ To install the extension, download the latest release from the [GitLab Releases]
 
 ### Firefox
 
-1.  Download the `.xpi` file (e.g., `edupage-ai-sidebar-vX.Y.Z.xpi`) from the latest release.
+1.  Download the `.xpi` file from the `package:firefox` job artifact.
 2.  Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
 3.  Click **"Load Temporary Add-on"**.
 4.  Select the downloaded `.xpi` file.
 
 ### Safari (macOS only)
 
-1.  Download `aipage-safari.zip` from the latest release.
+1.  Download `aipage-safari.zip` from the `package:safari` job artifact.
 2.  Unzip the file to get the application.
 3.  Run the application locally.
 4.  Open Safari Preferences → Extensions.
