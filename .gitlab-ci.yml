@@ -34,6 +34,9 @@ install_dependencies:
     paths:
       - node_modules/
     expire_in: 1 hour
+  only:
+    - main
+    - merge_requests
 
 # Lint the TypeScript code
 lint:
@@ -43,6 +46,8 @@ lint:
   script:
     - bun run lint
   allow_failure: false
+  only:
+    - merge_requests
 
 # Build for Chrome
 build:chrome:
@@ -56,7 +61,7 @@ build:chrome:
       - dist-chrome/
     expire_in: 7 days
   only:
-    
+    - main
 
 # Build for Firefox
 build:firefox:
@@ -71,6 +76,7 @@ build:firefox:
       - dist-firefox/
     expire_in: 7 days
   only:
+    - main
     
 
 # Build for Safari
@@ -85,32 +91,15 @@ build:safari:
       - dist-safari/
     expire_in: 7 days
   only:
-    
-
-# Build for Playwright tests (only on branches/MRs)
-build:test:
-  stage: build
-  needs:
-    - install_dependencies
-  script:
-    - bun run build:all
-  artifacts:
-    paths:
-      - dist-chrome/
-      - dist-firefox/
-      - dist-safari/
-    expire_in: 5 hours
-  only:
     - main
-    - develop
-    - merge_requests
-    
 
 # Run Playwright tests
 test:
   stage: test
   needs:
-    - build:test
+    - build:chrome
+    - build:firefox
+    - build:safari
   before_script:
     - bunx playwright install --with-deps chromium
   script:
@@ -123,8 +112,6 @@ test:
     expire_in: 7 days
   only:
     - main
-    - develop
-    - merge_requests
   except:
     variables:
       - $CI_COMMIT_MESSAGE =~ /^chore\(release\):/
