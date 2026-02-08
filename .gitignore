@@ -29,3 +29,6 @@ coverage/
 .vscode/
 .idea/
 *.swp
+
+# Vercel
+.vercel
