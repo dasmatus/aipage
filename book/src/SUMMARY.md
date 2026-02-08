@@ -1,16 +1,16 @@
 # Summary
 
-[Introduction](./introduction.md)
+[Introduction](introduction.md)
 
 # User Documentation
 
-- [User Guide](./user-guide.md)
+- [User Guide](user-guide.md)
 
 # Development
 
-- [Contributing Guide](./contributing.md)
+- [Contributing Guide](contributing.md)
 
 # Reference
 
-- [Changelog](./changelog.md)
-- [API Reference](./api-reference.md)
+- [Changelog](changelog.md)
+- [API Reference](api-reference.md)
