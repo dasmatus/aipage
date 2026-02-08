@@ -14,7 +14,7 @@ export interface ContextAction {
     primary: boolean;
 }
 
-export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudio' | 'ollama' | 'vercel';
+export { ProviderType } from './providers';
 
 export interface ChatState {
     messages: Message[];

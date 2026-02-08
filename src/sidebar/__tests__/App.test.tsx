@@ -66,37 +66,42 @@ describe('App', () => {
         });
 
         // Setup Storage mocks
-        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('gemini');
+        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('vercel');
         (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
         (Storage.getThemePreference as jest.Mock).mockResolvedValue('default');
     });
 
     it('renders chat view by default', async () => {
         await act(async () => {
-            render(<App />);
+             render(<App />);
         });
+        const v = await Storage.getProviderPreference();
+        // console.log('Mocked Provider:', v);
         
         expect(screen.getByTestId('message-list')).toBeInTheDocument();
         expect(screen.getByTestId('input-area')).toBeInTheDocument();
-        // Settings view should be hidden (or not rendered if conditionally rendered, but in App it uses class hidden)
-        // Check implementation: it renders both but toggles visibility class.
-        // Or wait, let's check App.tsx source.
-        // It renders both div#chat-view and div#settings-view with classes.
         const settingsView = screen.getByTestId('settings-view').parentElement;
-        expect(settingsView).toHaveClass('hidden');
+        // In App.tsx, initial state is 'chat', so chat view is visible (translate-x-0) 
+        // and settings view is hidden (translate-x-full).
+        // Since we mock child components, we checks styles on container.
+        // Actually, the test checks if it has class 'hidden'?
+        // The implementation: view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
+        // So yes, if view is chat, settings view has 'hidden'.
+         expect(settingsView).toHaveClass('hidden');
     });
 
     it('switches to settings view', async () => {
         await act(async () => {
             render(<App />);
         });
-
-        const settingsBtn = screen.getByRole('button', { name: /settings/i }); // Wait, svg inside button, might not have name. 
-        // Use ID if possible. ID is "settings-btn".
-        // Or finding by role button works if it's the only one or we use id.
-        // We mocked child components so ONLY the header buttons remain.
-        const btn = document.querySelector('#settings-btn');
-        fireEvent.click(btn!);
+        
+        // Settings button has id settings-btn
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) { 
+            await act(async () => {
+                fireEvent.click(settingsBtn);
+            });
+        }
 
         const settingsView = screen.getByTestId('settings-view').parentElement;
         expect(settingsView).not.toHaveClass('hidden');
@@ -108,11 +113,14 @@ describe('App', () => {
         });
 
         const sendBtn = screen.getByText('Send');
-        fireEvent.click(sendBtn);
+        await act(async () => {
+            fireEvent.click(sendBtn);
+        });
 
         await waitFor(() => {
              // App calls sendMessage with text, provider, key, options
-             expect(mockSendMessage).toHaveBeenCalledWith('hello', 'gemini', 'test-key', undefined);
+             // default mock is 'vercel'
+             expect(mockSendMessage).toHaveBeenCalledWith('hello', 'vercel', 'test-key', undefined);
         });
     });
 

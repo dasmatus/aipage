@@ -103,11 +103,9 @@ jest.mock('../../../providers', () => ({
     })),
     providers: {},
     ProviderType: {
-        GEMINI: 'gemini',
-        CLAUDE: 'claude',
-        OPENAI: 'openai',
         LMSTUDIO: 'lmstudio',
         OLLAMA: 'ollama',
+        VERCEL: 'vercel',
     }
 }));
 
@@ -132,7 +130,7 @@ describe('SettingsView', () => {
         await act(async () => {
             render(
                 <SettingsView
-                    currentProvider="gemini"
+                    currentProvider="vercel"
                     onClose={mockOnClose}
                     onProviderChange={mockOnProviderChange}
                     language="en"

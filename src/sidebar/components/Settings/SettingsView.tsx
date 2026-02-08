@@ -150,53 +150,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         if (providerBackend === 'vercel') return null;
 
         const instructions: Record<string, { title: string, steps: (string | React.ReactNode)[], note?: string, troubleshoot?: string }> = {
-            gemini: {
-                title: t('geminiInstructionsTitle', language),
-                steps: [
-                    <>{t('geminiStep1', language)} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a></>,
-                    t('geminiStep2', language),
-                    t('geminiStep3', language),
-                    t('geminiStep4', language),
-                    t('geminiStep5', language),
-                ],
-                note: t('geminiNote', language),
-                troubleshoot: t('geminiTroubleshoot', language)
-            },
-            openai: {
-                title: t('openaiInstructionsTitle', language),
-                steps: [
-                    <>{t('openaiStep1', language)} <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI Platform</a></>,
-                    t('openaiStep2', language),
-                    t('openaiStep3', language),
-                    t('openaiStep4', language),
-                    t('openaiStep5', language),
-                ],
-                note: t('openaiNote', language)
-            },
-            claude: {
-                title: t('claudeInstructionsTitle', language),
-                steps: [
-                    <>{t('claudeStep1', language)} <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Anthropic Console</a></>,
-                    t('claudeStep2', language),
-                    t('claudeStep3', language),
-                    t('claudeStep4', language),
-                    t('claudeStep5', language),
-                    t('claudeStep6', language),
-                ],
-                note: t('claudeNote', language)
-            },
-            mistral: {
-                title: t('mistralInstructionsTitle', language),
-                steps: [
-                    <>{t('mistralStep1', language)} <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mistral Console</a></>,
-                    t('mistralStep2', language),
-                    t('mistralStep3', language),
-                    t('mistralStep4', language),
-                    t('mistralStep5', language),
-                    t('mistralStep6', language),
-                ],
-                note: t('mistralNote', language)
-            },
             lmstudio: {
                 title: t('lmstudioInstructionsTitle', language),
                 steps: [

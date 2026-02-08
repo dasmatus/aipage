@@ -12,10 +12,6 @@ import { ProviderType } from './providers';
 export const STORAGE_KEYS = {
     PROVIDER: 'ai_provider',
     API_KEYS: {
-        gemini: 'gemini_api_key',
-        openai: 'openai_api_key',
-        claude: 'claude_api_key',
-        mistral: 'mistral_api_key',
         lmstudio: 'lmstudio_api_key',
         ollama: 'ollama_api_key',
         vercel: 'vercel_api_key'
@@ -34,7 +30,9 @@ export const STORAGE_KEYS = {
  */
 export async function getProviderPreference(): Promise<ProviderType> {
     const result = await browser.storage.local.get([STORAGE_KEYS.PROVIDER]) as Record<string, any>;
-    return (result[STORAGE_KEYS.PROVIDER] || 'gemini') as ProviderType;
+    const p = result[STORAGE_KEYS.PROVIDER];
+    if (p === 'lmstudio' || p === 'ollama' || p === 'vercel') return p;
+    return 'vercel';
 }
 
 /**

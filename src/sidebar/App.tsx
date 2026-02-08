@@ -16,7 +16,7 @@ import { cn } from './lib/utils';
 const App: React.FC = () => {
     // State
     const [view, setView] = useState<'chat' | 'settings'>('chat');
-    const [provider, setProvider] = useState<ProviderType>('gemini');
+    const [provider, setProvider] = useState<ProviderType>('vercel');
     const [, setApiKey] = useState<string | null>(null);
     const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, setIsTyping } = useChat();
     const [isScanning, setIsScanning] = useState(false);
