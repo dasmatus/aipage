@@ -36,6 +36,7 @@ export interface Translation {
     
     // Chat
     chatPlaceholder: string;
+    send: string;
     errorApiKey: string;
     errorNetwork: string;
     errorGeneral: string;
@@ -137,6 +138,7 @@ export const translations: Record<string, Translation> = {
         apiKeyHint: 'Váš kľúč je uložený na vašom zariadení a nikdy sa nezdieľa.',
         
         chatPlaceholder: 'Napíšte správu...',
+        send: 'Odoslať',
         errorApiKey: 'Prosím, nastavte svoj API kľúč v nastaveniach',
         errorNetwork: 'Chyba siete. Skontrolujte pripojenie.',
         errorGeneral: 'Vyskytla sa chyba. Skúste to znova.',
@@ -238,6 +240,7 @@ export const translations: Record<string, Translation> = {
         apiKeyHint: 'Your key is stored on your device and never shared.',
         
         chatPlaceholder: 'Type a message...',
+        send: 'Send',
         errorApiKey: 'Please set your API key in settings',
         errorNetwork: 'Network error. Check your connection.',
         errorGeneral: 'An error occurred. Please try again.',
@@ -339,6 +342,7 @@ export const translations: Record<string, Translation> = {
         apiKeyHint: 'Váš klíč je uložen na vašem zařízení a nikdy se nesdílí.',
         
         chatPlaceholder: 'Napište zprávu...',
+        send: 'Odeslat',
         errorApiKey: 'Prosím, nastavte svůj API klíč v nastavení',
         errorNetwork: 'Chyba sítě. Zkontrolujte připojení.',
         errorGeneral: 'Došlo k chybě. Zkuste to znovu.',
@@ -440,6 +444,7 @@ export const translations: Record<string, Translation> = {
         apiKeyHint: 'Ihr Schlüssel wird auf Ihrem Gerät gespeichert und niemals geteilt.',
         
         chatPlaceholder: 'Nachricht eingeben...',
+        send: 'Senden',
         errorApiKey: 'Bitte legen Sie Ihren API-Schlüssel in den Einstellungen fest',
         errorNetwork: 'Netzwerkfehler. Überprüfen Sie Ihre Verbindung.',
         errorGeneral: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
@@ -541,6 +546,7 @@ export const translations: Record<string, Translation> = {
         apiKeyHint: 'A kulcs az eszközén tárolódik és soha nem osztjuk meg.',
         
         chatPlaceholder: 'Írjon üzenetet...',
+        send: 'Küldés',
         errorApiKey: 'Kérjük, állítsa be az API kulcsot a beállításokban',
         errorNetwork: 'Hálózati hiba. Ellenőrizze a kapcsolatot.',
         errorGeneral: 'Hiba történt. Kérjük, próbálja újra.',

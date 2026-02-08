@@ -152,7 +152,9 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                         style={{ flexGrow: 1 }}
                     />
                     <button 
-                        id="send-btn" 
+                        id="send-btn"
+                        title={t('send', language)}
+                        aria-label={t('send', language)} 
                         disabled={!text.trim() || disabled} 
                         onClick={handleSend}
                     >

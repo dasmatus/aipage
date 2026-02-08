@@ -185,8 +185,6 @@ pages:
 # Generate Changelog and version bump
 changelog:
   stage: release
-  needs:    
-    - build:test
   script:
     - apt-get update && apt-get install -y git
     - git config --global user.email "${GITLAB_USER_EMAIL}"
