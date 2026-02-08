@@ -26,7 +26,6 @@ mkdir -p public
 
 # Copy and process markdown files (remove emojis)
 echo "Processing markdown files..."
-sed 's/🤖 //g; s/🌐 //g; s/🎨 //g; s/💬 //g; s/🔒 //g; s/📱 //g; s/🛡️ //g; s/🧠 //g; s/✨ //g; s/📦 //g; s/🔧 //g; s/🚀 //g; s/📝 //g; s/🏗️ //g; s/👷 //g; s/✅ //g; s/⚡ //g; s/🐛 //g; s/♻️ //g; s/📚 //g; s/💎 //g' README.md > book/src/user-guide.md
 
 sed 's/✨ //g; s/🐛 //g; s/⚡ //g; s/📚 //g; s/💎 //g; s/♻️ //g; s/✅ //g; s/🏗️ //g; s/👷 //g; s/🔧 //g' CHANGELOG.md > book/src/changelog.md
 

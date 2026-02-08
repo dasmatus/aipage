@@ -252,7 +252,7 @@ dual licensed as above, without any additional terms or conditions.
 
 ## Contribution
 
-See [the contribution guide](./contributing.md).
+See [the contribution guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/contributing.md?ref_type=heads).
 
 ## Credits
 

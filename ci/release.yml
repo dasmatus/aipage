@@ -5,6 +5,7 @@ pages:
     - install_dependencies
   before_script:
     - apt-get update && apt-get install -y mdbook
+  cache: {}
   script:
     - chmod +x scripts/build-docs.sh
     - ./scripts/build-docs.sh
@@ -13,3 +14,4 @@ pages:
       - public
   only:
     - main
+    - merge_requests
