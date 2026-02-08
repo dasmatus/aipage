@@ -1,7 +1,7 @@
 [book]
 title = "AIPage Documentation"
 authors = ["AIPage Contributors"]
-description = "Cross-browser extension bringing AI assistance to EduPage"
+description = "AIPage for the rest of us with some neat features. - documentation"
 language = "en"
 src = "book/src"
 
@@ -14,7 +14,7 @@ default-theme = "light"
 preferred-dark-theme = "navy"
 git-repository-url = "https://gitlab.com/TenTypekMatus/aipage"
 edit-url-template = "https://gitlab.com/TenTypekMatus/aipage/-/edit/main/{path}"
-site-url = "/edupage-ai-sidebar/"
+site-url = "/aipage/"
 cname = ""
 additional-css = ["docs/mdbook-theme.css"]
 

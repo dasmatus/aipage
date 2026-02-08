@@ -225,7 +225,7 @@ const App: React.FC = () => {
         <div className="app-container">
             {/* Header */}
             <div className="header">
-                 <div className="header-title"><span>EduPage AI</span></div>
+                 <div className="header-title"><span>AIPage</span></div>
                  <button id="settings-btn" className="icon-btn" onClick={() => setView('settings')}>
                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="3"></circle>

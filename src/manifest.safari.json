@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "AIPage",
   "version": "1.4.0",
-  "description": "EduPage AI for the rest of us with some neat features.",
+  "description": "AIPage for the rest of us with some neat features.",
   "permissions": [
     "storage",
     "activeTab",

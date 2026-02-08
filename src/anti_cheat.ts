@@ -18,5 +18,5 @@
         document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
     });
     
-    console.log('[EduPage AI] Anti-cheat active: Tab switch & Copy/Paste detection blocked (External Script).');
+    console.log('[AIPage] Anti-cheat active: Tab switch & Copy/Paste detection blocked (External Script).');
 })();
