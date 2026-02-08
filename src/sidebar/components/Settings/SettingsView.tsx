@@ -2,9 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { ProviderType } from '../../types';
 import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
-// i18n imports removed as we use props now
 import { t } from '../../i18n';
 import browser from '../../../polyfills/browser-polyfill';
+
+// Shadcn UI Components
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '../ui/select';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { Separator } from '../ui/separator';
+import { RefreshCw, Zap, Settings2, Globe, Palette, Languages, ExternalLink, AlertCircle } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
@@ -20,28 +30,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [globalTheme, setGlobalTheme] = useState(false);
     const [autoUpdate, setAutoUpdate] = useState(false);
     const [providerBackend, setProviderBackend] = useState<'standard' | 'vercel'>('standard');
-    // language state removed
     
     // Local settings
     const [baseUrl, setBaseUrl] = useState('');
     const [modelName, setModelName] = useState('');
-    const [availableModels, setAvailableModels] = useState<string[]>([]);
+    const [availableModels, setAvailableModels] = useState<any[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
         loadSettings();
-        // loadLanguage removed
     }, [currentProvider]);
 
-    // loadLanguage removed
+    // Internal effect to handle backend transitions
+    useEffect(() => {
+        const handleBackendTransition = async () => {
+            const backend = await browser.storage.local.get('providerBackend');
+            const bValue = (backend.providerBackend as 'standard' | 'vercel') || 'standard';
+            
+            if (bValue === 'vercel' && currentProvider !== 'vercel') {
+                onProviderChange('vercel');
+            } else if (bValue === 'standard' && currentProvider === 'vercel') {
+                onProviderChange('gemini');
+            }
+        };
+        handleBackendTransition();
+    }, [providerBackend, currentProvider, onProviderChange]);
 
     const loadSettings = async () => {
         const key = await Storage.getApiKey(currentProvider);
         setApiKey(key || '');
 
-        const t = await Storage.getThemePreference();
-        setTheme(t);
+        const th = await Storage.getThemePreference();
+        setTheme(th);
 
         const g = await browser.storage.local.get('ai_sidebar_global');
         setGlobalTheme(!!g.ai_sidebar_global);
@@ -50,16 +71,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         setAutoUpdate(!!u.autoUpdate);
 
         const backend = await browser.storage.local.get('providerBackend');
-        setProviderBackend((backend.providerBackend as 'standard' | 'vercel') || 'standard');
+        const bValue = (backend.providerBackend as 'standard' | 'vercel') || 'standard';
+        setProviderBackend(bValue);
 
-        if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
-            const local = await Storage.getLocalSettings(currentProvider);
+        const local = await Storage.getLocalSettings(currentProvider);
+        setModelName(local.model || '');
+
+        if (bValue === 'standard' && (currentProvider === 'lmstudio' || currentProvider === 'ollama')) {
             const defaultUrl = currentProvider === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434';
             const url = local.url || defaultUrl;
             setBaseUrl(url);
-            setModelName(local.model);
-            // Always try to fetch models with the URL (even if it's the default)
             fetchModels(url);
+        } else if (bValue === 'vercel') {
+            fetchModels('https://ai-gateway.vercel.sh/v1');
         }
     };
 
@@ -70,9 +94,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         try {
             const p = getProvider(currentProvider);
             if (p.getModels) {
-                const models = await p.getModels('', { baseUrl: url });
+                const models = await p.getModels(apiKey, { baseUrl: url });
                 setAvailableModels(models);
                 if (models.length === 0) setFetchError(t('noModelsFound', language) || 'No models found');
+            } else {
+                setAvailableModels([]);
             }
         } catch (e) {
             console.warn('Failed to fetch models', e);
@@ -90,275 +116,405 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             return;
         }
 
-        await browser.storage.local.set({ [Storage.STORAGE_KEYS.API_KEYS[currentProvider]]: apiKey });
-        
-        if (isLocal) {
-            await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
+        const storageKey = (Storage.STORAGE_KEYS.API_KEYS as any)[currentProvider];
+        if (storageKey) {
+            await browser.storage.local.set({ [storageKey]: apiKey });
         }
+        
+        await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
 
         alert(t('alertSettingsSaved', language));
         onClose();
     };
 
-    const handleThemeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newTheme = e.target.value;
-        setTheme(newTheme);
-        await Storage.saveThemePreference(newTheme);
-        document.body.dataset.theme = newTheme;
+    const handleThemeChange = async (value: string) => {
+        setTheme(value);
+        await Storage.saveThemePreference(value);
+        document.body.dataset.theme = value;
     };
 
-    const handleGlobalThemeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const checked = e.target.checked;
+    const handleGlobalThemeChange = async (checked: boolean) => {
         setGlobalTheme(checked);
         await browser.storage.local.set({ ai_sidebar_global: checked });
     };
 
-    const handleAutoUpdateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const checked = e.target.checked;
+    const handleAutoUpdateChange = async (checked: boolean) => {
         setAutoUpdate(checked);
         await browser.storage.local.set({ autoUpdate: checked });
     };
 
-    const handleBackendChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value as 'standard' | 'vercel';
+    const handleBackendChange = async (value: 'standard' | 'vercel') => {
         setProviderBackend(value);
         await browser.storage.local.set({ providerBackend: value });
+        if (value === 'vercel') {
+            onProviderChange('vercel');
+        } else {
+            onProviderChange('gemini');
+        }
     };
-
-    const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLang = e.target.value;
-        onLanguageChange(newLang);
-    };
-
 
     const renderInstructions = (fullProvider: ProviderType) => {
+        if (providerBackend === 'vercel') return null;
+
+        const instructions: Record<string, { title: string, steps: (string | React.ReactNode)[], note?: string, troubleshoot?: string }> = {
+            gemini: {
+                title: t('geminiInstructionsTitle', language),
+                steps: [
+                    <>{t('geminiStep1', language)} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a></>,
+                    t('geminiStep2', language),
+                    t('geminiStep3', language),
+                    t('geminiStep4', language),
+                    t('geminiStep5', language),
+                ],
+                note: t('geminiNote', language),
+                troubleshoot: t('geminiTroubleshoot', language)
+            },
+            openai: {
+                title: t('openaiInstructionsTitle', language),
+                steps: [
+                    <>{t('openaiStep1', language)} <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI Platform</a></>,
+                    t('openaiStep2', language),
+                    t('openaiStep3', language),
+                    t('openaiStep4', language),
+                    t('openaiStep5', language),
+                ],
+                note: t('openaiNote', language)
+            },
+            claude: {
+                title: t('claudeInstructionsTitle', language),
+                steps: [
+                    <>{t('claudeStep1', language)} <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Anthropic Console</a></>,
+                    t('claudeStep2', language),
+                    t('claudeStep3', language),
+                    t('claudeStep4', language),
+                    t('claudeStep5', language),
+                    t('claudeStep6', language),
+                ],
+                note: t('claudeNote', language)
+            },
+            mistral: {
+                title: t('mistralInstructionsTitle', language),
+                steps: [
+                    <>{t('mistralStep1', language)} <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mistral Console</a></>,
+                    t('mistralStep2', language),
+                    t('mistralStep3', language),
+                    t('mistralStep4', language),
+                    t('mistralStep5', language),
+                    t('mistralStep6', language),
+                ],
+                note: t('mistralNote', language)
+            },
+            lmstudio: {
+                title: t('lmstudioInstructionsTitle', language),
+                steps: [
+                    <>{t('lmstudioStep1', language)} <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">lmstudio.ai</a></>,
+                    t('lmstudioStep2', language),
+                    t('lmstudioStep3', language),
+                    t('lmstudioStep4', language),
+                    t('lmstudioStep5', language),
+                ],
+                note: t('lmstudioNote', language)
+            },
+            ollama: {
+                title: t('ollamaInstructionsTitle', language),
+                steps: [
+                    <>{t('ollamaStep1', language)} <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ollama.com</a></>,
+                    <>{t('ollamaStep2', language)} <code className="bg-muted px-1 rounded">ollama run llama3</code></>,
+                    t('ollamaStep3', language),
+                    t('ollamaStep4', language),
+                ],
+                note: t('ollamaNote', language)
+            }
+        };
+
+        const inst = instructions[fullProvider];
+        if (!inst) return null;
+
         return (
-            <>
-                {fullProvider === 'gemini' && (
-                    <div className="instructions-box provider-instructions" data-provider="gemini">
-                        <h3>{t('geminiInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('geminiStep1', language)} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></li>
-                            <li>{t('geminiStep2', language)}</li>
-                            <li>{t('geminiStep3', language)}</li>
-                            <li>{t('geminiStep4', language)}</li>
-                            <li>{t('geminiStep5', language)}</li>
-                        </ol>
-                        <p className="note">{t('geminiNote', language)}</p>
-                        <p className="note" style={{marginTop: '0.5rem'}}>
-                            <a href="https://discuss.ai.google.dev/t/cant-create-project-or-apikey-from-ai-stuidio/108979/4" target="_blank" rel="noopener noreferrer">
-                                {t('geminiTroubleshoot', language)}
-                            </a>
-                        </p>
-                    </div>
-                )}
-                {fullProvider === 'openai' && (
-                    <div className="instructions-box provider-instructions" data-provider="openai">
-                        <h3>{t('openaiInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('openaiStep1', language)} <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></li>
-                            <li>{t('openaiStep2', language)}</li>
-                            <li>{t('openaiStep3', language)}</li>
-                            <li>{t('openaiStep4', language)}</li>
-                            <li>{t('openaiStep5', language)}</li>
-                        </ol>
-                        <p className="note">{t('openaiNote', language)}</p>
-                    </div>
-                )}
-                {fullProvider === 'claude' && (
-                    <div className="instructions-box provider-instructions" data-provider="claude">
-                        <h3>{t('claudeInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('claudeStep1', language)} <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></li>
-                            <li>{t('claudeStep2', language)}</li>
-                            <li>{t('claudeStep3', language)}</li>
-                            <li>{t('claudeStep4', language)}</li>
-                            <li>{t('claudeStep5', language)}</li>
-                            <li>{t('claudeStep6', language)}</li>
-                        </ol>
-                        <p className="note">{t('claudeNote', language)}</p>
-                    </div>
-                )}
-                {fullProvider === 'mistral' && (
-                    <div className="instructions-box provider-instructions" data-provider="mistral">
-                        <h3>{t('mistralInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('mistralStep1', language)} <a href="https://console.mistral.ai/" target="_blank" rel="noopener noreferrer">Mistral Console</a></li>
-                            <li>{t('mistralStep2', language)}</li>
-                            <li>{t('mistralStep3', language)}</li>
-                            <li>{t('mistralStep4', language)}</li>
-                            <li>{t('mistralStep5', language)}</li>
-                            <li>{t('mistralStep6', language)}</li>
-                        </ol>
-                        <p className="note">{t('mistralNote', language)}</p>
-                    </div>
-                )}
-                {fullProvider === 'lmstudio' && (
-                    <div className="instructions-box provider-instructions" data-provider="lmstudio">
-                        <h3>{t('lmstudioInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('lmstudioStep1', language)} <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">lmstudio.ai</a></li>
-                            <li>{t('lmstudioStep2', language)}</li>
-                            <li>{t('lmstudioStep3', language)}</li>
-                            <li>{t('lmstudioStep4', language)}</li>
-                            <li>{t('lmstudioStep5', language)}</li>
-                        </ol>
-                        <p className="note">{t('lmstudioNote', language)}</p>
-                    </div>
-                )}
-                {fullProvider === 'ollama' && (
-                    <div className="instructions-box provider-instructions" data-provider="ollama">
-                        <h3>{t('ollamaInstructionsTitle', language)}</h3>
-                        <ol>
-                            <li>{t('ollamaStep1', language)} <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
-                            <li>{t('ollamaStep2', language)} <code>ollama run llama3</code></li>
-                            <li>{t('ollamaStep3', language)}</li>
-                            <li>{t('ollamaStep4', language)}</li>
-                        </ol>
-                        <p className="note">{t('ollamaNote', language)}</p>
-                    </div>
-                )}
-            </>
+            <Card className="mb-6 bg-secondary/30 border-dashed">
+                <CardHeader className="py-3 px-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-primary" />
+                        {inst.title}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="py-0 px-4 pb-4">
+                    <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
+                        {inst.steps.map((step, i) => <li key={i}>{step}</li>)}
+                    </ol>
+                    {inst.note && <p className="text-[10px] mt-2 opacity-70 italic">{inst.note}</p>}
+                    {inst.troubleshoot && (
+                        <a href="https://discuss.ai.google.dev/t/cant-create-project-or-apikey-from-ai-stuidio/108979/4" 
+                           target="_blank" rel="noopener noreferrer" 
+                           className="text-[10px] mt-1 block text-primary hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" /> {inst.troubleshoot}
+                        </a>
+                    )}
+                </CardContent>
+            </Card>
         );
     };
 
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
 
     return (
-        <div className="settings-content">
-                <h2>{t('settingsTitle', language)}</h2>
-                <div className="input-group">
-                    <label>{t('aiProvider', language)}</label>
-                    <select 
-                        id="provider-select"
-                        value={currentProvider} 
-                        onChange={(e) => onProviderChange(e.target.value as ProviderType)}
-                    >
-                        <option value="gemini">{t('providerGemini', language)}</option>
-                        <option value="openai">{t('providerChatGPT', language)}</option>
-                        <option value="claude">{t('providerClaude', language)}</option>
-                        <option value="mistral">{t('providerMistral', language)}</option>
-                        <option value="ollama">{t('providerOllama', language)}</option>
-                        <option value="lmstudio">{t('providerLMStudio', language)}</option>
-                    </select>
-                </div>
+        <div className="flex flex-col h-full bg-background overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground">
+            <div className="max-w-[500px] mx-auto w-full space-y-6">
+                <header className="flex flex-col gap-1">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">{t('settingsTitle', language)}</h2>
+                    <p className="text-sm text-muted-foreground">{t('settingsDescription', language)}</p>
+                </header>
 
-                <div className="input-group">
-                    <label>{t('themeInterface', language)}</label>
-                    <select value={theme} onChange={handleThemeChange}>
-                        <option value="default">{t('themeEduPage', language)}</option>
-                        <option value="sms">{t('themeImessage', language)}</option>
-                        <option value="gradient">{t('themeMessenger', language)}</option>
-                        <option value="discord">{t('themeDiscord', language)}</option>
-                        <option value="tokyo">{t('themeTokyo', language)}</option>
-                        <option value="mono">{t('themeMono', language)}</option>
-                    </select>
-                </div>
+                <Card className={cn("overflow-hidden transition-all duration-300", 
+                            providerBackend === 'vercel' && "border-primary/50 shadow-lg shadow-primary/10")}>
+                    <CardHeader className="space-y-1 bg-muted/30">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Zap className={cn("w-4 h-4", providerBackend === 'vercel' ? "text-primary" : "text-muted-foreground")} />
+                                <CardTitle className="text-lg">{t('providerEngine', language)}</CardTitle>
+                            </div>
+                            {providerBackend === 'vercel' && (
+                                <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                                    {t('vercelBadge', language)}
+                                </span>
+                            )}
+                        </div>
+                        <CardDescription>
+                            {providerBackend === 'vercel' 
+                                ? t('vercelDescription', language)
+                                : t('standardDescription', language)}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="backend-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('engineMode', language)}</Label>
+                            <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'standard' | 'vercel')}>
+                                <SelectTrigger className={cn(providerBackend === 'vercel' && "border-primary ring-primary")}>
+                                    <SelectValue placeholder={t('selectEngine', language)} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="standard" className="flex items-center gap-2">
+                                        {t('standardMode', language)}
+                                    </SelectItem>
+                                    <SelectItem value="vercel" className="flex items-center gap-2">
+                                        {t('vercelMode', language)}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                <div className="input-group checkbox-group">
-                    <input 
-                        type="checkbox" 
-                        id="global-theme-toggle" 
-                        checked={globalTheme} 
-                        onChange={handleGlobalThemeChange}
-                    />
-                    <label htmlFor="global-theme-toggle" className="inline-label">{t('applyThemeGlobal', language)}</label>
-                </div>
-
-                <div className="input-group checkbox-group">
-                    <input 
-                        type="checkbox" 
-                        id="auto-update-toggle" 
-                        checked={autoUpdate} 
-                        onChange={handleAutoUpdateChange}
-                    />
-                    <label htmlFor="auto-update-toggle" className="inline-label">{t('autoUpdate', language) || 'Enable Auto-Updates (GitLab)'}</label>
-                </div>
-
-                <div className="input-group">
-                    <label style={{color: 'var(--eduba-primary)', fontWeight: 'bold', fontSize: '0.9em', marginTop: '10px', display: 'block'}}>Experimental</label>
-                    <div className="input-group" style={{marginTop: '5px'}}>
-                        <label style={{fontSize: '11px'}}>Provider Backend</label>
-                         <select 
-                            value={providerBackend} 
-                            onChange={handleBackendChange}
-                            style={{borderColor: providerBackend === 'vercel' ? 'var(--eduba-primary)' : ''}}
-                        >
-                            <option value="standard">Standard</option>
-                            <option value="vercel">Vercel AI SDK</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="input-group">
-                    <label htmlFor="language-select">{t('language', language).toUpperCase()}</label>
-                    <select id="language-select" value={language} onChange={handleLanguageChange}>
-                        <option value="sk">Slovenčina</option>
-                        <option value="en">English</option>
-                        <option value="cs">Čeština</option>
-                        <option value="de">Deutsch</option>
-                        <option value="hu">Magyar</option>
-                    </select>
-                </div>
+                        {providerBackend === 'standard' && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <Label htmlFor="provider-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('aiProvider', language)}</Label>
+                                <Select value={currentProvider} onValueChange={(p) => onProviderChange(p as ProviderType)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('selectProvider', language)} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="gemini">{t('providerGemini', language)}</SelectItem>
+                                        <SelectItem value="openai">{t('providerChatGPT', language)}</SelectItem>
+                                        <SelectItem value="claude">{t('providerClaude', language)}</SelectItem>
+                                        <SelectItem value="mistral">{t('providerMistral', language)}</SelectItem>
+                                        <SelectItem value="ollama">{t('providerOllama', language)}</SelectItem>
+                                        <SelectItem value="lmstudio">{t('providerLMStudio', language)}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {renderInstructions(currentProvider)}
 
-                {isLocal && (
-                    <div id="local-settings">
-                         <div className="input-group">
-                            <label>{t('baseUrl', language)}</label>
-                            <input 
-                                id="base-url"
-                                type="text" 
-                                value={baseUrl} 
-                                onChange={(e) => setBaseUrl(e.target.value)} 
-                                placeholder="http://localhost:1234"
+                <Card>
+                    <CardHeader className="py-4 px-6 bg-muted/10">
+                        <div className="flex items-center gap-2">
+                            <Settings2 className="w-4 h-4 text-primary" />
+                            <CardTitle className="text-sm">{t('modelAndAuth', language)}</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        {((isLocal && providerBackend === 'standard') || providerBackend === 'vercel') && (
+                            <div className="space-y-4 animate-in fade-in duration-500">
+                                {providerBackend === 'standard' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="base-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('baseUrl', language)}</Label>
+                                        <Input 
+                                            id="base-url"
+                                            value={baseUrl} 
+                                            onChange={(e) => setBaseUrl(e.target.value)} 
+                                            placeholder="http://localhost:1234"
+                                            className="bg-muted/30"
+                                        />
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{t('model', language)}</Label>
+                                    {isLoadingModels ? (
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-2">
+                                            <RefreshCw className="w-3 h-3 animate-spin" /> {t('loading', language)}...
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <Select value={modelName} onValueChange={setModelName}>
+                                                <SelectTrigger className={cn("flex-1", availableModels.length === 0 && "border-destructive/50")}>
+                                                    <SelectValue placeholder={availableModels.length > 0 ? t('selectModel', language) : t('noModelsFound', language)} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableModels.length === 0 ? (
+                                                        <SelectItem value="none" disabled>{t('noModelsFound', language)}</SelectItem>
+                                                    ) : (() => {
+                                                        const groups: Record<string, any[]> = {};
+                                                        availableModels.forEach(m => {
+                                                            const p = m.provider || 'other';
+                                                            if (!groups[p]) groups[p] = [];
+                                                            groups[p].push(m);
+                                                        });
+
+                                                        return Object.entries(groups).map(([provider, models]) => (
+                                                            <SelectGroup key={provider}>
+                                                                <SelectLabel className="bg-muted/50 py-1 px-2 text-[10px] font-black uppercase text-muted-foreground tracking-[2px]">
+                                                                    {provider}
+                                                                </SelectLabel>
+                                                                {models.map(m => {
+                                                                    const label = m.id.includes(':') 
+                                                                        ? m.id.split(':').slice(1).join(':') 
+                                                                        : (m.id.includes('/') ? m.id.split('/').slice(1).join('/') : m.id);
+                                                                    return (
+                                                                        <SelectItem key={m.id} value={m.id}>
+                                                                            {label} <span className="text-[10px] opacity-60 ml-1">{m.pricing ? `(${m.pricing})` : `(${t('free', language)})`}</span>
+                                                                        </SelectItem>
+                                                                    );
+                                                                })}
+                                                            </SelectGroup>
+                                                        ));
+                                                    })()}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button 
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => fetchModels(providerBackend === 'vercel' ? 'https://ai-gateway.vercel.sh/v1' : baseUrl)}
+                                                title={t('refreshModels', language)}
+                                                className="shrink-0"
+                                            >
+                                                <RefreshCw className={cn("w-4 h-4", isLoadingModels && "animate-spin")} />
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {fetchError && <p className="text-[10px] text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {fetchError}</p>}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label htmlFor="api-key-input" className="text-xs uppercase font-bold tracking-wider opacity-70">
+                                {providerBackend === 'vercel' ? t('vercelApiKey', language) : t('apiKey', language)}
+                            </Label>
+                            <Input 
+                                id="api-key-input"
+                                type="password" 
+                                value={apiKey} 
+                                onChange={(e) => setApiKey(e.target.value)} 
+                                placeholder={providerBackend === 'vercel' ? t('vercelApiKeyPlaceholder', language) : t('apiKeyPlaceholder', language)} 
+                                className={cn("bg-muted/30 focus-visible:ring-primary", providerBackend === 'vercel' && "border-primary/30")}
+                            />
+                            <p className="text-[10px] text-muted-foreground opacity-70">
+                                {providerBackend === 'vercel' ? t('vercelApiKeyHint', language) : t('apiKeyHint', language)}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="py-4 px-6 bg-muted/10">
+                        <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4 text-primary" />
+                                <CardTitle className="text-sm">{t('appearanceAndApp', language)}</CardTitle>
+                            </div>
+                            <Globe className="w-4 h-4 text-muted-foreground/50" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium">{t('themeInterface', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{t('themeDescription', language)}</p>
+                            </div>
+                            <Select value={theme} onValueChange={handleThemeChange}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="default">{t('themeEduPage', language)}</SelectItem>
+                                    <SelectItem value="sms">{t('themeImessage', language)}</SelectItem>
+                                    <SelectItem value="gradient">{t('themeMessenger', language)}</SelectItem>
+                                    <SelectItem value="discord">{t('themeDiscord', language)}</SelectItem>
+                                    <SelectItem value="tokyo">{t('themeTokyo', language)}</SelectItem>
+                                    <SelectItem value="mono">{t('themeMono', language)}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <Separator className="opacity-50" />
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="global-theme-toggle" className="text-sm font-medium cursor-pointer">{t('applyThemeGlobal', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{t('globalThemeDescription', language)}</p>
+                            </div>
+                            <Switch 
+                                id="global-theme-toggle" 
+                                checked={globalTheme} 
+                                onCheckedChange={handleGlobalThemeChange}
                             />
                         </div>
-                        <div className="input-group">
-                            <label>{t('model', language)}</label>
-                            {isLoadingModels ? (
-                                <div style={{ fontSize: '12px', color: 'var(--eduba-body-text)', padding: '8px 0' }}>
-                                    {t('loading', language)}
-                                </div>
-                            ) : (
-                                <select 
-                                    id="model-select" 
-                                    value={modelName} 
-                                    onChange={(e) => setModelName(e.target.value)}
-                                    className={availableModels.length === 0 ? 'error-border' : ''}
-                                >
-                                    <option value="" disabled>{availableModels.length > 0 ? t('selectModel', language) : t('noModelsFound', language)}</option>
-                                    {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
-                                </select>
-                            )}
-                            <button 
-                                className="secondary-btn" 
-                                style={{ marginTop: '4px', fontSize: '11px', padding: '4px', width: 'auto' }}
-                                onClick={() => fetchModels(baseUrl)}
-                                disabled={isLoadingModels}
-                            >
-                                {isLoadingModels ? t('loading', language) : t('refreshModels', language)}
-                            </button>
-                            {fetchError && <p className="error-text" style={{ fontSize: '11px', color: 'var(--eduba-danger)', marginTop: '4px' }}>{fetchError}</p>}
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="auto-update-toggle" className="text-sm font-medium cursor-pointer">{t('autoUpdate', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{t('autoUpdateDescription', language)}</p>
+                            </div>
+                            <Switch 
+                                id="auto-update-toggle" 
+                                checked={autoUpdate} 
+                                onCheckedChange={handleAutoUpdateChange}
+                            />
                         </div>
-                    </div>
-                )}
 
-                <div className="input-group">
-                    <label>{t('apiKey', language)}</label>
-                    <input 
-                        id="api-key-input"
-                        type="password" 
-                        value={apiKey} 
-                        onChange={(e) => setApiKey(e.target.value)} 
-                        placeholder={t('apiKeyPlaceholder', language)} 
-                    />
-                    <p className="hint">{t('apiKeyHint', language)}</p>
-                </div>
+                        <Separator className="opacity-50" />
 
-                <button id="save-key-btn" className="primary-btn" onClick={handleSave}>{t('saveKey', language)}</button>
-                <button className="secondary-btn" onClick={onClose}>{t('backToChat', language)}</button>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Languages className="w-4 h-4 text-muted-foreground" />
+                                <Label htmlFor="language-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('language', language)}</Label>
+                            </div>
+                            <Select value={language} onValueChange={onLanguageChange}>
+                                <SelectTrigger id="language-select">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="sk">Slovenčina</SelectItem>
+                                    <SelectItem value="en">English</SelectItem>
+                                    <SelectItem value="cs">Čeština</SelectItem>
+                                    <SelectItem value="de">Deutsch</SelectItem>
+                                    <SelectItem value="hu">Magyar</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <footer className="pt-4 flex flex-col gap-3">
+                    <Button id="save-key-btn" className="w-full font-bold shadow-md h-12" onClick={handleSave}>
+                        {t('saveKey', language)}
+                    </Button>
+                    <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" onClick={onClose}>
+                        {t('backToChat', language)}
+                    </Button>
+                </footer>
             </div>
+        </div>
     );
 };

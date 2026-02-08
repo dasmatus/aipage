@@ -17,7 +17,8 @@ export const STORAGE_KEYS = {
         claude: 'claude_api_key',
         mistral: 'mistral_api_key',
         lmstudio: 'lmstudio_api_key',
-        ollama: 'ollama_api_key'
+        ollama: 'ollama_api_key',
+        vercel: 'vercel_api_key'
     },
     LOCAL_SETTINGS: {
         lmstudio: { url: 'lmstudio_base_url', model: 'lmstudio_model' },

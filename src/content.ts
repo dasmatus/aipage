@@ -7,7 +7,7 @@ import browser from "./polyfills/browser-polyfill";
     if (window !== window.top) return;
     (window as any).__gemini_sidebar_injected__ = true;
 
-    console.log('[Gemini Sidebar] Content script loaded and active');
+    console.log('[AIPage] Content script loaded and active');
 
     let sidebarOpen = false;
     let iframe: HTMLIFrameElement | null = null;
@@ -96,7 +96,7 @@ import browser from "./polyfills/browser-polyfill";
     };
 
     function injectAntiCheat() {
-        console.log('[Gemini Sidebar] Injecting anti-cheat protection');
+        console.log('[AIPage] Injecting anti-cheat protection');
         const script = document.createElement('script');
         script.src = chrome.runtime.getURL('anti_cheat.js');
         (document.head || document.documentElement).appendChild(script);
@@ -106,7 +106,7 @@ import browser from "./polyfills/browser-polyfill";
     }
 
     async function init() {
-        console.log('[Gemini Sidebar] Initializing...');
+        console.log('[AIPage] Initializing...');
 
         // Load settings first (await makes it synchronous-like)
         const result = await getStorage(['sidebarWidth', 'ai_sidebar_theme', 'ai_sidebar_global']);
@@ -464,7 +464,7 @@ import browser from "./polyfills/browser-polyfill";
                     
                     sendResponse({ content: text, isSelection: false });
                 } catch (e) {
-                    console.error('[Gemini Sidebar] Content scan failed:', e);
+                    console.error('[AIPage] Content scan failed:', e);
                     sendResponse({ content: null, error: (e as Error).toString() });
                 }
             })();

@@ -38,13 +38,13 @@ describe('InputArea Component', () => {
         const searchButton = screen.getByTitle(/search web/i);
         
         // Should not show search input initially
-        expect(screen.queryByPlaceholderText(/enter search query/i)).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(/search query/i)).not.toBeInTheDocument();
         
         // Click to open search mode
         fireEvent.click(searchButton);
         
         // Should now show search input
-        expect(screen.getByPlaceholderText(/enter search query/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/search query/i)).toBeInTheDocument();
     });
 
     it('should submit search query when enter is pressed', () => {
@@ -60,7 +60,7 @@ describe('InputArea Component', () => {
         const searchButton = screen.getByTitle(/search web/i);
         fireEvent.click(searchButton);
 
-        const searchInput = screen.getByPlaceholderText(/enter search query/i);
+        const searchInput = screen.getByPlaceholderText(/search query/i);
         fireEvent.change(searchInput, { target: { value: 'test query' } });
         fireEvent.keyDown(searchInput, { key: 'Enter' });
 
@@ -80,10 +80,10 @@ describe('InputArea Component', () => {
         const searchButton = screen.getByTitle(/search web/i);
         fireEvent.click(searchButton);
 
-        const searchInput = screen.getByPlaceholderText(/enter search query/i);
+        const searchInput = screen.getByPlaceholderText(/search query/i);
         fireEvent.keyDown(searchInput, { key: 'Escape' });
 
-        expect(screen.queryByPlaceholderText(/enter search query/i)).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(/search query/i)).not.toBeInTheDocument();
     });
 
     it('should send message when send button is clicked', () => {

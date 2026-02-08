@@ -20,6 +20,47 @@ jest.mock('webextension-polyfill', () => ({
     }
 }));
 
+// Mock Shadcn UI components to render simply for testing
+jest.mock('../../ui/select', () => ({
+    Select: ({ children, value, onValueChange }: any) => <select value={value} onChange={(e) => onValueChange(e.target.value)}>{children}</select>,
+    SelectTrigger: ({ children }: any) => <div>{children}</div>,
+    SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
+    SelectContent: ({ children }: any) => <>{children}</>,
+    SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
+    SelectGroup: ({ children }: any) => <optgroup>{children}</optgroup>,
+    SelectLabel: ({ children }: any) => <option disabled>{children}</option>,
+    SelectSeparator: () => <hr />,
+}));
+
+jest.mock('../../ui/switch', () => ({
+    Switch: ({ checked, onCheckedChange }: any) => <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} />,
+}));
+
+jest.mock('../../ui/button', () => ({
+    Button: ({ children, onClick, title, id, ...props }: any) => <button id={id} onClick={onClick} title={title}>{children}</button>,
+}));
+
+jest.mock('../../ui/input', () => ({
+    Input: (props: any) => <input {...props} />,
+}));
+
+jest.mock('../../ui/card', () => ({
+    Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+    CardHeader: ({ children }: any) => <div>{children}</div>,
+    CardTitle: ({ children }: any) => <h3>{children}</h3>,
+    CardDescription: ({ children }: any) => <p>{children}</p>,
+    CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
+    CardFooter: ({ children }: any) => <div>{children}</div>,
+}));
+
+jest.mock('../../ui/label', () => ({
+    Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
+}));
+
+jest.mock('../../ui/separator', () => ({
+    Separator: () => <hr />,
+}));
+
 // Mock browser polyfill
 // Mock browser polyfill
 jest.mock('../../../../polyfills/browser-polyfill', () => {
@@ -58,9 +99,9 @@ jest.mock('../../../storage', () => {
 // Mock providers
 jest.mock('../../../providers', () => ({
     getProvider: jest.fn(() => ({
-        getModels: jest.fn().mockResolvedValue(['model1', 'model2']),
+        getModels: jest.fn().mockResolvedValue([{ id: 'model1', provider: 'Test' }, { id: 'model2', provider: 'Test' }]),
     })),
-    // Also likely needs this mock since it might be used
+    providers: {},
     ProviderType: {
         GEMINI: 'gemini',
         CLAUDE: 'claude',
@@ -146,15 +187,15 @@ describe('SettingsView', () => {
             );
         });
 
-        expect(screen.getByText('refreshModels')).toBeInTheDocument();
+        expect(screen.getByTitle('refreshModels')).toBeInTheDocument();
         
         // Mock getModels to work
-        const refreshBtn = screen.getByText('refreshModels');
+        const refreshBtn = screen.getByTitle('refreshModels');
         await act(async () => {
             fireEvent.click(refreshBtn);
         });
 
         // Should populate models
-        expect(screen.getByText('model1')).toBeInTheDocument();
+        expect(screen.getByText(/model1/)).toBeInTheDocument();
     });
 });

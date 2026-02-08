@@ -49,6 +49,7 @@ export interface Translation {
     providerMistral: string;
     providerLMStudio: string;
     providerOllama: string;
+    providerVercel: string;
     
     // Provider-specific instructions titles & steps
     geminiInstructionsTitle: string;
@@ -114,6 +115,32 @@ export interface Translation {
     themeMono: string;
 
     noModelsFound: string;
+    settings: string;
+    chat: string;
+    engineMode: string;
+    standardMode: string;
+    vercelMode: string;
+    vercelDescription: string;
+    standardDescription: string;
+    providerEngine: string;
+    selectEngine: string;
+    selectProvider: string;
+    modelAndAuth: string;
+    free: string;
+    searchPlaceholder: string;
+    search: string;
+    closeSearch: string;
+    searchWeb: string;
+    vercelApiKey: string;
+    vercelApiKeyPlaceholder: string;
+    vercelApiKeyHint: string;
+    appearanceAndApp: string;
+    themeDescription: string;
+    globalThemeDescription: string;
+    autoUpdateDescription: string;
+    user: string;
+    ai: string;
+    vercelBadge: string;
 }
 
 export const translations: Record<string, Translation> = {
@@ -152,6 +179,7 @@ export const translations: Record<string, Translation> = {
         providerMistral: 'Mistral AI',
         providerLMStudio: 'LM Studio (Lokálne)',
         providerOllama: 'Ollama (Lokálne)',
+        providerVercel: 'Vercel AI SDK',
         
         geminiInstructionsTitle: 'Ako získať Gemini API kľúč:',
         geminiStep1: 'Navštívte Google AI Studio',
@@ -219,6 +247,32 @@ export const translations: Record<string, Translation> = {
         themeMono: 'Monochromatická',
 
         noModelsFound: 'Nenašli sa žiadne modely.',
+        settings: 'Nastavenia',
+        chat: 'AiPage',
+        engineMode: 'Režim Engine',
+        standardMode: 'Štandardný režim',
+        vercelMode: 'Vercel AI SDK (Experimentálne)',
+        vercelDescription: 'Experimentálne vysoko výkonné runtime Vercel AI SDK.',
+        standardDescription: 'Štandardné rozšírenie s plnou kompatibilitou.',
+        providerEngine: 'Motor Poskytovateľa',
+        selectEngine: 'Vybrať Engine',
+        selectProvider: 'Vybrať Poskytovateľa',
+        modelAndAuth: 'Model & Autentifikácia',
+        free: 'Zadarmo',
+        searchPlaceholder: 'Hľadať...',
+        search: 'Hľadať',
+        closeSearch: 'Zavrieť hľadanie',
+        searchWeb: 'Hľadať na webe',
+        vercelApiKey: 'Zašifrovaný AI SDK API kľúč',
+        vercelApiKeyPlaceholder: 'sk-...',
+        vercelApiKeyHint: 'Tento kľúč bude použitý pre Vercel AI SDK Adaptér.',
+        appearanceAndApp: 'Vzhľad a Aplikácia',
+        themeDescription: 'Vyberte si preferovaný vizuálny štýl.',
+        globalThemeDescription: 'Aplikovať tému sidebar-u na celú stránku.',
+        autoUpdateDescription: 'Povoliť automatické aktualizácie z GitLabu.',
+        user: 'Používateľ',
+        ai: 'AI',
+        vercelBadge: 'Vercel SDK',
     },
     
     // English
@@ -256,6 +310,7 @@ export const translations: Record<string, Translation> = {
         providerMistral: 'Mistral AI',
         providerLMStudio: 'LM Studio (Local)',
         providerOllama: 'Ollama (Local)',
+        providerVercel: 'Vercel AI SDK',
         
         geminiInstructionsTitle: 'How to get a Gemini API key:',
         geminiStep1: 'Visit Google AI Studio',
@@ -323,6 +378,32 @@ export const translations: Record<string, Translation> = {
         themeMono: 'Monochromatic',
 
         noModelsFound: 'No models found.',
+        settings: 'Settings',
+        chat: 'AiPage',
+        engineMode: 'Engine Mode',
+        standardMode: 'Standard Mode',
+        vercelMode: 'Vercel AI SDK (Experimental)',
+        vercelDescription: 'Experimental high-performance Vercel AI SDK runtime.',
+        standardDescription: 'The standard extension runtime with broad compatibility.',
+        providerEngine: 'Provider Engine',
+        selectEngine: 'Select Engine',
+        selectProvider: 'Select Provider',
+        modelAndAuth: 'Model & Authentication',
+        free: 'Free',
+        searchPlaceholder: 'Search query...',
+        search: 'SEARCH',
+        closeSearch: 'Close Search',
+        searchWeb: 'Search Web',
+        vercelApiKey: 'Encrypted AI SDK API Key',
+        vercelApiKeyPlaceholder: 'sk-...',
+        vercelApiKeyHint: 'This key will be used by the Vercel AI SDK Adapter.',
+        appearanceAndApp: 'Appearance & App',
+        themeDescription: 'Select your preferred visual style.',
+        globalThemeDescription: 'Apply the sidebar theme to the whole page.',
+        autoUpdateDescription: 'Enable automatic updates from GitLab.',
+        user: 'User',
+        ai: 'AI',
+        vercelBadge: 'Vercel SDK',
     },
     
     // Czech
@@ -360,6 +441,7 @@ export const translations: Record<string, Translation> = {
         providerMistral: 'Mistral AI',
         providerLMStudio: 'LM Studio (Místní)',
         providerOllama: 'Ollama (Místní)',
+        providerVercel: 'Vercel AI SDK',
         
         geminiInstructionsTitle: 'Jak získat Gemini API klíč:',
         geminiStep1: 'Navštivte Google AI Studio',
@@ -427,6 +509,32 @@ export const translations: Record<string, Translation> = {
         themeMono: 'Monochromatická',
 
         noModelsFound: 'Nebyly nalezeny žádné modely.',
+        settings: 'Nastavení',
+        chat: 'AiPage',
+        engineMode: 'Režim Engine',
+        standardMode: 'Standardní režim',
+        vercelMode: 'Vercel AI SDK (Experimentální)',
+        vercelDescription: 'Experimentální vysoce výkonné runtime Vercel AI SDK.',
+        standardDescription: 'Standardní rozšíření s plnou kompatibilitou.',
+        providerEngine: 'Motor Poskytovatele',
+        selectEngine: 'Vybrat Engine',
+        selectProvider: 'Vybrat Poskytovatele',
+        modelAndAuth: 'Model & Autentizace',
+        free: 'Zdarma',
+        searchPlaceholder: 'Hledat...',
+        search: 'HLEDAT',
+        closeSearch: 'Zavřít hledání',
+        searchWeb: 'Hledat na webu',
+        vercelApiKey: 'Zašifrovaný AI SDK API klíč',
+        vercelApiKeyPlaceholder: 'sk-...',
+        vercelApiKeyHint: 'Tento klíč bude použit pro Vercel AI SDK Adaptér.',
+        appearanceAndApp: 'Vzhled a Aplikace',
+        themeDescription: 'Vyberte si preferovaný vizuální styl.',
+        globalThemeDescription: 'Aplikovat téma sidebar-u na celou stránku.',
+        autoUpdateDescription: 'Povolit automatické aktualizace z GitLabu.',
+        user: 'Uživatel',
+        ai: 'AI',
+        vercelBadge: 'Vercel SDK',
     },
     
     // German
@@ -464,6 +572,7 @@ export const translations: Record<string, Translation> = {
         providerMistral: 'Mistral AI',
         providerLMStudio: 'LM Studio (Lokal)',
         providerOllama: 'Ollama (Lokal)',
+        providerVercel: 'Vercel AI SDK',
         
         geminiInstructionsTitle: 'So erhalten Sie einen Gemini API-Schlüssel:',
         geminiStep1: 'Besuchen Sie Google AI Studio',
@@ -531,6 +640,32 @@ export const translations: Record<string, Translation> = {
         themeMono: 'Monochrom',
 
         noModelsFound: 'Keine Modelle gefunden.',
+        settings: 'Einstellungen',
+        chat: 'AiPage',
+        engineMode: 'Engine-Modus',
+        standardMode: 'Standardmodus',
+        vercelMode: 'Vercel AI SDK (Experimentell)',
+        vercelDescription: 'Experimentelle Hochleistungs-Runtime des Vercel AI SDK.',
+        standardDescription: 'Die Standard-Erweiterungs-Runtime mit breiter Kompatibilität.',
+        providerEngine: 'Provider-Engine',
+        selectEngine: 'Engine auswählen',
+        selectProvider: 'Anbieter auswählen',
+        modelAndAuth: 'Modell & Authentifizierung',
+        free: 'Kostenlos',
+        searchPlaceholder: 'Suchanfrage...',
+        search: 'SUCHEN',
+        closeSearch: 'Suche schließen',
+        searchWeb: 'Websuche',
+        vercelApiKey: 'Verschlüsselter AI SDK API-Schlüssel',
+        vercelApiKeyPlaceholder: 'sk-...',
+        vercelApiKeyHint: 'Dieser Schlüssel wird vom Vercel AI SDK Adapter verwendet.',
+        appearanceAndApp: 'Erscheinungsbild & App',
+        themeDescription: 'Wählen Sie Ihren bevorzugten visuellen Stil.',
+        globalThemeDescription: 'Wenden Sie das Sidebar-Design auf die gesamte Seite an.',
+        autoUpdateDescription: 'Automatische Updates von GitLab aktivieren.',
+        user: 'Benutzer',
+        ai: 'KI',
+        vercelBadge: 'Vercel SDK',
     },
     
     // Hungarian
@@ -568,6 +703,7 @@ export const translations: Record<string, Translation> = {
         providerMistral: 'Mistral AI',
         providerLMStudio: 'LM Studio (Helyi)',
         providerOllama: 'Ollama (Helyi)',
+        providerVercel: 'Vercel AI SDK',
         
         geminiInstructionsTitle: 'Hogyan szerezzünk Gemini API kulcsot:',
         geminiStep1: 'Látogassa meg a Google AI Studio-t',
@@ -635,6 +771,32 @@ export const translations: Record<string, Translation> = {
         themeMono: 'Monokróm',
 
         noModelsFound: 'Nem található modell.',
+        settings: 'Beállítások',
+        chat: 'AiPage',
+        engineMode: 'Engine mód',
+        standardMode: 'Standard mód',
+        vercelMode: 'Vercel AI SDK (Kísérleti)',
+        vercelDescription: 'Kísérleti nagy teljesítményű Vercel AI SDK futtatókörnyezet.',
+        standardDescription: 'A standard bővítmény futtatókörnyezet széleskörű kompatibilitással.',
+        providerEngine: 'Szolgáltató Engine',
+        selectEngine: 'Engine kiválasztása',
+        selectProvider: 'Szolgáltató kiválasztása',
+        modelAndAuth: 'Modell és hitelesítés',
+        free: 'Ingyenes',
+        searchPlaceholder: 'Keresés...',
+        search: 'KERESÉS',
+        closeSearch: 'Keresés bezárása',
+        searchWeb: 'Keresés a weben',
+        vercelApiKey: 'Titkosított AI SDK API kulcs',
+        vercelApiKeyPlaceholder: 'sk-...',
+        vercelApiKeyHint: 'Ezt a kulcsot a Vercel AI SDK Adapter fogja használni.',
+        appearanceAndApp: 'Megjelenés és Alkalmazás',
+        themeDescription: 'Válassza ki a preferált vizuális stílust.',
+        globalThemeDescription: 'Alkalmazza a sidebar témát a teljes oldalra.',
+        autoUpdateDescription: 'Automatikus frissítések engedélyezése a GitLabról.',
+        user: 'Felhasználó',
+        ai: 'AI',
+        vercelBadge: 'Vercel SDK',
     },
 };
 

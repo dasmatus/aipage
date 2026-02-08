@@ -8,6 +8,11 @@ import * as Storage from './storage';
 import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
 import browser from 'webextension-polyfill';
 
+// Shadcn & Icons
+import { Button } from './components/ui/button';
+import { Settings, MessageCircle, ChevronLeft } from 'lucide-react';
+import { cn } from './lib/utils';
+
 const App: React.FC = () => {
     // State
     const [view, setView] = useState<'chat' | 'settings'>('chat');
@@ -60,7 +65,6 @@ const App: React.FC = () => {
     }, []);
 
     const handleSend = async (text: string) => {
-        // Fetch fresh API key in case it changed
         const currentKey = await Storage.getApiKey(provider);
         const options = (provider === 'lmstudio' || provider === 'ollama') 
             ? await Storage.getLocalSettings(provider) 
@@ -80,8 +84,6 @@ const App: React.FC = () => {
                 } else {
                     alert(t('alertContentLoadFailed', language));
                 }
-            } else {
-                console.warn("No active tab found");
             }
         } catch (e) {
             console.error(e);
@@ -91,40 +93,32 @@ const App: React.FC = () => {
         }
     };
 
-
     const handleSearchWeb = async (query: string) => {
-        // Check if using local model
         const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
-        
         if (!isLocalModel) {
-            alert('Web search requires a local model (LM Studio or Ollama). Please switch to a local provider in settings.');
+            alert('Web search requires a local model (LM Studio or Ollama).');
             return;
         }
 
-        // Trigger web search
         addMessage('user', `Search web: ${query}`);
         setIsTyping(true);
         addMessage('ai', 'Searching the web...');
 
         try {
-            // Call background script to search
             const response: any = await browser.runtime.sendMessage({
                 action: 'search_web',
                 payload: { query: query.trim() }
             });
 
             if (response.ok && response.results && response.results.length > 0) {
-                // Format search results
                 const formattedResults = response.results.map((r: any, i: number) => 
                     `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
                 ).join('\n\n');
 
                 updateLastMessage(`Found ${response.results.length} results. Analyzing...`);
 
-                // Inject into AI prompt
                 const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
 
-                // Get current settings for local model
                 const currentKey = await Storage.getApiKey(provider);
                 const options = await Storage.getLocalSettings(provider);
                 
@@ -140,7 +134,6 @@ const App: React.FC = () => {
         }
     };
 
-
     const handleActionClick = async (action: string) => {
         if (action === 'search_web') {
             const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_web') 
@@ -149,49 +142,10 @@ const App: React.FC = () => {
 
             if (!query) return;
 
-            // Check if using local model
             const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
-
             if (isLocalModel) {
-                // Perform web search and inject results into AI
-                addMessage('user', `Search web: ${query}`);
-                setIsTyping(true);
-                addMessage('ai', 'Searching the web...');
-
-                try {
-                    // Call background script to search
-                    const response: any = await browser.runtime.sendMessage({
-                        action: 'search_web',
-                        payload: { query }
-                    });
-
-                    if (response.ok && response.results && response.results.length > 0) {
-                        // Format search results
-                        const formattedResults = response.results.map((r: any, i: number) => 
-                            `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
-                        ).join('\n\n');
-
-                        updateLastMessage(`Found ${response.results.length} results. Analyzing...`);
-
-                        // Inject into AI prompt
-                        const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
-
-                        // Get current settings for local model
-                        const currentKey = await Storage.getApiKey(provider);
-                        const options = await Storage.getLocalSettings(provider);
-                        
-                        await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
-                    } else {
-                        updateLastMessage('No search results found.');
-                        setIsTyping(false);
-                    }
-                } catch (error) {
-                    console.error('Search error:', error);
-                    updateLastMessage(`Search error: ${(error as Error).message}`);
-                    setIsTyping(false);
-                }
+                handleSearchWeb(query);
             } else {
-                // Cloud provider: open DDG in new tab (existing behavior)
                 window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
             }
             return;
@@ -207,7 +161,6 @@ const App: React.FC = () => {
     };
 
     const handleSettingsClose = async () => {
-        // Refresh key when closing settings
         const k = await Storage.getApiKey(provider);
         setApiKey(k);
         setView('chat');
@@ -220,47 +173,67 @@ const App: React.FC = () => {
 
     if (!isInitialized) return null;
 
-
     return (
-        <div className="app-container">
+        <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
             {/* Header */}
-            <div className="header">
-                 <div className="header-title"><span>AIPage</span></div>
-                 <button id="settings-btn" className="icon-btn" onClick={() => setView('settings')}>
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                     </svg>
-                 </button>
-            </div>
+            <header className="flex items-center justify-between px-4 h-12 border-b bg-card/50 backdrop-blur-md z-50 shrink-0">
+                 <div className="flex items-center gap-2">
+                    {view === 'settings' ? (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setView('chat')}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <div className="bg-primary/10 p-1.5 rounded-lg border border-primary/20">
+                            <MessageCircle className="h-4 w-4 text-primary" />
+                        </div>
+                    )}
+                    <span className="font-bold text-sm tracking-tight">
+                        {view === 'settings' ? t('settings', language) : t('chat', language)}
+                    </span>
+                 </div>
+                 
+                 {view === 'chat' && (
+                     <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
+                         <Settings className="h-4 w-4" />
+                     </Button>
+                 )}
+            </header>
 
-
-            <div id="chat-view" className={view === 'chat' ? 'view' : 'view hidden'} style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)' }}>
-                <MessageList 
-                    messages={messages} 
-                    onActionClick={handleActionClick} 
-                    disableActions={isTyping}
-                    userInitials={userInitials}
-                />
-                <InputArea 
-                    onSend={handleSend} 
-                    onScanPage={handleScanPage} 
-                    onSearchWeb={handleSearchWeb}
-                    disabled={isTyping} 
-                    isScanning={isScanning}
-                    language={language}
-                />
-            </div>
-            
-            <div id="settings-view" className={view === 'settings' ? 'view' : 'view hidden'}>
-                <SettingsView 
-                    currentProvider={provider} 
-                    onProviderChange={handleProviderChange} 
-                    onClose={handleSettingsClose} 
-                    language={language}
-                    onLanguageChange={handleLanguageChange}
-                />
-            </div>
+            <main className="flex-1 relative overflow-hidden flex flex-col">
+                <div className={cn(
+                    "flex-1 flex flex-col transition-all duration-500 absolute inset-0",
+                    view === 'chat' ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none hidden"
+                )}>
+                    <MessageList 
+                        messages={messages} 
+                        onActionClick={handleActionClick} 
+                        disableActions={isTyping}
+                        userInitials={userInitials}
+                        language={language}
+                    />
+                    <InputArea 
+                        onSend={handleSend} 
+                        onScanPage={handleScanPage} 
+                        onSearchWeb={handleSearchWeb}
+                        disabled={isTyping} 
+                        isScanning={isScanning}
+                        language={language}
+                    />
+                </div>
+                
+                <div className={cn(
+                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
+                )}>
+                    <SettingsView 
+                        currentProvider={provider} 
+                        onProviderChange={handleProviderChange} 
+                        onClose={handleSettingsClose} 
+                        language={language}
+                        onLanguageChange={handleLanguageChange}
+                    />
+                </div>
+            </main>
         </div>
     );
 };

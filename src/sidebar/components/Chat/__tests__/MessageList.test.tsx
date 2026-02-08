@@ -45,10 +45,10 @@ describe('MessageList', () => {
     ];
 
     it('renders messages correctly', async () => {
-        render(<MessageList messages={mockMessages} userInitials="JD" />);
+        render(<MessageList messages={mockMessages} userInitials="JD" language="en" />);
 
         expect(screen.getByText('JD')).toBeInTheDocument(); // User initials
-        expect(screen.getByText('AI')).toBeInTheDocument(); // AI avatar
+        expect(screen.getByLabelText('AI')).toBeInTheDocument(); // AI avatar
 
         // Wait for async markdown rendering if any (our mock is sync but component wraps in Promise)
         await waitFor(() => {
@@ -66,6 +66,7 @@ describe('MessageList', () => {
             <MessageList 
                 messages={mockMessages} 
                 onActionClick={mockOnActionClick} 
+                language="en"
             />
         );
 
@@ -87,6 +88,7 @@ describe('MessageList', () => {
                 messages={mockMessages} 
                 onActionClick={mockOnActionClick}
                 disableActions={true}
+                language="en"
             />
         );
 
@@ -97,12 +99,12 @@ describe('MessageList', () => {
     });
 
     it('scrolls to bottom on new messages', () => {
-        const { rerender } = render(<MessageList messages={[]} />);
+        const { rerender } = render(<MessageList messages={[]} language="en" />);
         expect(mockScrollIntoView).toHaveBeenCalled(); // Initial render might trigger or not depending on refs but useEffect runs.
 
         mockScrollIntoView.mockClear();
 
-        rerender(<MessageList messages={mockMessages} />);
+        rerender(<MessageList messages={mockMessages} language="en" />);
         expect(mockScrollIntoView).toHaveBeenCalled();
     });
 });

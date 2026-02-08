@@ -5,6 +5,57 @@ All notable changes to the AIPage extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0](https://gitlab.com/TenTypekMatus/aipage/compare/v1.4.0...v1.5.0) (2026-02-08)
+
+
+### ♻️ Code Refactoring
+
+* modularize GitLab CI configuration by splitting it into multiple included YAML files. ([9188424](https://gitlab.com/TenTypekMatus/aipage/commit/918842476dc9e9cb6d5c5fbe2d3c5ab0fbfdfe1d))
+* Remove `./` prefix from internal markdown links in SUMMARY.md. ([e50baf8](https://gitlab.com/TenTypekMatus/aipage/commit/e50baf88bcbe792947980b688520fe440d5b2588))
+* Remove OCR functionality, its component, tests, i18n strings, and dependencies; add test fixtures. ([f97a838](https://gitlab.com/TenTypekMatus/aipage/commit/f97a838efa2a0e717cf87431ab824aa56bdf88be))
+* Rename project and branding from 'EduPage AI' to 'AIPage' across documentation, manifests, and UI components. ([fb7f9e7](https://gitlab.com/TenTypekMatus/aipage/commit/fb7f9e72266de8ce114f0d3b26d426016a20d6b2))
+* Replace `npx` with `bunx` for script execution, remove Node.js from CI, and update Playwright types. ([d04d4d7](https://gitlab.com/TenTypekMatus/aipage/commit/d04d4d788051c50556a9035350ce6d3b7b906756))
+
+
+### 📚 Documentation
+
+* add 1.4.0 release notes to changelog. ([6daf19b](https://gitlab.com/TenTypekMatus/aipage/commit/6daf19b2298c63072e014bc29a9d41e973b93b24))
+* Remove redundant `./` from internal links in introduction.md. ([1231fc5](https://gitlab.com/TenTypekMatus/aipage/commit/1231fc59955b4cf3f26acb7cc056a6172f1147f2))
+* Update installation guide to use pre-built releases and switch to absolute links in the summary. ([1f8fec8](https://gitlab.com/TenTypekMatus/aipage/commit/1f8fec8839de4d11dd2bd00e7beed5a764ad3975))
+* Update installation instructions to download CI build artifacts and remove automatic release publishing from CI. ([bb0d375](https://gitlab.com/TenTypekMatus/aipage/commit/bb0d375eab5f5d3980368e1ad694f61d890299dd))
+
+
+### 👷 CI/CD
+
+* Add `before_script` to install `zip` package for CI packaging. ([f3414a6](https://gitlab.com/TenTypekMatus/aipage/commit/f3414a63492eee781b2212dd04f63fe3d88f44ea))
+* Reduce CI artifact expiration for node_modules from 1 hour to 5 minutes. ([d4a78b3](https://gitlab.com/TenTypekMatus/aipage/commit/d4a78b3f70f8e7dfd6ce4f1ebdebca2ac3af94ad))
+* Remove testing from the CI pipeline and migrate documentation generation to mdbook. ([0cca947](https://gitlab.com/TenTypekMatus/aipage/commit/0cca947f21edb7e4ba34d5d0fb23578eb16d22db))
+* Update test command, remove Playwright installation, reduce test artifact expiration, and standardize GitLab token variable. ([d2ea9c8](https://gitlab.com/TenTypekMatus/aipage/commit/d2ea9c8e7b7c39d89da5dabd93bc295f8024836e))
+
+
+### 🔧 Chores
+
+* Enhance type safety by introducing the `PageContentResponse` interface and adding explicit types to OCR-related functions. ([eaae3d5](https://gitlab.com/TenTypekMatus/aipage/commit/eaae3d574534cecf1cc9efc5f2ff6390b5b8941a))
+* remove old test result files ([45d0b7d](https://gitlab.com/TenTypekMatus/aipage/commit/45d0b7d5a99261ed4f963861156bd175fee931eb))
+* Update CI to run on merge requests and include a cache, remove README processing from the documentation build script, and fix the contribution guide link in the user guide. ([a62ccd8](https://gitlab.com/TenTypekMatus/aipage/commit/a62ccd8ff7b48521d518cec8cda38a2115413d73))
+
+
+### ✅ Tests
+
+* Add unit tests for sidebar App, MessageList, and SettingsView components and update user guide with Manifest V2 compatibility. ([87a4a6a](https://gitlab.com/TenTypekMatus/aipage/commit/87a4a6a952bf08fb236ddbcb546a33079546c7ec))
+* refactor `browser-polyfill` mock to support ES modules and include `runtime` API methods. ([4eae74f](https://gitlab.com/TenTypekMatus/aipage/commit/4eae74f4bddb6e8e9c9999c32ff06b52d42fb691))
+
+
+### ✨ Features
+
+* Add 'send' button internationalization and accessibility labels; chore: Remove `build:test` dependency from GitLab CI changelog job. ([b48a16a](https://gitlab.com/TenTypekMatus/aipage/commit/b48a16a0586e4004e8725a992deafe03794c7e78))
+* add Gemini API key creation troubleshooting link to settings and update user guide documentation. ([9e3af49](https://gitlab.com/TenTypekMatus/aipage/commit/9e3af4962c7c7007ed0883be36eb1c9b6086c259))
+* Configure Jest with JSDOM and Chrome API mocks for extension testing, and refine GitLab CI/CD pipeline jobs and dependencies. ([6bfe621](https://gitlab.com/TenTypekMatus/aipage/commit/6bfe62106ed79d288086bdd6bb808a8348cb86d0))
+* enhance Playwright testing infrastructure with improved browser API mocking and add tests for sidebar initialization and API key management. ([0e79027](https://gitlab.com/TenTypekMatus/aipage/commit/0e79027569b6f03e968aab6d081214b59333f421))
+* Implement auto-update functionality via GitLab and add Vercel AI SDK as an experimental provider backend. ([4ce0383](https://gitlab.com/TenTypekMatus/aipage/commit/4ce0383a6c504ad1c4b29941ed20ba74643820cf))
+* Migrate testing framework from Playwright to Jest and React Testing Library, and refine chat search action. ([d5d3863](https://gitlab.com/TenTypekMatus/aipage/commit/d5d3863bc7fe424ab1965117526e8e516bee86d3))
+* Update CI/CD job triggers for packaging and releases to run on `main` instead of `tags`, and add new changelog entries for version 1.4.0. ([4b30cc5](https://gitlab.com/TenTypekMatus/aipage/commit/4b30cc5f4e8c6f7a75117b17b085b38f573d4c67))
+
 ## [1.4.0](https://gitlab.com/TenTypekMatus/aipage/compare/v1.3.0...v1.4.0) (2026-02-07)
 
 

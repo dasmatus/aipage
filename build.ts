@@ -60,6 +60,10 @@ async function build() {
     const sassProcess = Bun.spawn(['bunx', 'sass', 'src/sidebar/sidebar.scss', `${distDir}/sidebar.css`, '--style=compressed', '--no-source-map']);
     await sassProcess.exited;
 
+    // Run Tailwind/PostCSS
+    const postcssProcess = Bun.spawn(['bunx', 'postcss', 'src/sidebar/tailwind.css', '-o', `${distDir}/tailwind.css`]);
+    await postcssProcess.exited;
+
     // Copy static files
     copyFileSync('src/sidebar/sidebar.html', `${distDir}/sidebar.html`);
     

@@ -5,7 +5,7 @@
  * concrete classes for each supported service (Gemini, OpenAI, etc.).
  */
 
-export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudio' | 'ollama';
+export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudio' | 'ollama' | 'vercel';
 
 const SYSTEM_PROMPT = "You are a helpful assistant that answers questions correctly.";
 
@@ -31,8 +31,9 @@ export interface AIProvider {
     
     /**
      * Fetches available models from the provider (if supported).
+     * Returns an array of model objects { id: string, pricing?: string, tags?: string[] }.
      */
-    getModels?(apiKey: string, options?: { baseUrl?: string }): Promise<string[]>;
+    getModels?(apiKey: string, options?: { baseUrl?: string }): Promise<any[]>;
 }
 
 /**
@@ -89,7 +90,9 @@ export class GeminiProvider implements AIProvider {
         options?: { baseUrl?: string, modelName?: string },
         onProgress?: (chunk: string) => void
     ): Promise<string> {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const model = options?.modelName || 'gemini-pro';
+        const baseUrl = options?.baseUrl ? (options.baseUrl.endsWith('/v1') ? options.baseUrl.slice(0, -3) : options.baseUrl) : 'https://generativelanguage.googleapis.com/v1beta';
+        const url = `${baseUrl}/models/${model}:generateContent?key=${apiKey}`;
 
         const data = await performRequest(url, 'POST', { 'Content-Type': 'application/json' }, JSON.stringify({
             contents: [{ parts: [{ text: SYSTEM_PROMPT + "\n\n" + prompt }] }]
@@ -98,6 +101,31 @@ export class GeminiProvider implements AIProvider {
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
         if (onProgress) onProgress(text);
         return text;
+    }
+
+    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<string[]> {
+        // If baseUrl is provided and looks like an OpenAI-style gateway (e.g. Vercel), use that
+        if (options?.baseUrl && (options.baseUrl.includes('vercel') || options.baseUrl.includes('api.openai.com'))) {
+            try {
+                const url = options.baseUrl.endsWith('/v1') ? `${options.baseUrl}/models` : `${options.baseUrl}/v1/models`;
+                const data = await performRequest(url, 'GET', {
+                    'Authorization': apiKey ? `Bearer ${apiKey}` : ''
+                });
+                return data.data.map((m: any) => ({ id: m.id, provider: 'Google' }));
+            } catch (e) {
+                console.error('Failed to fetch models from gateway', e);
+            }
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        try {
+            const data = await performRequest(url, 'GET', {});
+            // Gemini returns { models: [ { name: "models/gemini-1.5-pro", ... } ] }
+            return data.models.map((m: any) => ({ id: m.name.replace('models/', ''), provider: 'Google' }));
+        } catch (e) {
+            console.error('Failed to fetch Gemini models', e);
+            return [];
+        }
     }
 }
 
@@ -114,7 +142,7 @@ export class OpenAIProvider implements AIProvider {
         options?: { baseUrl?: string, modelName?: string },
         onProgress?: (chunk: string) => void
     ): Promise<string> {
-        const url = 'https://api.openai.com/v1/chat/completions';
+        const url = options?.baseUrl ? `${options.baseUrl}/chat/completions` : 'https://api.openai.com/v1/chat/completions';
 
         const data = await performRequest(url, 'POST', {
             'Content-Type': 'application/json',
@@ -132,6 +160,22 @@ export class OpenAIProvider implements AIProvider {
         if (onProgress) onProgress(text);
         return text;
     }
+
+    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<any[]> {
+        let url = options?.baseUrl || 'https://api.openai.com/v1';
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        const fetchUrl = url.endsWith('/models') ? url : `${url}/models`;
+
+        try {
+            const data = await performRequest(fetchUrl, 'GET', {
+                'Authorization': apiKey ? `Bearer ${apiKey}` : ''
+            });
+            return data.data.map((m: any) => ({ id: m.id, provider: 'OpenAI' }));
+        } catch (e) {
+            console.error('Failed to fetch OpenAI models', e);
+            return [];
+        }
+    }
 }
 
 /**
@@ -147,7 +191,7 @@ export class ClaudeProvider implements AIProvider {
         options?: { baseUrl?: string, modelName?: string },
         onProgress?: (chunk: string) => void
     ): Promise<string> {
-        const url = 'https://api.anthropic.com/v1/messages';
+        const url = options?.baseUrl ? `${options.baseUrl}/messages` : 'https://api.anthropic.com/v1/messages';
 
         const data = await performRequest(url, 'POST', {
             'Content-Type': 'application/json',
@@ -195,6 +239,22 @@ export class MistralProvider implements AIProvider {
         const text = data.choices?.[0]?.message?.content || 'No response';
         if (onProgress) onProgress(text);
         return text;
+    }
+
+    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<any[]> {
+        let url = options?.baseUrl || 'https://api.mistral.ai/v1';
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        const fetchUrl = url.endsWith('/models') ? url : `${url}/models`;
+
+        try {
+            const data = await performRequest(fetchUrl, 'GET', {
+                'Authorization': apiKey ? `Bearer ${apiKey}` : `Bearer ${apiKey}`
+            });
+            return data.data.map((m: any) => ({ id: m.id }));
+        } catch (e) {
+            console.error('Failed to fetch Mistral models', e);
+            return [];
+        }
     }
 }
 
@@ -244,14 +304,14 @@ export class LMStudioProvider implements AIProvider {
         return text;
     }
 
-    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<string[]> {
+    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<any[]> {
         let baseUrl = options?.baseUrl || 'http://localhost:1234';
         if (baseUrl.endsWith('/v1')) baseUrl = baseUrl.substring(0, baseUrl.length - 3);
         
         try {
             const data = await performRequest(`${baseUrl}/v1/models`, 'GET', {});
             // LM Studio /v1/models returns { data: [ { id: "model-id", ... } ] }
-            return data.data.map((m: any) => m.id);
+            return data.data.map((m: any) => ({ id: m.id, provider: 'LM Studio' }));
         } catch (e) {
             console.error('Failed to fetch LM Studio models', e);
             return [];
@@ -297,9 +357,82 @@ export class OllamaProvider implements AIProvider {
         try {
             const data = await performRequest(`${baseUrl}/api/tags`, 'GET', {});
             // Ollama /api/tags returns { models: [ { name: "llama3", ... } ] }
-            return data.models.map((m: any) => m.name);
+            return data.models.map((m: any) => ({ id: m.name, provider: 'Ollama' }));
         } catch (e) {
             console.error('Failed to fetch Ollama models', e);
+            return [];
+        }
+    }
+}
+
+/**
+ * Vercel AI SDK Provider (Gateway)
+ */
+export class VercelSDKProvider implements AIProvider {
+    name = 'vercel';
+    displayName = 'Vercel AI SDK';
+
+    async sendMessage(
+        prompt: string, 
+        apiKey: string, 
+        options?: { baseUrl?: string, modelName?: string },
+        onProgress?: (chunk: string) => void
+    ): Promise<string> {
+        const url = options?.baseUrl ? `${options.baseUrl}/chat/completions` : 'https://ai-gateway.vercel.sh/v1/chat/completions';
+
+        const data = await performRequest(url, 'POST', {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        }, JSON.stringify({
+            model: options?.modelName || 'openai:gpt-4o-mini',
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7
+        }));
+
+        const text = data.choices?.[0]?.message?.content || 'No response';
+        if (onProgress) onProgress(text);
+        return text;
+    }
+
+    async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<any[]> {
+        const url = options?.baseUrl ? `${options.baseUrl}/models` : 'https://ai-gateway.vercel.sh/v1/models';
+
+        try {
+            const data = await performRequest(url, 'GET', {
+                'Authorization': `Bearer ${apiKey}`
+            });
+            const models = data.data
+                .filter((m: any) => m.type === 'language' && m.id)
+                .map((m: any) => {
+                    let provider = 'other';
+                    if (m.id.includes(':')) {
+                        provider = m.id.split(':')[0];
+                    } else if (m.id.includes('/')) {
+                        provider = m.id.split('/')[0];
+                    }
+                    
+                    return {
+                        id: m.id,
+                        provider: provider.charAt(0).toUpperCase() + provider.slice(1),
+                        pricing: m.pricing?.prompt ? `${m.pricing.prompt}/${m.pricing.completion} (1M)` : '',
+                        tags: m.tags || []
+                    };
+                });
+
+            // Sort models by provider, then tags, then id
+            return models.sort((a: any, b: any) => {
+                const providerCompare = a.provider.localeCompare(b.provider);
+                if (providerCompare !== 0) return providerCompare;
+                
+                if (a.tags.length > 0 && b.tags.length === 0) return -1;
+                if (a.tags.length === 0 && b.tags.length > 0) return 1;
+                return a.id.localeCompare(b.id);
+            });
+        } catch (e) {
+            console.error('Failed to fetch Vercel models', e);
             return [];
         }
     }
@@ -314,7 +447,8 @@ export const providers: Record<ProviderType, AIProvider> = {
     claude: new ClaudeProvider(),
     mistral: new MistralProvider(),
     lmstudio: new LMStudioProvider(),
-    ollama: new OllamaProvider()
+    ollama: new OllamaProvider(),
+    vercel: new VercelSDKProvider()
 };
 
 /**
