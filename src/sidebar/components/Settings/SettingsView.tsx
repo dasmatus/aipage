@@ -321,7 +321,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                             value={baseUrl} 
                                             onChange={(e) => setBaseUrl(e.target.value)} 
                                             placeholder="http://localhost:1234"
-                                            className="bg-muted/30"
+                                            className="bg-muted/30 focus-visible:ring-primary"
                                         />
                                     </div>
                                 )}
@@ -416,7 +416,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                 <Palette className="w-4 h-4 text-primary" />
                                 <CardTitle className="text-sm">{t('appearanceAndApp', language)}</CardTitle>
                             </div>
-                            <Globe className="w-4 h-4 text-muted-foreground/50" />
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-4">
