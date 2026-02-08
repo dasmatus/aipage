@@ -56,7 +56,7 @@ function getArtifactUrl(): string {
             jobName = 'package:firefox';
             // Firefox artifact is a zip of XPIs, user has to unzip.
             // But usually we just give them the zip.
-            return `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/jobs/artifacts/main/download?job=${jobName}`;
+            return `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/artifacts/main/download?job=${jobName}`;
         case 'safari':
             jobName = 'package:safari';
             artifactPath = 'aipage-safari.zip';
@@ -69,7 +69,7 @@ function getArtifactUrl(): string {
     }
 
     // Direct raw download link for specific file in artifact
-    return `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/jobs/artifacts/main/raw/${artifactPath}?job=${jobName}`;
+    return `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/artifacts/main/raw/${artifactPath}?job=${jobName}`;
 }
 
 /**
