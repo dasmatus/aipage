@@ -34,6 +34,10 @@ To install the extension, download the latest build artifacts directly from our 
 5.  Click **"Load unpacked"**.
 6.  Select the unzipped folder.
 
+> **Note on Manifest V2**: Chrome has phased out Manifest V2 extensions. If you encounter issues loading the extension, please refer to this guide on [how to enable Manifest V2 in Chrome](https://gist.github.com/velzie/053ffedeaecea1a801a2769ab86ab376).
+>
+> If you are unable to enable Manifest V2 in Chrome, we recommend using **[Brave Browser](https://brave.com/)**, which retains support for Manifest V2 extensions.
+
 ### Firefox
 
 1.  Download the `.xpi` file from the `package:firefox` job artifact.
