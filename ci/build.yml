@@ -1,0 +1,42 @@
+# Build for Chrome
+build:chrome:
+  stage: build
+  needs:
+    - install_dependencies
+  script:
+    - bun run build:chrome
+  artifacts:
+    paths:
+      - dist-chrome/
+    expire_in: 7 days
+  only:
+    - main
+
+# Build for Firefox
+build:firefox:
+  stage: build
+  needs:
+    - install_dependencies
+  script:
+    - bun run build:firefox
+    - bunx web-ext lint -s dist-firefox
+  artifacts:
+    paths:
+      - dist-firefox/
+    expire_in: 7 days
+  only:
+    - main
+
+# Build for Safari
+build:safari:
+  stage: build
+  needs:
+    - install_dependencies
+  script:
+    - bun run build:safari
+  artifacts:
+    paths:
+      - dist-safari/
+    expire_in: 7 days
+  only:
+    - main

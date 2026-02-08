@@ -1,0 +1,38 @@
+# Global configuration
+image: oven/bun:canary-debian
+
+stages:
+  - cache
+  - lint
+  - build
+  - test
+  - package
+  - pages
+  - release
+
+# Global environment variables
+variables:
+  PLAYWRIGHT_BROWSERS_PATH: ".playwright"
+
+# Cache node_modules and Playwright binaries
+cache:
+  key:
+    files:
+      - package.json
+      - bun.lock
+  paths:
+    - node_modules/
+    - .playwright/
+
+# Install dependencies
+install_dependencies:
+  stage: cache
+  script:
+    - bun install
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+  only:
+    - main
+    - merge_requests

@@ -1,0 +1,46 @@
+# Package Chrome extension
+package:chrome:
+  stage: package
+  needs:
+    - build:chrome
+    - test
+  script:
+    - cd dist-chrome && zip -r ../aipage-chrome.zip .
+  artifacts:
+    paths:
+      - aipage-chrome.zip
+    expire_in: 30 days
+  only:
+    - main
+
+# Package Firefox extension
+package:firefox:
+  stage: package
+  needs:
+    - build:firefox
+    - test
+  before_script:
+    - mkdir -p packages
+  script:
+    - bunx web-ext build -s dist-firefox -a packages
+  artifacts:
+    paths:
+      - packages/*.xpi
+    expire_in: 30 days
+  only:
+    - main
+
+# Package Safari extension (creates distributable directory)
+package:safari:
+  stage: package
+  needs:
+    - build:safari
+    - test
+  script:
+    - cd dist-safari && zip -r ../aipage-safari.zip .
+  artifacts:
+    paths:
+      - aipage-safari.zip
+    expire_in: 30 days
+  only:
+    - main

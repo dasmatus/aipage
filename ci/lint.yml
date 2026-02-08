@@ -1,0 +1,10 @@
+# Lint the TypeScript code
+lint:
+  stage: lint
+  needs:
+    - install_dependencies
+  script:
+    - bun run lint
+  allow_failure: false
+  only:
+    - merge_requests
