@@ -1,9 +1,9 @@
 
-import { test, expect } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
 import path from 'path';
 
 // Helper to get the correct build path based on project
-const getDistPath = (projectName: string) => {
+export const getDistPath = (projectName: string) => {
     switch (projectName) {
         case 'firefox':
             return 'dist-firefox/sidebar.html';
@@ -14,31 +14,38 @@ const getDistPath = (projectName: string) => {
     }
 };
 
-const resolvePath = (relativePath: string) => {
+export const resolvePath = (relativePath: string) => {
     return path.resolve(process.cwd(), relativePath);
-}
+};
 
-
-test.describe('OCR Functionality', () => {
-    test.beforeEach(async ({ page }) => {
-        // --- Universal Mock Setup ---
+// Extend base test with our mocks
+export const test = base.extend<{
+    mockBrowser: void;
+}>({
+    mockBrowser: async ({ page }, use) => {
         await page.addInitScript(() => {
-            const storage: Record<string, any> = { 'gemini_api_key': 'test-key', 'ai_provider': 'gemini' };
-            
+            const storage: Record<string, any> = {};
+            const listeners: any[] = [];
+
             // Mock Tabs API
             const mockTabs = {
                 query: async (queryInfo: any) => {
+                    // Support both currentWindow and lastFocusedWindow
                     if (queryInfo.active && (queryInfo.currentWindow || queryInfo.lastFocusedWindow)) {
                         return [{ id: 1, url: 'https://example.com', title: 'Test Page' }];
+                    }
+                    if (queryInfo.active) {
+                        // Fallback for just active
+                         return [{ id: 1, url: 'https://example.com', title: 'Test Page' }];
                     }
                     return [];
                 },
                 sendMessage: async (tabId: number, message: any) => {
                     if (message.action === 'get_page_content') {
                         return {
-                            content: 'OCR Test Content?',
-                            isSelection: true,
-                            images: ['http://example.com/ocr.png']
+                            content: 'Sample page content for testing.',
+                            isSelection: false,
+                            images: []
                         };
                     }
                     return {};
@@ -64,24 +71,44 @@ test.describe('OCR Functionality', () => {
                             Object.assign(storage, items);
                             if (callback) callback();
                         },
+                        remove: async (keys: string[] | string, callback?: () => void) => {
+                            const keyList = Array.isArray(keys) ? keys : [keys];
+                            for (const key of keyList) {
+                                delete storage[key];
+                            }
+                            if (callback) callback();
+                        },
                         onChanged: { addListener: () => {} }
                     }
                 },
                 runtime: {
                     getURL: (path: string) => path,
                     sendMessage: (message: any, callback: (response: any) => void) => {
+                        // Mock LLM response for proxy_fetch
                         if (message.action === 'proxy_fetch') {
-                             // Mock image fetch for OCR
-                             callback({ ok: true, data: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' });
+                             const mockResponse = {
+                                  ok: true,
+                                  data: {
+                                      choices: [{ message: { content: 'Mocked LLM Response' } }],
+                                      candidates: [{ content: { parts: [{ text: 'Mocked Gemini Response' }] } }]
+                                  }
+                              };
+                             // Support both callback and promise return styles if needed, but runtime.sendMessage usually takes callback
+                             if (callback) callback(mockResponse);
+                             return true; // Keep channel open
                         }
+                        // Default resolve for others to prevent hang
+                        if (callback) callback({}); 
+                        return true; 
                     },
                     onMessage: {
-                        addListener: () => {}
+                        addListener: (cb: any) => listeners.push(cb)
                     }
                 },
                 tabs: mockTabs
             };
 
+            // Expose as chrome and browser
             (window as any).chrome = chromeAPI;
             (window as any).browser = {
                 storage: chromeAPI.storage,
@@ -96,36 +123,17 @@ test.describe('OCR Functionality', () => {
                 },
                 tabs: mockTabs
             };
-
-            // Mock Tesseract globally
-            (window as any).Tesseract = {
-                recognize: async () => ({
-                    data: { text: "MOCKED OCR RESULT" }
-                })
-            };
         });
-    });
-
-    test('should display detected images and allow OCR', async ({ page }, testInfo) => {
-        await page.goto(`file://${resolvePath(getDistPath(testInfo.project.name))}`);
-        // Wait for scan button (ensures we are in chat view)
-        const scanBtn = page.locator('#scan-page-btn');
-        await expect(scanBtn).toBeVisible({ timeout: 10000 });
         
-        // Click scan
-        await scanBtn.click();
-    
-        // Check for badge "OCR Detected Image"
-        // Wait for potential async state update
-        const badge = page.locator('button[title="OCR Detected Image"]');
-        await expect(badge).toBeVisible({ timeout: 10000 });
-        await expect(badge).toHaveText('1');
+        // Listen for console logs
+        page.on('console', msg => {
+            const text = msg.text();
+            if (msg.type() === 'error') console.error(`[Browser Error] ${text}`);
+            else console.log(`[Browser Log] ${text}`);
+        });
 
-        // Click it
-        await badge.click();
-
-        // Check input for result
-        const input = page.locator('#chat-input');
-        await expect(input).toHaveValue(/MOCKED OCR RESULT/);
-    });
+        await use();
+    },
 });
+
+export { expect };

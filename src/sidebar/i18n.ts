@@ -110,11 +110,6 @@ export interface Translation {
     themeTokyo: string;
     themeMono: string;
 
-    // OCR
-    ocrUploadImage: string;
-    alertOCRNoText: string;
-    alertOCRError: string;
-    alertNoImageClipboard: string;
     noModelsFound: string;
 }
 
@@ -217,10 +212,6 @@ export const translations: Record<string, Translation> = {
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatická',
 
-        ocrUploadImage: 'Nahrať obrázok (OCR)',
-        alertOCRNoText: 'Na obrázku sa nenašiel žiadny text.',
-        alertOCRError: 'Nepodarilo sa spracovať obrázok.',
-        alertNoImageClipboard: 'V schránke sa nenašiel žiadny obrázok.',
         noModelsFound: 'Nenašli sa žiadne modely.',
     },
     
@@ -322,11 +313,6 @@ export const translations: Record<string, Translation> = {
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatic',
 
-        // OCR
-        ocrUploadImage: 'Upload Image for OCR',
-        alertOCRNoText: 'No text found in the image.',
-        alertOCRError: 'Error processing OCR.',
-        alertNoImageClipboard: 'No image found in clipboard.',
         noModelsFound: 'No models found.',
     },
     
@@ -417,7 +403,7 @@ export const translations: Record<string, Translation> = {
         alertSettingsSaved: 'Nastavení uloženo!',
         
         analyzePage: 'Analyzovat stránku',
-        askAnything: 'Zeptej se na cokoliv...',
+        askAnything: 'Zeptejte se na cokoliv...',
         alertContentLoadFailed: 'Nepodařilo se načíst obsah.',
         alertScanError: 'Chyba při skenování.',
 
@@ -428,10 +414,6 @@ export const translations: Record<string, Translation> = {
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochromatická',
 
-        ocrUploadImage: 'Nahrát obrázek (OCR)',
-        alertOCRNoText: 'V obrázku nebyl nalezen žádný text.',
-        alertOCRError: 'Chyba při zpracování OCR.',
-        alertNoImageClipboard: 'Ve schránce nebyl nalezen žádný obrázek.',
         noModelsFound: 'Nebyly nalezeny žádné modely.',
     },
     
@@ -533,10 +515,6 @@ export const translations: Record<string, Translation> = {
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monochrom',
 
-        ocrUploadImage: 'Bild hochladen (OCR)',
-        alertOCRNoText: 'Kein Text im Bild gefunden.',
-        alertOCRError: 'Bild konnte nicht verarbeitet werden.',
-        alertNoImageClipboard: 'Kein Bild in der Zwischenablage gefunden.',
         noModelsFound: 'Keine Modelle gefunden.',
     },
     
@@ -638,10 +616,6 @@ export const translations: Record<string, Translation> = {
         themeTokyo: 'Tokyo Night',
         themeMono: 'Monokróm',
 
-        ocrUploadImage: 'Kép feltöltése (OCR)',
-        alertOCRNoText: 'Nem található szöveg a képen.',
-        alertOCRError: 'A kép feldolgozása sikertelen.',
-        alertNoImageClipboard: 'Nem található kép a vágólapon.',
         noModelsFound: 'Nem található modell.',
     },
 };

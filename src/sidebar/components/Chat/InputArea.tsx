@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { t } from '../../i18n';
-import { OCRTool } from '../OCRTool';
 
 interface InputAreaProps {
     onSend: (text: string) => void;
@@ -9,10 +8,9 @@ interface InputAreaProps {
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
-    detectedImages?: string[];
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language, detectedImages }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language }) => {
     const [text, setText] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,15 +61,6 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
                     </button>
-                    
-                    <OCRTool 
-                        language={language} 
-                        detectedImages={detectedImages}
-                        onTextRecognized={(newText) => {
-                            setText((prev) => prev ? prev + '\n' + newText : newText);
-                            setTimeout(autoResize, 0);
-                        }} 
-                    />
                 </div>
 
                 <div style={{ display: 'flex', width: '100%', alignItems: 'flex-end' }}>
