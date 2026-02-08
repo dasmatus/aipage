@@ -29,7 +29,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
     const [autoUpdate, setAutoUpdate] = useState(false);
-    const [providerBackend, setProviderBackend] = useState<'standard' | 'vercel'>('standard');
+    const [providerBackend, setProviderBackend] = useState<'vercel' | 'ollama' | 'lmstudio'>('vercel');
     
     // Local settings
     const [baseUrl, setBaseUrl] = useState('');
@@ -44,17 +44,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     // Internal effect to handle backend transitions
     useEffect(() => {
-        const handleBackendTransition = async () => {
-            const backend = await browser.storage.local.get('providerBackend');
-            const bValue = (backend.providerBackend as 'standard' | 'vercel') || 'standard';
-            
-            if (bValue === 'vercel' && currentProvider !== 'vercel') {
-                onProviderChange('vercel');
-            } else if (bValue === 'standard' && currentProvider === 'vercel') {
-                onProviderChange('gemini');
-            }
-        };
-        handleBackendTransition();
+        // Ensure provider matches backend
+        if (providerBackend === 'vercel' && currentProvider !== 'vercel') {
+            onProviderChange('vercel');
+        } else if (providerBackend === 'ollama' && currentProvider !== 'ollama') {
+            onProviderChange('ollama');
+        } else if (providerBackend === 'lmstudio' && currentProvider !== 'lmstudio') {
+            onProviderChange('lmstudio');
+        }
     }, [providerBackend, currentProvider, onProviderChange]);
 
     const loadSettings = async () => {
@@ -70,19 +67,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         const u = await browser.storage.local.get('autoUpdate');
         setAutoUpdate(!!u.autoUpdate);
 
-        const backend = await browser.storage.local.get('providerBackend');
-        const bValue = (backend.providerBackend as 'standard' | 'vercel') || 'standard';
-        setProviderBackend(bValue);
+        const backend = await Storage.getProviderBackendPreference();
+        setProviderBackend(backend);
 
         const local = await Storage.getLocalSettings(currentProvider);
         setModelName(local.model || '');
 
-        if (bValue === 'standard' && (currentProvider === 'lmstudio' || currentProvider === 'ollama')) {
-            const defaultUrl = currentProvider === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434';
+        if (backend === 'lmstudio' || backend === 'ollama') {
+            const defaultUrl = backend === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434';
             const url = local.url || defaultUrl;
             setBaseUrl(url);
             fetchModels(url, key || '');
-        } else if (bValue === 'vercel') {
+        } else if (backend === 'vercel') {
             fetchModels('https://ai-gateway.vercel.sh/v1/models', key || '');
         }
     };
@@ -144,14 +140,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         await browser.storage.local.set({ autoUpdate: checked });
     };
 
-    const handleBackendChange = async (value: 'standard' | 'vercel') => {
+    const handleBackendChange = async (value: 'vercel' | 'ollama' | 'lmstudio') => {
         setProviderBackend(value);
-        await browser.storage.local.set({ providerBackend: value });
-        if (value === 'vercel') {
-            onProviderChange('vercel');
-        } else {
-            onProviderChange('gemini');
-        }
+        await Storage.saveProviderBackendPreference(value);
+        onProviderChange(value); // Directly map backend to provider
     };
 
     const renderInstructions = (fullProvider: ProviderType) => {
@@ -289,39 +281,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <CardContent className="pt-6 space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="backend-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('engineMode', language)}</Label>
-                            <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'standard' | 'vercel')}>
+                            <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'vercel' | 'ollama' | 'lmstudio')}>
                                 <SelectTrigger className={cn(providerBackend === 'vercel' && "border-primary ring-primary")}>
                                     <SelectValue placeholder={t('selectEngine', language)} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="standard" className="flex items-center gap-2">
-                                        {t('standardMode', language)}
-                                    </SelectItem>
                                     <SelectItem value="vercel" className="flex items-center gap-2">
                                         {t('vercelMode', language)}
+                                    </SelectItem>
+                                    <SelectItem value="ollama" className="flex items-center gap-2">
+                                        {t('providerOllama', language)}
+                                    </SelectItem>
+                                    <SelectItem value="lmstudio" className="flex items-center gap-2">
+                                        {t('providerLMStudio', language)}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-
-                        {providerBackend === 'standard' && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <Label htmlFor="provider-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('aiProvider', language)}</Label>
-                                <Select value={currentProvider} onValueChange={(p) => onProviderChange(p as ProviderType)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('selectProvider', language)} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="gemini">{t('providerGemini', language)}</SelectItem>
-                                        <SelectItem value="openai">{t('providerChatGPT', language)}</SelectItem>
-                                        <SelectItem value="claude">{t('providerClaude', language)}</SelectItem>
-                                        <SelectItem value="mistral">{t('providerMistral', language)}</SelectItem>
-                                        <SelectItem value="ollama">{t('providerOllama', language)}</SelectItem>
-                                        <SelectItem value="lmstudio">{t('providerLMStudio', language)}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
 
@@ -335,9 +311,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                        {((isLocal && providerBackend === 'standard') || providerBackend === 'vercel') && (
+                        {(providerBackend === 'ollama' || providerBackend === 'lmstudio' || providerBackend === 'vercel') && (
                             <div className="space-y-4 animate-in fade-in duration-500">
-                                {providerBackend === 'standard' && (
+                                {(providerBackend === 'ollama' || providerBackend === 'lmstudio') && (
                                     <div className="space-y-2">
                                         <Label htmlFor="base-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('baseUrl', language)}</Label>
                                         <Input 

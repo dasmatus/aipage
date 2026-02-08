@@ -45,12 +45,12 @@ export async function saveProviderPreference(provider: ProviderType): Promise<vo
     await browser.storage.local.set({ [STORAGE_KEYS.PROVIDER]: provider });
 }
 
-export async function getProviderBackendPreference(): Promise<'standard' | 'vercel'> {
+export async function getProviderBackendPreference(): Promise<'vercel' | 'ollama' | 'lmstudio'> {
     const result = await browser.storage.local.get('providerBackend');
-    return (result.providerBackend as 'standard' | 'vercel') || 'standard';
+    return (result.providerBackend as 'vercel' | 'ollama' | 'lmstudio') || 'vercel';
 }
 
-export async function saveProviderBackendPreference(backend: 'standard' | 'vercel'): Promise<void> {
+export async function saveProviderBackendPreference(backend: 'vercel' | 'ollama' | 'lmstudio'): Promise<void> {
     await browser.storage.local.set({ providerBackend: backend });
 }
 

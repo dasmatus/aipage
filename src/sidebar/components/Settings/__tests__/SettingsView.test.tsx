@@ -149,7 +149,7 @@ describe('SettingsView', () => {
         await act(async () => {
             render(
                 <SettingsView
-                    currentProvider="gemini"
+                    currentProvider="vercel"
                     onClose={mockOnClose}
                     onProviderChange={mockOnProviderChange}
                     language="en"
@@ -158,7 +158,7 @@ describe('SettingsView', () => {
             );
         });
 
-        const input = screen.getByPlaceholderText('apiKeyPlaceholder');
+        const input = screen.getByPlaceholderText('vercelApiKeyPlaceholder');
         fireEvent.change(input, { target: { value: 'new-key' } });
         
         const saveBtn = screen.getByText('saveKey');
@@ -167,9 +167,8 @@ describe('SettingsView', () => {
         });
 
         // Check if browser.storage.local.set was called with correct key
-        // gemini key is gemini_api_key
         expect(browser.storage.local.set).toHaveBeenCalledWith(
-            expect.objectContaining({ gemini_api_key: 'new-key' })
+            expect.objectContaining({ vercel_api_key: 'new-key' })
         );
         expect(mockOnClose).toHaveBeenCalled();
     });
