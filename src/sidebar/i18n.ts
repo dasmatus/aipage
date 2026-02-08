@@ -141,6 +141,7 @@ export interface Translation {
     user: string;
     ai: string;
     vercelBadge: string;
+    vercelVirtualCardNotice: string;
 }
 
 export const translations: Record<string, Translation> = {
@@ -273,6 +274,7 @@ export const translations: Record<string, Translation> = {
         user: 'Používateľ',
         ai: 'AI',
         vercelBadge: 'Vercel SDK',
+        vercelVirtualCardNotice: 'Odporúčame vytvoriť si virtuálnu platobnú kartu vo vašej bankovej aplikácii a použiť ju tu pre zvýšenie bezpečnosti.'
     },
     
     // English
@@ -404,6 +406,7 @@ export const translations: Record<string, Translation> = {
         user: 'User',
         ai: 'AI',
         vercelBadge: 'Vercel SDK',
+        vercelVirtualCardNotice: 'We recommend creating a virtual credit card in your bank app and putting it here for enhanced security.'
     },
     
     // Czech
@@ -530,11 +533,12 @@ export const translations: Record<string, Translation> = {
         vercelApiKeyHint: 'Tento klíč bude použit pro Vercel AI SDK Adaptér.',
         appearanceAndApp: 'Vzhled a Aplikace',
         themeDescription: 'Vyberte si preferovaný vizuální styl.',
-        globalThemeDescription: 'Aplikovat téma sidebar-u na celou stránku.',
+        globalThemeDescription: 'Aplikovat téma sidebar-u na celú stránku.',
         autoUpdateDescription: 'Povolit automatické aktualizace z GitLabu.',
         user: 'Uživatel',
         ai: 'AI',
         vercelBadge: 'Vercel SDK',
+        vercelVirtualCardNotice: 'Doporučujeme vytvořit si virtuální platební kartu ve vaší bankovní aplikaci a použít ji zde pro zvýšení bezpečnosti.'
     },
     
     // German
@@ -666,6 +670,7 @@ export const translations: Record<string, Translation> = {
         user: 'Benutzer',
         ai: 'KI',
         vercelBadge: 'Vercel SDK',
+        vercelVirtualCardNotice: 'Wir empfehlen, in Ihrer Bank-App eine virtuelle Kreditkarte zu erstellen und diese hier für zusätzliche Sicherheit zu hinterlegen.'
     },
     
     // Hungarian
@@ -797,6 +802,7 @@ export const translations: Record<string, Translation> = {
         user: 'Felhasználó',
         ai: 'AI',
         vercelBadge: 'Vercel SDK',
+        vercelVirtualCardNotice: 'Javasoljuk, hogy hozzon létre egy virtuális bankkártyát a banki alkalmazásában, és használja azt itt a nagyobb biztonság érdekében.'
     },
 };
 

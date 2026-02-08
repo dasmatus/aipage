@@ -9,6 +9,8 @@ export type ProviderType = 'gemini' | 'openai' | 'claude' | 'mistral' | 'lmstudi
 
 const SYSTEM_PROMPT = "You are a helpful assistant that answers questions correctly.";
 
+import browser from '../polyfills/browser-polyfill';
+
 /**
  * Interface that all AI providers must implement.
  */
@@ -41,40 +43,41 @@ export interface AIProvider {
  * This is necessary to bypass CORS restrictions for both local and cloud APIs.
  */
 async function performRequest(url: string, method: string, headers: Record<string, string>, body: string | null = null): Promise<any> {
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
+    try {
+        const response: any = await browser.runtime.sendMessage({
             action: 'proxy_fetch',
             payload: { url, method, headers, body }
-        }, (response) => {
-            if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-                return;
-            }
-            if (!response) {
-                reject(new Error('No response from background script'));
-                return;
-            }
-            if (response.ok) {
-                let result = response.data;
-                console.log(`PerformRequest Success: ${url}, type: ${typeof result}`);
-                if (typeof result === 'string') {
-                    try {
-                        result = JSON.parse(result);
-                        console.log(`Parsed JSON result for ${url}`);
-                    } catch (e) {
-                        console.warn(`Failed to parse JSON for ${url}: ${result.substring(0, 100)}`);
-                    }
-                }
-                resolve(result);
-            } else {
-                console.error(`PerformRequest Failed: ${url}`, response);
-                const errorMsg = typeof response.data === 'object' ?
-                    (response.data.error?.message || response.data.message || JSON.stringify(response.data)) :
-                    (response.data || response.error || 'Unknown error');
-                reject(new Error(errorMsg));
-            }
         });
-    });
+
+        if (!response) {
+            throw new Error('No response from background script');
+        }
+
+        if (response.ok) {
+            let result = response.data;
+            console.log(`PerformRequest Success: ${url}, type: ${typeof result}`);
+            if (typeof result === 'string') {
+                try {
+                    result = JSON.parse(result);
+                    console.log(`Parsed JSON result for ${url}`);
+                } catch (e) {
+                    console.warn(`Failed to parse JSON for ${url}: ${result.substring(0, 100)}`);
+                }
+            }
+            return result;
+        } else {
+            console.error(`PerformRequest Failed: ${url}`, response);
+            const errorMsg = typeof response.data === 'object' ?
+                (response.data.error?.message || response.data.message || JSON.stringify(response.data)) :
+                (response.data || response.error || 'Unknown error');
+            throw new Error(errorMsg);
+        }
+    } catch (error: any) {
+        if (error.message?.includes('Could not establish connection')) {
+            throw new Error('Extension connection lost. Please refresh the page and the sidebar.');
+        }
+        throw error;
+    }
 }
 
 /**
@@ -378,7 +381,10 @@ export class VercelSDKProvider implements AIProvider {
         options?: { baseUrl?: string, modelName?: string },
         onProgress?: (chunk: string) => void
     ): Promise<string> {
-        const url = options?.baseUrl ? `${options.baseUrl}/chat/completions` : 'https://ai-gateway.vercel.sh/v1/chat/completions';
+        let url = options?.baseUrl || 'https://ai-gateway.vercel.sh/v1';
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        if (url.endsWith('/models')) url = url.slice(0, -7);
+        if (!url.endsWith('/chat/completions')) url = `${url}/chat/completions`;
 
         const data = await performRequest(url, 'POST', {
             'Content-Type': 'application/json',
@@ -398,14 +404,23 @@ export class VercelSDKProvider implements AIProvider {
     }
 
     async getModels(apiKey: string, options?: { baseUrl?: string }): Promise<any[]> {
-        const url = options?.baseUrl ? `${options.baseUrl}/models` : 'https://ai-gateway.vercel.sh/v1/models';
+        let url = options?.baseUrl || 'https://ai-gateway.vercel.sh/v1/models';
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        if (!url.endsWith('/models')) url = `${url}/models`;
 
         try {
             const data = await performRequest(url, 'GET', {
                 'Authorization': `Bearer ${apiKey}`
             });
-            const models = data.data
-                .filter((m: any) => m.type === 'language' && m.id)
+            // Robustly extract model list from various common API formats
+            const modelData = Array.isArray(data.data) 
+                ? data.data 
+                : (Array.isArray(data.models) 
+                    ? data.models 
+                    : (Array.isArray(data) ? data : []));
+            
+            const models = modelData
+                .filter((m: any) => m && m.id)
                 .map((m: any) => {
                     let provider = 'other';
                     if (m.id.includes(':')) {
@@ -414,10 +429,14 @@ export class VercelSDKProvider implements AIProvider {
                         provider = m.id.split('/')[0];
                     }
                     
+                    const pricingLabel = (m.pricing && m.pricing.prompt !== undefined) 
+                        ? `${m.pricing.input}/${m.pricing.output} (1M)` 
+                        : '';
+
                     return {
                         id: m.id,
                         provider: provider.charAt(0).toUpperCase() + provider.slice(1),
-                        pricing: m.pricing?.prompt ? `${m.pricing.prompt}/${m.pricing.completion} (1M)` : '',
+                        pricing: pricingLabel,
                         tags: m.tags || []
                     };
                 });

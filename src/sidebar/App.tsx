@@ -66,7 +66,7 @@ const App: React.FC = () => {
 
     const handleSend = async (text: string) => {
         const currentKey = await Storage.getApiKey(provider);
-        const options = (provider === 'lmstudio' || provider === 'ollama') 
+        const options = (provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel') 
             ? await Storage.getLocalSettings(provider) 
             : undefined;
 
@@ -94,8 +94,8 @@ const App: React.FC = () => {
     };
 
     const handleSearchWeb = async (query: string) => {
-        const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
-        if (!isLocalModel) {
+        const isRemoteWithModels = provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel';
+        if (!isRemoteWithModels) {
             alert('Web search requires a local model (LM Studio or Ollama).');
             return;
         }
@@ -142,8 +142,8 @@ const App: React.FC = () => {
 
             if (!query) return;
 
-            const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
-            if (isLocalModel) {
+            const isRemoteWithModels = provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel';
+            if (isRemoteWithModels) {
                 handleSearchWeb(query);
             } else {
                 window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');

@@ -81,20 +81,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             const defaultUrl = currentProvider === 'lmstudio' ? 'http://localhost:1234/v1' : 'http://localhost:11434';
             const url = local.url || defaultUrl;
             setBaseUrl(url);
-            fetchModels(url);
+            fetchModels(url, key || '');
         } else if (bValue === 'vercel') {
-            fetchModels('https://ai-gateway.vercel.sh/v1');
+            fetchModels('https://ai-gateway.vercel.sh/v1/models', key || '');
         }
     };
 
-    const fetchModels = async (url: string) => {
+    const fetchModels = async (url: string, manualKey?: string) => {
         if (!url) return;
         setIsLoadingModels(true);
         setFetchError(null);
         try {
             const p = getProvider(currentProvider);
             if (p.getModels) {
-                const models = await p.getModels(apiKey, { baseUrl: url });
+                const effectiveKey = manualKey !== undefined ? manualKey : apiKey;
+                const models = await p.getModels(effectiveKey, { baseUrl: url });
                 setAvailableModels(models);
                 if (models.length === 0) setFetchError(t('noModelsFound', language) || 'No models found');
             } else {
@@ -394,7 +395,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                             <Button 
                                                 variant="outline"
                                                 size="icon"
-                                                onClick={() => fetchModels(providerBackend === 'vercel' ? 'https://ai-gateway.vercel.sh/v1' : baseUrl)}
+                                                onClick={() => fetchModels(providerBackend === 'vercel' ? 'https://ai-gateway.vercel.sh/v1/models' : baseUrl)}
                                                 title={t('refreshModels', language)}
                                                 className="shrink-0"
                                             >
@@ -422,6 +423,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <p className="text-[10px] text-muted-foreground opacity-70">
                                 {providerBackend === 'vercel' ? t('vercelApiKeyHint', language) : t('apiKeyHint', language)}
                             </p>
+                            {providerBackend === 'vercel' && (
+                                <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded text-[10px] text-primary flex items-start gap-2">
+                                    <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                    <span>{t('vercelVirtualCardNotice', language)}</span>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

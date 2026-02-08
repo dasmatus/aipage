@@ -22,7 +22,8 @@ export const STORAGE_KEYS = {
     },
     LOCAL_SETTINGS: {
         lmstudio: { url: 'lmstudio_base_url', model: 'lmstudio_model' },
-        ollama: { url: 'ollama_base_url', model: 'ollama_model' }
+        ollama: { url: 'ollama_base_url', model: 'ollama_model' },
+        vercel: { url: 'vercel_base_url', model: 'vercel_model' }
     },
     THEME: 'ai_sidebar_theme'
 };
@@ -72,7 +73,7 @@ export async function getApiKey(provider: ProviderType): Promise<string | null> 
  * @param {string} model 
  */
 export async function saveLocalSettings(provider: ProviderType, url: string, model: string): Promise<void> {
-    if (provider !== 'lmstudio' && provider !== 'ollama') return;
+    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'vercel') return;
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
     await browser.storage.local.set({
         [keys.url]: url,
@@ -86,7 +87,7 @@ export async function saveLocalSettings(provider: ProviderType, url: string, mod
  * @returns {Promise<{url: string, model: string}>}
  */
 export async function getLocalSettings(provider: ProviderType): Promise<{ url: string, model: string }> {
-    if (provider !== 'lmstudio' && provider !== 'ollama') {
+    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'vercel') {
         return { url: '', model: '' };
     }
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];

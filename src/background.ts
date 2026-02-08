@@ -5,44 +5,6 @@
 
 import { initUpdateManager } from './update-manager';
 
-// Initialize auto-update check
-initUpdateManager();
-
-/**
- * Listen for extension icon clicks to toggle sidebar if needed.
- */
-const actionAPI = chrome.action || chrome.browserAction;
-actionAPI.onClicked.addListener((tab) => {
-    if (tab.id) {
-        chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" });
-    }
-});
-
-/**
- * Parse DuckDuckGo HTML search results
- */
-function parseSearchResults(html: string): Array<{title: string, snippet: string, url: string}> {
-    const results: Array<{title: string, snippet: string, url: string}> = [];
-    
-    // Simple regex-based parsing of DuckDuckGo HTML
-    // Look for result blocks: <div class="result__body"> containing title and snippet
-    const resultRegex = /<div class="result__body">[\s\S]*?<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
-    
-    let match;
-    while ((match = resultRegex.exec(html)) !== null && results.length < 5) {
-        const url = match[1];
-        const title = match[2].replace(/<[^>]*>/g, '').trim(); // Remove HTML tags
-        const snippet = match[3].replace(/<[^>]*>/g, '').trim(); // Remove HTML tags
-        
-        if (title && snippet && url) {
-            results.push({ title, snippet, url });
-        }
-    }
-    
-    return results;
-}
-
-
 /**
  * Proxy Fetch Listener
  * Background scripts have higher privileges than the sidebar/page and can bypass CORS
@@ -52,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'proxy_fetch') {
         const { url, method, headers, body } = message.payload;
 
-            fetch(url, { method, headers, body })
+        fetch(url, { method, headers, body })
             .then(async response => {
                 const contentType = response.headers.get('content-type');
                 let data;
@@ -88,6 +50,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
             })
             .catch(error => {
+                console.error('Fetch error:', error);
                 sendResponse({ ok: false, error: error.message });
             });
 
@@ -132,9 +95,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ ok: true, results });
             })
             .catch(error => {
+                console.error('Search error:', error);
                 sendResponse({ ok: false, error: error.toString() });
             });
         
         return true; // Keep channel open for async response
     }
 });
+
+/**
+ * Listen for extension icon clicks to toggle sidebar if needed.
+ */
+const actionAPI = chrome.action || chrome.browserAction;
+if (actionAPI) {
+    actionAPI.onClicked.addListener((tab) => {
+        if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" });
+        }
+    });
+}
+
+// Initialize auto-update check inside a try-catch for robustness
+try {
+    initUpdateManager();
+} catch (e) {
+    console.error('Failed to initialize update manager:', e);
+}
