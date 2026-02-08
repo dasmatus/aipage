@@ -125,6 +125,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <li>{t('geminiStep5', language)}</li>
                         </ol>
                         <p className="note">{t('geminiNote', language)}</p>
+                        <p className="note" style={{marginTop: '0.5rem'}}>
+                            <a href="https://discuss.ai.google.dev/t/cant-create-project-or-apikey-from-ai-stuidio/108979/4" target="_blank" rel="noopener noreferrer">
+                                {t('geminiTroubleshoot', language)}
+                            </a>
+                        </p>
                     </div>
                 )}
                 {fullProvider === 'openai' && (

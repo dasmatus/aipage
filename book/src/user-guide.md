@@ -82,6 +82,8 @@ The extension supports multiple AI providers. Choose your preferred provider and
 3. Click **"Get API Key"** or **"Create API Key"**
 4. Copy the key (starts with `AIzaSy...`)
 
+> **Troubleshooting**: If you encounter the error _"We are unable to create an API key and a Google Cloud project for you"_, you may need to manually create a project in the [Google Cloud Console](https://console.cloud.google.com/) first. See [this forum post](https://discuss.ai.google.dev/t/cant-create-project-or-apikey-from-ai-stuidio/108979/4) for more details.
+
 #### OpenAI, Claude, Mistral
 
 Follow the links in the sidebar settings to get your API keys from their respective consoles.

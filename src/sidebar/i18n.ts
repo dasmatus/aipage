@@ -57,6 +57,7 @@ export interface Translation {
     geminiStep4: string;
     geminiStep5: string;
     geminiNote: string;
+    geminiTroubleshoot: string;
     
     openaiInstructionsTitle: string;
     openaiStep1: string;
@@ -157,6 +158,7 @@ export const translations: Record<string, Translation> = {
         geminiStep4: 'Skopírujte vygenerovaný kľúč (začína na AIzaSy...)',
         geminiStep5: 'Vložte ho nižšie a kliknite na "Uložiť kľúč"',
         geminiNote: '⚠️ Váš API kľúč je uložený lokálne a bezpečne vo vašom prehliadači.',
+        geminiTroubleshoot: 'Neviete vytvoriť kľúč? Čítajte tu.',
 
         openaiInstructionsTitle: 'Ako získať OpenAI API kľúč:',
         openaiStep1: 'Navštívte OpenAI Platform',
@@ -259,6 +261,7 @@ export const translations: Record<string, Translation> = {
         geminiStep4: 'Copy the generated key (starts with AIzaSy...)',
         geminiStep5: 'Paste it below and click "Save Key"',
         geminiNote: '⚠️ Your API key is stored locally and securely in your browser.',
+        geminiTroubleshoot: 'Can\'t create a key? Read this.',
 
         openaiInstructionsTitle: 'How to get an OpenAI API key:',
         openaiStep1: 'Visit OpenAI Platform',
@@ -361,6 +364,7 @@ export const translations: Record<string, Translation> = {
         geminiStep4: 'Zkopírujte vygenerovaný klíč (začíná na AIzaSy...)',
         geminiStep5: 'Vložte jej níže a klikněte na "Uložit klíč"',
         geminiNote: '⚠️ Váš API klíč je uložen lokálně a bezpečně ve vašem prohlížeči.',
+        geminiTroubleshoot: 'Nemůžete vytvořit klíč? Čtěte zde.',
 
         openaiInstructionsTitle: 'Jak získat OpenAI API klíč:',
         openaiStep1: 'Navštivte OpenAI Platform',
@@ -463,6 +467,7 @@ export const translations: Record<string, Translation> = {
         geminiStep4: 'Kopieren Sie den generierten Schlüssel (beginnt mit AIzaSy...)',
         geminiStep5: 'Fügen Sie ihn unten ein und klicken Sie auf "Schlüssel Speichern"',
         geminiNote: '⚠️ Ihr API-Schlüssel wird lokal und sicher in Ihrem Browser gespeichert.',
+        geminiTroubleshoot: 'Schlüssel kann nicht erstellt werden? Hier lesen.',
 
         openaiInstructionsTitle: 'So erhalten Sie einen OpenAI API-Schlüssel:',
         openaiStep1: 'Besuchen Sie OpenAI Platform',
@@ -565,6 +570,7 @@ export const translations: Record<string, Translation> = {
         geminiStep4: 'Másolja ki a generált kulcsot (AIzaSy... kezdettel)',
         geminiStep5: 'Illessze be alább és kattintson a "Kulcs Mentése" gombra',
         geminiNote: '⚠️ Az API kulcsa helyileg és biztonságosan a böngészőjében tárolódik.',
+        geminiTroubleshoot: 'Nem tud kulcsot létrehozni? Olvassa el ezt.',
 
         openaiInstructionsTitle: 'Hogyan szerezzünk OpenAI API kulcsot:',
         openaiStep1: 'Látogassa meg az OpenAI Platformot',
