@@ -4,7 +4,7 @@ pages:
   needs:
     - install_dependencies
   before_script:
-    - bun install marked
+    - apt-get update && apt-get install -y mdbook
   script:
     - chmod +x scripts/build-docs.sh
     - ./scripts/build-docs.sh

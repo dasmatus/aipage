@@ -24,7 +24,8 @@
         "release:major": "standard-version --release-as major",
         "docs:build": "./scripts/build-docs.sh",
         "docs:api": "typedoc --out public/api src",
-        "docs:serve": "mdbook serve --open"
+        "docs:serve": "mdbook serve --open",
+        "convert-to-md": "bun run docs:build && bunx marked"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",

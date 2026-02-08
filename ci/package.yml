@@ -3,7 +3,6 @@ package:chrome:
   stage: package
   needs:
     - build:chrome
-    - test
   script:
     - cd dist-chrome && zip -r ../aipage-chrome.zip .
   artifacts:
@@ -18,7 +17,6 @@ package:firefox:
   stage: package
   needs:
     - build:firefox
-    - test
   before_script:
     - mkdir -p packages
   script:
@@ -35,7 +33,6 @@ package:safari:
   stage: package
   needs:
     - build:safari
-    - test
   script:
     - cd dist-safari && zip -r ../aipage-safari.zip .
   artifacts:

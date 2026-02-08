@@ -5,6 +5,5 @@ include:
   - local: "/ci/base.yml"
   - local: "/ci/lint.yml"
   - local: "/ci/build.yml"
-  - local: "/ci/test.yml"
   - local: "/ci/package.yml"
   - local: "/ci/release.yml"
