@@ -32,7 +32,7 @@ install_dependencies:
   artifacts:
     paths:
       - node_modules/
-    expire_in: 1 hour
+    expire_in: 5 mins
   only:
     - main
     - merge_requests
