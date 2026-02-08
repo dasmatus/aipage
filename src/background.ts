@@ -3,6 +3,11 @@
  * Handles extension-wide tasks and acts as a CORS proxy for API requests.
  */
 
+import { initUpdateManager } from './update-manager';
+
+// Initialize auto-update check
+initUpdateManager();
+
 /**
  * Listen for extension icon clicks to toggle sidebar if needed.
  */

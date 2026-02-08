@@ -33,3 +33,22 @@
 };
 
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder as any;
+
+if (typeof global.TransformStream === 'undefined') {
+    try {
+        const { TransformStream } = require('stream/web');
+        global.TransformStream = TransformStream;
+    } catch (e) {
+        // Fallback or ignore
+    }
+}
+if (typeof global.ReadableStream === 'undefined') {
+    try {
+        const { ReadableStream } = require('stream/web');
+        global.ReadableStream = ReadableStream;
+    } catch (e) {}
+}

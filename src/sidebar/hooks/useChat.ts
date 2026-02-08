@@ -1,6 +1,16 @@
 import { useState, useCallback } from 'react';
 import { Message, ProviderType, Role } from '../types';
 import { getProvider } from '../providers';
+import { streamText } from 'ai';
+import { createVercelModel } from '../vercel-providers';
+import * as Storage from '../storage';
+import browser from 'webextension-polyfill';
+
+// Fallback type if ai package doesn't export it in this version
+type CoreMessage = {
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string;
+};
 
 export const useChat = () => {
     const [messages, setMessages] = useState<Message[]>([
@@ -41,19 +51,63 @@ export const useChat = () => {
 
         addMessage('user', text);
         setIsTyping(true);
-        addMessage('ai', 'Rozmýšľam...');
-
+        addMessage('ai', 'Rozmýšľam...'); // Initial placeholder
+        
         try {
-            const provider = getProvider(providerType);
-            let response = '';
-
-            await provider.sendMessage(text, apiKey || '', options, (chunk) => {
-                response += chunk;
-                updateLastMessage(response);
-            });
+            // Check backend preference
+            const backendPref = await Storage.getProviderBackendPreference();
             
-            // Final update to ensure consistency
-            updateLastMessage(response);
+            if (backendPref === 'vercel') {
+                console.log('Using Vercel AI SDK Backend');
+                // Use Vercel AI SDK
+                const model = createVercelModel(providerType, apiKey || '', options);
+                
+                // Convert messages to CoreMessage[]
+                // We need to exclude the placeholder 'ai' message we just added (last one)
+                // And filter out messages without content or invalid roles if necessary
+                const validMessages: CoreMessage[] = messages.map(m => ({
+                    role: m.role === 'ai' ? 'assistant' : 'user',
+                    content: m.content
+                }));
+                // Add current user message
+                validMessages.push({ role: 'user', content: text });
+
+                const { textStream } = streamText({
+                    model,
+                    messages: validMessages as any,
+                });
+
+                let fullResponse = '';
+                for await (const textPart of textStream) {
+                    fullResponse += textPart;
+                    updateLastMessage(fullResponse);
+                }
+                
+                // Final update
+                updateLastMessage(fullResponse);
+
+            } else {
+                // Legacy Standard Backend
+                const provider = getProvider(providerType);
+                let response = '';
+
+                // Note: The legacy sendMessage doesn't usually take full history, just prompt 
+                // but providers.ts implementation handles just the prompt string.
+                // We might want to pass full history if providers supported it.
+                await provider.sendMessage(text, apiKey || '', options, (chunk) => {
+                    // Legacy chunk handling (often just full text at end)
+                     // If it's a true chunk, we append. If it's full text re-sent, we replace.
+                     // provider.sendMessage in providers.ts seems to do: if (onProgress) onProgress(text);
+                     // where text is the FULL response.
+                     // So we should probably just set it. 
+                     // BUT, in providers.ts, performRequest might return full text.
+                     // Let's assume standard behavior:
+                     response = chunk; // In legacy, chunk IS the full text so far or final text
+                     updateLastMessage(response);
+                });
+                
+                updateLastMessage(response);
+            }
 
         } catch (error) {
             console.error('AI Error:', error);

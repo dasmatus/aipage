@@ -13,6 +13,7 @@ export interface Translation {
     language: string;
     themeInterface: string;
     applyThemeGlobal: string;
+    autoUpdate: string;
     
     // Instructions
     instructionsTitle: string;
@@ -127,6 +128,7 @@ export const translations: Record<string, Translation> = {
         language: 'Jazyk',
         themeInterface: 'Téma rozhrania',
         applyThemeGlobal: 'Aplikovať tému aj na EduPage',
+        autoUpdate: 'Automatické aktualizácie (GitLab)',
         
         instructionsTitle: 'Ako získať API kľúč:',
         
@@ -230,6 +232,7 @@ export const translations: Record<string, Translation> = {
         language: 'Language',
         themeInterface: 'Interface Theme',
         applyThemeGlobal: 'Apply theme to EduPage',
+        autoUpdate: 'Auto-update (GitLab)',
         
         instructionsTitle: 'How to get an API key:',
         
@@ -333,6 +336,7 @@ export const translations: Record<string, Translation> = {
         language: 'Jazyk',
         themeInterface: 'Téma rozhraní',
         applyThemeGlobal: 'Aplikovat téma na EduPage',
+        autoUpdate: 'Automatické aktualizace (GitLab)',
         
         instructionsTitle: 'Jak získat API klíč:',
         
@@ -436,6 +440,7 @@ export const translations: Record<string, Translation> = {
         language: 'Sprache',
         themeInterface: 'Oberflächenthema',
         applyThemeGlobal: 'Design auf EduPage anwenden',
+        autoUpdate: 'Automatische Updates (GitLab)',
         
         instructionsTitle: 'So erhalten Sie einen API-Schlüssel:',
         
@@ -539,6 +544,7 @@ export const translations: Record<string, Translation> = {
         language: 'Nyelv',
         themeInterface: 'Felület téma',
         applyThemeGlobal: 'Téma alkalmazása az EduPage-re',
+        autoUpdate: 'Automatikus frissítés (GitLab)',
         
         instructionsTitle: 'Hogyan szerezzünk API kulcsot:',
         

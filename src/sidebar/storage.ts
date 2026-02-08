@@ -43,6 +43,15 @@ export async function saveProviderPreference(provider: ProviderType): Promise<vo
     await browser.storage.local.set({ [STORAGE_KEYS.PROVIDER]: provider });
 }
 
+export async function getProviderBackendPreference(): Promise<'standard' | 'vercel'> {
+    const result = await browser.storage.local.get('providerBackend');
+    return (result.providerBackend as 'standard' | 'vercel') || 'standard';
+}
+
+export async function saveProviderBackendPreference(backend: 'standard' | 'vercel'): Promise<void> {
+    await browser.storage.local.set({ providerBackend: backend });
+}
+
 /**
  * Loads the API key for a specific provider.
  * @param {ProviderType} provider 

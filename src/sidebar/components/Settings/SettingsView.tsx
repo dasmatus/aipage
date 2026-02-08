@@ -18,6 +18,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [apiKey, setApiKey] = useState('');
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
+    const [autoUpdate, setAutoUpdate] = useState(false);
+    const [providerBackend, setProviderBackend] = useState<'standard' | 'vercel'>('standard');
     // language state removed
     
     // Local settings
@@ -43,6 +45,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
         const g = await browser.storage.local.get('ai_sidebar_global');
         setGlobalTheme(!!g.ai_sidebar_global);
+
+        const u = await browser.storage.local.get('autoUpdate');
+        setAutoUpdate(!!u.autoUpdate);
+
+        const backend = await browser.storage.local.get('providerBackend');
+        setProviderBackend((backend.providerBackend as 'standard' | 'vercel') || 'standard');
 
         if (currentProvider === 'lmstudio' || currentProvider === 'ollama') {
             const local = await Storage.getLocalSettings(currentProvider);
@@ -103,6 +111,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         const checked = e.target.checked;
         setGlobalTheme(checked);
         await browser.storage.local.set({ ai_sidebar_global: checked });
+    };
+
+    const handleAutoUpdateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = e.target.checked;
+        setAutoUpdate(checked);
+        await browser.storage.local.set({ autoUpdate: checked });
+    };
+
+    const handleBackendChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value as 'standard' | 'vercel';
+        setProviderBackend(value);
+        await browser.storage.local.set({ providerBackend: value });
     };
 
     const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -243,6 +263,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         onChange={handleGlobalThemeChange}
                     />
                     <label htmlFor="global-theme-toggle" className="inline-label">{t('applyThemeGlobal', language)}</label>
+                </div>
+
+                <div className="input-group checkbox-group">
+                    <input 
+                        type="checkbox" 
+                        id="auto-update-toggle" 
+                        checked={autoUpdate} 
+                        onChange={handleAutoUpdateChange}
+                    />
+                    <label htmlFor="auto-update-toggle" className="inline-label">{t('autoUpdate', language) || 'Enable Auto-Updates (GitLab)'}</label>
+                </div>
+
+                <div className="input-group">
+                    <label style={{color: 'var(--eduba-primary)', fontWeight: 'bold', fontSize: '0.9em', marginTop: '10px', display: 'block'}}>Experimental</label>
+                    <div className="input-group" style={{marginTop: '5px'}}>
+                        <label style={{fontSize: '11px'}}>Provider Backend</label>
+                         <select 
+                            value={providerBackend} 
+                            onChange={handleBackendChange}
+                            style={{borderColor: providerBackend === 'vercel' ? 'var(--eduba-primary)' : ''}}
+                        >
+                            <option value="standard">Standard</option>
+                            <option value="vercel">Vercel AI SDK</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div className="input-group">
