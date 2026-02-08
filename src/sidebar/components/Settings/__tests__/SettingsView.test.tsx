@@ -21,14 +21,26 @@ jest.mock('webextension-polyfill', () => ({
 }));
 
 // Mock browser polyfill
-jest.mock('../../../../polyfills/browser-polyfill', () => ({
-    storage: {
-        local: {
-            get: jest.fn(() => Promise.resolve({})),
-            set: jest.fn(() => Promise.resolve()),
+// Mock browser polyfill
+jest.mock('../../../../polyfills/browser-polyfill', () => {
+    const mockBrowser = {
+        storage: {
+            local: {
+                get: jest.fn(() => Promise.resolve({})),
+                set: jest.fn(() => Promise.resolve()),
+            }
+        },
+        runtime: {
+             getURL: jest.fn(),
+             sendMessage: jest.fn(),
         }
-    }
-}));
+    };
+    return {
+        __esModule: true,
+        default: mockBrowser,
+        ...mockBrowser, // for named exports if any are used
+    };
+});
 
 // Mock Storage but keep constants
 jest.mock('../../../storage', () => {
