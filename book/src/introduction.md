@@ -14,13 +14,13 @@ This is a cross-browser extension that brings AI assistance directly to EduPage.
 
 ## Quick Links
 
-- **[User Guide](./user-guide.md)**: Installation and usage instructions
-- **[Contributing Guide](./contributing.md)**: Developer documentation
-- **[Changelog](./changelog.md)**: Version history
-- **[API Reference](./api-reference.md)**: TypeScript API documentation
+- **[User Guide](user-guide.md)**: Installation and usage instructions
+- **[Contributing Guide](contributing.md)**: Developer documentation
+- **[Changelog](changelog.md)**: Version history
+- **[API Reference](api-reference.md)**: TypeScript API documentation
 
 ## Getting Started
 
-For end users, start with the [User Guide](./user-guide.md) to learn how to install and use the extension.
+For end users, start with the [User Guide](user-guide.md) to learn how to install and use the extension.
 
-For developers looking to contribute, check out the [Contributing Guide](./contributing.md) for setup instructions and architecture overview.
+For developers looking to contribute, check out the [Contributing Guide](contributing.md) for setup instructions and architecture overview.
