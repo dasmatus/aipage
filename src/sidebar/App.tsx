@@ -13,7 +13,7 @@ const App: React.FC = () => {
     const [view, setView] = useState<'chat' | 'settings'>('chat');
     const [provider, setProvider] = useState<ProviderType>('gemini');
     const [, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext } = useChat();
+    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, setIsTyping } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
@@ -91,16 +91,110 @@ const App: React.FC = () => {
         }
     };
 
-    const handleActionClick = (action: string) => {
-        if (action === 'search_ddg') {
-             const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_ddg') 
+
+    const handleSearchWeb = async (query: string) => {
+        // Check if using local model
+        const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
+        
+        if (!isLocalModel) {
+            alert('Web search requires a local model (LM Studio or Ollama). Please switch to a local provider in settings.');
+            return;
+        }
+
+        // Trigger web search
+        addMessage('user', `Search web: ${query}`);
+        setIsTyping(true);
+        addMessage('ai', 'Searching the web...');
+
+        try {
+            // Call background script to search
+            const response: any = await browser.runtime.sendMessage({
+                action: 'search_web',
+                payload: { query: query.trim() }
+            });
+
+            if (response.ok && response.results && response.results.length > 0) {
+                // Format search results
+                const formattedResults = response.results.map((r: any, i: number) => 
+                    `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
+                ).join('\n\n');
+
+                updateLastMessage(`Found ${response.results.length} results. Analyzing...`);
+
+                // Inject into AI prompt
+                const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
+
+                // Get current settings for local model
+                const currentKey = await Storage.getApiKey(provider);
+                const options = await Storage.getLocalSettings(provider);
+                
+                await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
+            } else {
+                updateLastMessage('No search results found.');
+                setIsTyping(false);
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            updateLastMessage(`Search error: ${(error as Error).message}`);
+            setIsTyping(false);
+        }
+    };
+
+
+    const handleActionClick = async (action: string) => {
+        if (action === 'search_web') {
+            const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_web') 
                 ? messages[messages.length - 1].content.match(/"([^"]+)"/)?.[1] || lastPageContext 
                 : lastPageContext;
 
-             if (query) {
-                 window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
-             }
-             return;
+            if (!query) return;
+
+            // Check if using local model
+            const isLocalModel = provider === 'lmstudio' || provider === 'ollama';
+
+            if (isLocalModel) {
+                // Perform web search and inject results into AI
+                addMessage('user', `Search web: ${query}`);
+                setIsTyping(true);
+                addMessage('ai', 'Searching the web...');
+
+                try {
+                    // Call background script to search
+                    const response: any = await browser.runtime.sendMessage({
+                        action: 'search_web',
+                        payload: { query }
+                    });
+
+                    if (response.ok && response.results && response.results.length > 0) {
+                        // Format search results
+                        const formattedResults = response.results.map((r: any, i: number) => 
+                            `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
+                        ).join('\n\n');
+
+                        updateLastMessage(`Found ${response.results.length} results. Analyzing...`);
+
+                        // Inject into AI prompt
+                        const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
+
+                        // Get current settings for local model
+                        const currentKey = await Storage.getApiKey(provider);
+                        const options = await Storage.getLocalSettings(provider);
+                        
+                        await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
+                    } else {
+                        updateLastMessage('No search results found.');
+                        setIsTyping(false);
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    updateLastMessage(`Search error: ${(error as Error).message}`);
+                    setIsTyping(false);
+                }
+            } else {
+                // Cloud provider: open DDG in new tab (existing behavior)
+                window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
+            }
+            return;
         }
 
         const prompt = generatePromptFromAction(action);
@@ -151,6 +245,7 @@ const App: React.FC = () => {
                 <InputArea 
                     onSend={handleSend} 
                     onScanPage={handleScanPage} 
+                    onSearchWeb={handleSearchWeb}
                     disabled={isTyping} 
                     isScanning={isScanning}
                     language={language}

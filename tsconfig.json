@@ -9,7 +9,7 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "jsx": "react-jsx",
-        "types": ["bun-types", "chrome", "playwright-core"],
+        "types": ["bun-types", "chrome", "jest", "@testing-library/jest-dom"],
         "moduleResolution": "bundler"
     },
     "include": [

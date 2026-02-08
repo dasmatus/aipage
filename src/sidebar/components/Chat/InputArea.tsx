@@ -5,14 +5,18 @@ import { t } from '../../i18n';
 interface InputAreaProps {
     onSend: (text: string) => void;
     onScanPage: () => void;
+    onSearchWeb: (query: string) => void;
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabled, isScanning, language }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, disabled, isScanning, language }) => {
     const [text, setText] = useState('');
+    const [isSearchMode, setIsSearchMode] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setText(e.target.value);
@@ -41,6 +45,35 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
         }
     };
 
+    const handleToggleSearch = () => {
+        setIsSearchMode(!isSearchMode);
+        if (isSearchMode) {
+            // Closing search mode, clear query
+            setSearchQuery('');
+        } else {
+            // Opening search mode, focus input
+            setTimeout(() => searchInputRef.current?.focus(), 100);
+        }
+    };
+
+    const handleSearchSubmit = () => {
+        if (searchQuery.trim()) {
+            onSearchWeb(searchQuery.trim());
+            setSearchQuery('');
+            setIsSearchMode(false);
+        }
+    };
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSearchSubmit();
+        } else if (e.key === 'Escape') {
+            setIsSearchMode(false);
+            setSearchQuery('');
+        }
+    };
+
     return (
         <div className="chat-input-area">
             <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -61,7 +94,50 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, disabl
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
                     </button>
+                    
+                    <button 
+                        id="search-web-btn" 
+                        className={`icon-btn ${isSearchMode ? 'active' : ''}`}
+                        title={isSearchMode ? "Close Search" : "Search Web"}
+                        style={{ padding: '6px', opacity: isSearchMode ? 1 : 0.7 }}
+                        onClick={handleToggleSearch}
+                        disabled={disabled}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
                 </div>
+
+                {isSearchMode && (
+                    <div style={{ display: 'flex', width: '100%', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            id="search-input"
+                            placeholder="Enter search query..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            disabled={disabled}
+                            style={{ 
+                                flexGrow: 1, 
+                                padding: '8px',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                marginRight: '4px'
+                            }}
+                        />
+                        <button
+                            onClick={handleSearchSubmit}
+                            disabled={!searchQuery.trim() || disabled}
+                            style={{ padding: '8px 16px' }}
+                        >
+                            Search
+                        </button>
+                    </div>
+                )}
 
                 <div style={{ display: 'flex', width: '100%', alignItems: 'flex-end' }}>
                     <textarea 

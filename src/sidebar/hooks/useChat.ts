@@ -74,7 +74,7 @@ export const useChat = () => {
             if (isQuestion) {
                  actions = [
                     { label: 'Odpovedať', action: 'answer_selection', primary: true },
-                    { label: 'Vyhľadať (DuckDuckGo)', action: 'search_ddg', primary: false }
+                    { label: 'Vyhľadať web', action: 'search_web', primary: false }
                  ];
                  const msg = `💡 Našiel som otázku vo výbere:\n"${content.substring(0, 100)}..."\n\nAko chceš postupovať?`;
                  addMessage('ai', msg, actions);
@@ -137,6 +137,9 @@ export const useChat = () => {
         sendMessage,
         handlePageContext,
         generatePromptFromAction,
-        lastPageContext
+        lastPageContext,
+        addMessage,
+        updateLastMessage,
+        setIsTyping
     };
 };
