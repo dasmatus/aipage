@@ -15,53 +15,31 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 
 ## Installation
 
-### Prerequisites
-
-1. Clone or download this repository
-2. Install dependencies:
-   ```bash
-   bun install
-   ```
+To install the extension, download the latest release from the [GitLab Releases](https://gitlab.com/TenTypekMatus/aipage/-/releases) page.
 
 ### Chrome
 
-1. Build the extension:
-   ```bash
-   bun run build:chrome
-   ```
-2. Load the extension in Chrome:
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable "Developer mode" (toggle in top-right corner)
-   - Click "Load unpacked"
-   - Select the `dist-chrome` folder from this project
+1.  Download `edupage-ai-sidebar-chrome.zip` from the latest release.
+2.  Unzip the file to a folder on your computer.
+3.  Open Chrome and navigate to `chrome://extensions/`.
+4.  Enable **"Developer mode"** (toggle in the top-right corner).
+5.  Click **"Load unpacked"**.
+6.  Select the unzipped folder.
 
 ### Firefox
 
-1. Build the extension:
-   ```bash
-   bun run build:firefox
-   ```
-2. Load the extension in Firefox:
-   - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-   - Click "Load Temporary Add-on"
-   - Navigate to the `dist-firefox` folder and select the `manifest.json` file
+1.  Download the `.xpi` file (e.g., `edupage-ai-sidebar-vX.Y.Z.xpi`) from the latest release.
+2.  Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+3.  Click **"Load Temporary Add-on"**.
+4.  Select the downloaded `.xpi` file.
 
 ### Safari (macOS only)
 
-1. Build the extension:
-   ```bash
-   bun run build:safari
-   ```
-2. Generate the Xcode project:
-   ```bash
-   ./scripts/setup-safari.sh
-   ```
-3. Open the generated Xcode project:
-   ```bash
-   open safari/EduPage\ AI\ Sidebar.xcodeproj
-   ```
-4. Build and run from Xcode
-5. Enable the extension in Safari Preferences → Extensions
+1.  Download `aipage-safari.zip` from the latest release.
+2.  Unzip the file to get the application.
+3.  Run the application locally.
+4.  Open Safari Preferences → Extensions.
+5.  Enable the **EduPage AI Sidebar** extension.
 
 ## Setting Up Your AI Provider
 

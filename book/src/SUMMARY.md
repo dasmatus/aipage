@@ -8,9 +8,9 @@
 
 # Development
 
-- [Contributing Guide](contributing.md)
+- [Contributing Guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/contributing.md?ref_type=heads)
 
 # Reference
 
-- [Changelog](changelog.md)
+- [Changelog](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/changelog.md?ref_type=heads)
 - [API Reference](api-reference.md)
