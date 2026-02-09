@@ -89,5 +89,9 @@ export const de: Translation = {
     user: 'Benutzer',
     ai: 'KI',
     vercelBadge: 'Vercel SDK',
-    vercelVirtualCardNotice: 'Wir empfehlen, in Ihrer Bank-App eine virtuelle Kreditkarte zu erstellen und diese hier für zusätzliche Sicherheit zu hinterlegen.'
+    vercelVirtualCardNotice: 'Wir empfehlen, in Ihrer Bank-App eine virtuelle Kreditkarte zu erstellen und diese hier für zusätzliche Sicherheit zu hinterlegen.',
+    exaApiKey: 'Exa API Schlüssel (Web Search)',
+    exaApiKeyPlaceholder: 'exa-...',
+    exaApiKeyHint: 'Optional: Ermöglicht die Echtzeit-Websuche für AI-Modelle mit Exa.ai.',
+    enableExaSearch: 'Exa Web Search aktivieren'
 };

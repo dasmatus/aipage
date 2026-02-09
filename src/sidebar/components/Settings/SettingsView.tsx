@@ -26,6 +26,8 @@ interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onClose, onProviderChange, language, onLanguageChange }) => {
     const [apiKey, setApiKey] = useState('');
+    const [exaApiKey, setExaApiKey] = useState('');
+    const [exaEnabled, setExaEnabled] = useState(false);
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
     const [autoUpdate, setAutoUpdate] = useState(false);
@@ -57,6 +59,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const loadSettings = async () => {
         const key = await Storage.getApiKey(currentProvider);
         setApiKey(key || '');
+
+        const exaKey = await Storage.getExaApiKey();
+        setExaApiKey(exaKey || '');
+
+        const exaEn = await Storage.getExaEnabled();
+        setExaEnabled(exaEn);
 
         const th = await Storage.getThemePreference();
         setTheme(th);
@@ -117,6 +125,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         if (storageKey) {
             await browser.storage.local.set({ [storageKey]: apiKey });
         }
+        
+        await Storage.saveExaApiKey(exaApiKey);
+        await Storage.saveExaEnabled(exaEnabled);
         
         await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
 
@@ -351,6 +362,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                 <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded text-[10px] text-primary flex items-start gap-2">
                                     <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
                                     <span>{translate('vercelVirtualCardNotice', language)}</span>
+                                </div>
+                            )}
+                            
+                            {providerBackend === 'vercel' && (
+                                <div className="space-y-4 pt-4 border-t border-border/50">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="enable-exa" className="text-sm font-medium cursor-pointer">
+                                                {translate('enableExaSearch', language)}
+                                            </Label>
+                                            <p className="text-[11px] text-muted-foreground">{translate('exaApiKeyHint', language)}</p>
+                                        </div>
+                                        <Switch 
+                                            id="enable-exa" 
+                                            checked={exaEnabled} 
+                                            onCheckedChange={setExaEnabled}
+                                        />
+                                    </div>
+                                    
+                                    {exaEnabled && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <Label htmlFor="exa-api-key" className="text-xs uppercase font-bold tracking-wider opacity-70">
+                                                {translate('exaApiKey', language)}
+                                            </Label>
+                                            <Input 
+                                                id="exa-api-key"
+                                                type="password" 
+                                                value={exaApiKey} 
+                                                onChange={(e) => setExaApiKey(e.target.value)} 
+                                                placeholder={translate('exaApiKeyPlaceholder', language)}
+                                                className="bg-muted/30 focus-visible:ring-primary border-primary/30"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -5,7 +5,7 @@
     Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
     
     // Block events that report inactivity or switching
-    const blockEvents = ['visibilitychange', 'webkitvisibilitychange', 'blur', 'focusout', 'pagehide'];
+    const blockEvents = ['visibilitychange', 'webkitvisibilitychange', 'blur', 'focusout', 'pagehide', 'resize'];
     blockEvents.forEach(evt => {
         window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
         document.addEventListener(evt, e => e.stopImmediatePropagation(), true);

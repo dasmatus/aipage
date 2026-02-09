@@ -12,9 +12,11 @@ interface InputAreaProps {
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
+    exaEnabled: boolean;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, disabled, isScanning, language }) => {
+
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, disabled, isScanning, language, exaEnabled }) => {
     const [text, setText] = useState('');
     const [isSearchMode, setIsSearchMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -90,16 +92,18 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                     {isScanning ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <FileText className="h-4 w-4" />}
                 </Button>
                 
-                <Button 
-                    variant={isSearchMode ? "secondary" : "ghost"}
-                    size="icon" 
-                    className={cn("h-8 w-8 rounded-full transition-all duration-300", isSearchMode && "bg-primary/20 text-primary")}
-                    title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
-                    onClick={handleToggleSearch}
-                    disabled={disabled}
-                >
-                    {isSearchMode ? <X className="h-4 w-4" /> : <Search className="h-4 w-4 text-muted-foreground" />}
-                </Button>
+                {exaEnabled && (
+                    <Button 
+                        variant={isSearchMode ? "secondary" : "ghost"}
+                        size="icon" 
+                        className={cn("h-8 w-8 rounded-full transition-all duration-300", isSearchMode && "bg-primary/20 text-primary")}
+                        title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
+                        onClick={handleToggleSearch}
+                        disabled={disabled}
+                    >
+                        {isSearchMode ? <X className="h-4 w-4" /> : <Search className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                )}
 
                 {isSearchMode && (
                     <div className="flex-1 flex gap-2 animate-in slide-in-from-left-2 fade-in duration-300">

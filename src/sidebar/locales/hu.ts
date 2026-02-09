@@ -89,5 +89,9 @@ export const hu: Translation = {
     user: 'Felhasználó',
     ai: 'AI',
     vercelBadge: 'Vercel SDK',
-    vercelVirtualCardNotice: 'Javasoljuk, hogy hozzon létre egy virtuális bankkártyát a banki alkalmazásában, és használja azt itt a nagyobb biztonság érdekében.'
+    vercelVirtualCardNotice: 'Javasoljuk, hogy hozzon létre egy virtuális bankkártyát a banki alkalmazásában, és használja azt itt a nagyobb biztonság érdekében.',
+    exaApiKey: 'Exa API Kulcs (Web Search)',
+    exaApiKeyPlaceholder: 'exa-...',
+    exaApiKeyHint: 'Opcionális: Lehetővé teszi az AI modellek valós idejű webes keresését az Exa.ai segítségével.',
+    enableExaSearch: 'Exa Web Search engedélyezése'
 };

@@ -72,6 +72,41 @@ export class SidebarController {
             mainContent.style.width = '100%';
             mainContent.style.transition = this.isResizing ? 'none' : 'width 0.3s ease';
         }
+
+        this.updateFloatingActionButtons(width);
+    }
+
+    private updateFloatingActionButtons(width: number) {
+        const selectors = [
+            '.etest-layout-next-button',
+            '.gn-next-button',
+            '.question-context-next',
+            '.finish-button',
+            '.sk-btn-floating',
+            '.floating-action-button',
+            '.btn-floating',
+            '[class*="next-button"]', // Catch-all for next buttons
+            '[class*="finish-test-button"]'
+        ];
+
+        selectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => this.moveElement(el as HTMLElement, width));
+        });
+    }
+
+    private moveElement(el: HTMLElement, width: number) {
+        if (!el.dataset.originalRight) {
+            const computed = window.getComputedStyle(el);
+            if (computed.position !== 'fixed' && computed.position !== 'absolute') return;
+            el.dataset.originalRight = computed.right !== 'auto' ? computed.right : '20px';
+        }
+        
+        const rightVal = parseInt(el.dataset.originalRight || '20');
+        // If specific button class, we might need extra offset or just the width
+        // Assuming the button is fixed to the right edge.
+        el.style.right = width > 0 ? `${rightVal + width}px` : `${rightVal}px`;
+        el.style.transition = this.isResizing ? 'none' : 'right 0.3s ease';
     }
 
     public cleanup() {

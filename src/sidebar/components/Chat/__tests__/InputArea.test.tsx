@@ -18,6 +18,7 @@ describe('InputArea Component', () => {
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
                 language="en"
+                exaEnabled={true}
             />
         );
 
@@ -32,6 +33,7 @@ describe('InputArea Component', () => {
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
                 language="en"
+                exaEnabled={true}
             />
         );
 
@@ -54,6 +56,7 @@ describe('InputArea Component', () => {
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
                 language="en"
+                exaEnabled={true}
             />
         );
 
@@ -74,6 +77,7 @@ describe('InputArea Component', () => {
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
                 language="en"
+                exaEnabled={true}
             />
         );
 
@@ -93,6 +97,7 @@ describe('InputArea Component', () => {
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
                 language="en"
+                exaEnabled={true}
             />
         );
 
@@ -103,5 +108,18 @@ describe('InputArea Component', () => {
         fireEvent.click(sendButton);
 
         expect(mockOnSend).toHaveBeenCalledWith('Hello AI');
+    });
+    it('should hide search button when exaEnabled is false', () => {
+        render(
+            <InputArea
+                onSend={mockOnSend}
+                onScanPage={mockOnScanPage}
+                onSearchWeb={mockOnSearchWeb}
+                language="en"
+                exaEnabled={false}
+            />
+        );
+
+        expect(screen.queryByTitle(/search web/i)).not.toBeInTheDocument();
     });
 });

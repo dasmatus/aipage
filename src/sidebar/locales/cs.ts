@@ -89,5 +89,9 @@ export const cs: Translation = {
     user: 'Uživatel',
     ai: 'AI',
     vercelBadge: 'Vercel SDK',
-    vercelVirtualCardNotice: 'Doporučujeme vytvořit si virtuální platební kartu ve vaší bankovní aplikaci a použít ji zde pro zvýšení bezpečnosti.'
+    vercelVirtualCardNotice: 'Doporučujeme vytvořit si virtuální platební kartu ve vaší bankovní aplikaci a použít ji zde pro zvýšení bezpečnosti.',
+    exaApiKey: 'Exa API Klíč (Web Search)',
+    exaApiKeyPlaceholder: 'exa-...',
+    exaApiKeyHint: 'Volitelné: Umožňuje vyhledávání na webu pro AI modely pomocí Exa.ai.',
+    enableExaSearch: 'Povolit Exa Web Search'
 };

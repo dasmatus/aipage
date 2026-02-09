@@ -5,11 +5,15 @@ import App from '../App';
 import * as Storage from '../storage';
 import { useChat } from '../hooks/useChat';
 import browser from 'webextension-polyfill';
+import { performRequest } from '../providers/utils';
 
 // Mock dependencies
 jest.mock('webextension-polyfill');
 jest.mock('../storage');
 jest.mock('../hooks/useChat');
+jest.mock('../providers/utils', () => ({
+    performRequest: jest.fn(),
+}));
 jest.mock('../i18n', () => ({
     t: (k: string) => k,
     getCurrentLanguage: jest.fn().mockResolvedValue('en'),
@@ -68,7 +72,10 @@ describe('App', () => {
         // Setup Storage mocks
         (Storage.getProviderPreference as jest.Mock).mockResolvedValue('vercel');
         (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
+        (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
         (Storage.getThemePreference as jest.Mock).mockResolvedValue('default');
+        (Storage.getExaApiKey as jest.Mock).mockResolvedValue(null);
+        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(false);
     });
 
     it('renders chat view by default', async () => {
@@ -149,6 +156,44 @@ describe('App', () => {
             });
             // Should also call sendMessage with search results prompt
             expect(mockSendMessage).toHaveBeenCalled(); 
+        });
+    });
+
+    it('handles web search for Vercel with Exa', async () => {
+        (performRequest as jest.Mock).mockResolvedValue({
+            results: [{ title: 'ExaRes', text: 'ExaSnip', url: 'http://exa.ai' }]
+        });
+
+        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('vercel');
+        (Storage.getExaApiKey as jest.Mock).mockResolvedValue('exa-key');
+        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
+        (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: '', model: '' });
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        const searchBtn = screen.getByText('Search Web');
+        fireEvent.click(searchBtn);
+
+        await waitFor(() => {
+            // Should call performRequest for Exa
+            expect(performRequest).toHaveBeenCalledWith(
+                'https://api.exa.ai/search',
+                'POST',
+                expect.objectContaining({ 'x-api-key': 'exa-key' }),
+                expect.stringContaining('query')
+            );
+            
+            // Should NOT call browser.runtime.sendMessage for search_web (DDG)
+            // But how to check? searchResults.length > 0 so it shouldn't call logic for DDG
+            // But we can check if sendMessage was called with Exa context
+            expect(mockSendMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Exa.ai'), 
+                'vercel', 
+                'test-key', 
+                expect.anything()
+            );
         });
     });
 });

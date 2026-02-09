@@ -21,7 +21,9 @@ export const STORAGE_KEYS = {
         ollama: { url: 'ollama_base_url', model: 'ollama_model' },
         vercel: { url: 'vercel_base_url', model: 'vercel_model' }
     },
-    THEME: 'ai_sidebar_theme'
+    THEME: 'ai_sidebar_theme',
+    EXA_API_KEY: 'exa_api_key',
+    EXA_ENABLED: 'exa_enabled'
 };
 
 /**
@@ -111,4 +113,22 @@ export async function getThemePreference(): Promise<string> {
  */
 export async function saveThemePreference(theme: string): Promise<void> {
     await browser.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
+}
+
+export async function getExaApiKey(): Promise<string | null> {
+    const result = await browser.storage.local.get([STORAGE_KEYS.EXA_API_KEY]) as Record<string, any>;
+    return (result[STORAGE_KEYS.EXA_API_KEY] as string) || null;
+}
+
+export async function saveExaApiKey(key: string): Promise<void> {
+    await browser.storage.local.set({ [STORAGE_KEYS.EXA_API_KEY]: key });
+}
+
+export async function getExaEnabled(): Promise<boolean> {
+    const result = await browser.storage.local.get([STORAGE_KEYS.EXA_ENABLED]) as Record<string, any>;
+    return !!result[STORAGE_KEYS.EXA_ENABLED];
+}
+
+export async function saveExaEnabled(enabled: boolean): Promise<void> {
+    await browser.storage.local.set({ [STORAGE_KEYS.EXA_ENABLED]: enabled });
 }

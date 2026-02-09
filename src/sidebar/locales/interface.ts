@@ -99,4 +99,10 @@ export interface Translation {
     ai: string;
     vercelBadge: string;
     vercelVirtualCardNotice: string;
+
+    // Exa
+    exaApiKey: string;
+    exaApiKeyPlaceholder: string;
+    exaApiKeyHint: string;
+    enableExaSearch: string;
 }

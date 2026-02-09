@@ -5,6 +5,7 @@ import { SettingsView } from './components/Settings/SettingsView';
 import { useChat } from './hooks/useChat';
 import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
+import { performRequest } from './providers/utils';
 import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
 import browser from 'webextension-polyfill';
 
@@ -22,6 +23,7 @@ const App: React.FC = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
+    const [exaEnabled, setExaEnabled] = useState(false);
 
     // Initialization
     const [isInitialized, setIsInitialized] = useState(false);
@@ -38,6 +40,10 @@ const App: React.FC = () => {
                 const lang = await getCurrentLanguage();
                 setLanguage(lang);
                 
+                // Load Exa enabled state
+                const exaEn = await Storage.getExaEnabled();
+                setExaEnabled(exaEn);
+
                 // Show settings if no API key for non-local providers
                 const isLocal = p === 'lmstudio' || p === 'ollama';
                 if (!k && !isLocal) {
@@ -96,7 +102,7 @@ const App: React.FC = () => {
     const handleSearchWeb = async (query: string) => {
         const isRemoteWithModels = provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel';
         if (!isRemoteWithModels) {
-            alert('Web search requires a local model (LM Studio or Ollama).');
+            alert('Web search requires a compatible provider (Vercel, LM Studio, or Ollama).');
             return;
         }
 
@@ -105,19 +111,59 @@ const App: React.FC = () => {
         addMessage('ai', 'Searching the web...');
 
         try {
-            const response: any = await browser.runtime.sendMessage({
-                action: 'search_web',
-                payload: { query: query.trim() }
-            });
+            let searchResults = [];
+            let source = 'DuckDuckGo';
 
-            if (response.ok && response.results && response.results.length > 0) {
-                const formattedResults = response.results.map((r: any, i: number) => 
+            // Check for Exa key if using Vercel
+            if (provider === 'vercel') {
+                const exaEnabled = await Storage.getExaEnabled();
+                const exaKey = await Storage.getExaApiKey();
+                
+                if (exaEnabled && exaKey) {
+                    source = 'Exa.ai';
+                    try {
+                        const data = await performRequest('https://api.exa.ai/search', 'POST', {
+                            'x-api-key': exaKey,
+                            'Content-Type': 'application/json'
+                        }, JSON.stringify({
+                            query: query.trim(),
+                            numResults: 5,
+                            useAutoprompt: true
+                        }));
+
+                        if (data && data.results) {
+                            searchResults = data.results.map((r: any) => ({
+                                title: r.title || 'Untitled',
+                                snippet: r.text || r.snippet || '',
+                                url: r.url
+                            }));
+                        }
+                    } catch (e) {
+                        console.warn('Exa search failed, falling back to DuckDuckGo', e);
+                        // Fallback will happen below if searchResults is empty
+                    }
+                }
+            }
+
+            // Fallback to DuckDuckGo
+            if (searchResults.length === 0) {
+                const response: any = await browser.runtime.sendMessage({
+                    action: 'search_web',
+                    payload: { query: query.trim() }
+                });
+                if (response.ok && response.results) {
+                    searchResults = response.results;
+                }
+            }
+
+            if (searchResults.length > 0) {
+                const formattedResults = searchResults.map((r: any, i: number) => 
                     `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
                 ).join('\n\n');
 
-                updateLastMessage(`Found ${response.results.length} results. Analyzing...`);
+                updateLastMessage(`Found ${searchResults.length} results via ${source}. Analyzing...`);
 
-                const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
+                const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
 
                 const currentKey = await Storage.getApiKey(provider);
                 const options = await Storage.getLocalSettings(provider);
@@ -163,6 +209,8 @@ const App: React.FC = () => {
     const handleSettingsClose = async () => {
         const k = await Storage.getApiKey(provider);
         setApiKey(k);
+        const exaEn = await Storage.getExaEnabled();
+        setExaEnabled(exaEn);
         setView('chat');
     };
 
@@ -218,6 +266,7 @@ const App: React.FC = () => {
                         disabled={isTyping} 
                         isScanning={isScanning}
                         language={language}
+                        exaEnabled={exaEnabled}
                     />
                 </div>
                 

@@ -93,6 +93,10 @@ jest.mock('../../../storage', () => {
         getLocalSettings: jest.fn(),
         saveLocalSettings: jest.fn(),
         saveThemePreference: jest.fn(),
+        getExaApiKey: jest.fn(),
+        saveExaApiKey: jest.fn(),
+        getExaEnabled: jest.fn(),
+        saveExaEnabled: jest.fn(),
     };
 });
 
@@ -124,6 +128,8 @@ describe('SettingsView', () => {
         (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
         (Storage.getThemePreference as jest.Mock).mockResolvedValue('default');
         (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: '', model: '' });
+        (Storage.getExaApiKey as jest.Mock).mockResolvedValue('exa-initial');
+        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
     });
 
     it('renders correctly', async () => {
@@ -144,6 +150,7 @@ describe('SettingsView', () => {
     });
 
     it('updates API key and saves', async () => {
+        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(false);
         await act(async () => {
             render(
                 <SettingsView
@@ -168,7 +175,43 @@ describe('SettingsView', () => {
         expect(browser.storage.local.set).toHaveBeenCalledWith(
             expect.objectContaining({ vercel_api_key: 'new-key' })
         );
+        expect(Storage.saveExaApiKey).toHaveBeenCalledWith('exa-initial');
+        expect(Storage.saveExaEnabled).toHaveBeenCalledWith(false); 
         expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('updates Exa API key and saves', async () => {
+        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
+        await act(async () => {
+            render(
+                <SettingsView
+                    currentProvider="vercel"
+                    onClose={mockOnClose}
+                    onProviderChange={mockOnProviderChange}
+                    language="en"
+                    onLanguageChange={mockOnLanguageChange}
+                />
+            );
+        });
+
+        // Now Exa Enabled is mocked as true, so input should be visible
+        // However, in mock Switch, we might not have handled controlled state correctly?
+        // Wait, mocked switch just uses input checkbox. 
+        // With getExaEnabled true, exaEnabled state is true.
+        // Switch checked=true.
+        // Input should be rendered.
+
+        // Actually the placeholder changed to 'exaApiKeyPlaceholder' (mocked as 'exaApiKeyPlaceholder' by t(k)=k)
+        const exaInput = screen.getByPlaceholderText('exaApiKeyPlaceholder');
+        fireEvent.change(exaInput, { target: { value: 'exa-new-key' } });
+        
+        const saveBtn = screen.getByText('saveKey');
+        await act(async () => {
+            fireEvent.click(saveBtn);
+        });
+
+        expect(Storage.saveExaApiKey).toHaveBeenCalledWith('exa-new-key');
+        expect(Storage.saveExaEnabled).toHaveBeenCalledWith(true);
     });
 
     it('handles local provider settings', async () => {

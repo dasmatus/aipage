@@ -51,7 +51,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             })
             .catch(error => {
                 console.error('Fetch error:', error);
-                sendResponse({ ok: false, error: error.message });
+                const isOffline = !navigator.onLine;
+                const errorMsg = isOffline 
+                    ? `Network error: You appear to be offline. Failed to fetch ${url}` 
+                    : `Network error: Failed to fetch ${url}. ${error.message}`;
+                sendResponse({ ok: false, error: errorMsg });
             });
 
         return true; // Keep channel open for async response
