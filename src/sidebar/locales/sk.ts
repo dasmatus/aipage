@@ -20,7 +20,7 @@ export const sk: Translation = {
     refreshModels: '↻ Obnoviť modely',
     loading: 'Načítavam...',
     apiKeyPlaceholder: 'Zadajte svoj API kľúč',
-    apiKeyHint: 'Váš kľúč je uložený na vašom zariadení a nikdy sa nezdieľa.',
+    apiKeyHint: 'Váš kľúč je uložený na vašom zariadení a nikde sa nezdieľa.',
     
     chatPlaceholder: 'Napíšte správu...',
     send: 'Odoslať',
@@ -38,9 +38,9 @@ export const sk: Translation = {
     lmstudioStep3: 'Prejdite na kartu Local Server (ikona s dvoma šípkami)',
     lmstudioStep4: 'Kliknite na Start Server',
     lmstudioStep5: 'Nižšie zadajte základní URL (predvolená: http://localhost:1234/v1)',
-    lmstudioNote: '⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a slušné GPU/CPU.',
+    lmstudioNote: '⚠️ Spúšťanie modelov lokálne vyžaduje značnú RAM a dostatočne silné GPU/CPU.',
 
-    ollamaInstructionsTitle: 'Ako nastaviť Ollama:',
+    ollamaInstructionsTitle: 'Ako nastaviť Ollamu:',
     ollamaStep1: 'Stiahnite a nainštalujte z ollama.com',
     ollamaStep2: 'Otvorte terminál a spustite: ollama run llama3',
     ollamaStep3: 'Počkajte, kým sa sťahovanie dokončí a objaví sa výzva',
@@ -67,8 +67,8 @@ export const sk: Translation = {
     chat: 'AiPage',
     engineMode: 'Režim Engine',
     standardMode: 'Štandardný režim',
-    vercelMode: 'Vercel AI SDK (Experimentálne)',
-    vercelDescription: 'Experimentálne vysoko výkonné runtime Vercel AI SDK.',
+    vercelMode: 'Vercel AI SDK',
+    vercelDescription: 'Vysoko výkonné runtime pre Vercel AI SDK.',
     standardDescription: 'Štandardné rozšírenie s plnou kompatibilitou.',
     providerEngine: 'Motor Poskytovateľa',
     selectEngine: 'Vybrať Engine',
@@ -80,7 +80,7 @@ export const sk: Translation = {
     closeSearch: 'Zavrieť hľadanie',
     searchWeb: 'Hľadať na webe',
     vercelApiKey: 'Zašifrovaný AI SDK API kľúč',
-    vercelApiKeyPlaceholder: 'sk-...',
+    vercelApiKeyPlaceholder: 'vck-...',
     vercelApiKeyHint: 'Tento kľúč bude použitý pre Vercel AI SDK Adaptér.',
     appearanceAndApp: 'Vzhľad a Aplikácia',
     themeDescription: 'Vyberte si preferovaný vizuálny štýl.',
@@ -89,5 +89,5 @@ export const sk: Translation = {
     user: 'Používateľ',
     ai: 'AI',
     vercelBadge: 'Vercel SDK',
-    vercelVirtualCardNotice: 'Odporúčame vytvoriť si virtuálnu platobnú kartu vo vašej bankovej aplikácii a použiť ju tu pre zvýšenie bezpečnosti.'
+    vercelVirtualCardNotice: 'Odporúčame vytvoriť si virtuálnu platobnú kartu vo vašej bankovej aplikácii a použiť ju na Verceli a potom ju vymazať pre zvýšenie bezpečnosti.'
 };

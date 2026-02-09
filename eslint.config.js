@@ -36,7 +36,8 @@ module.exports = [
             ...reactHooksPlugin.configs.recommended.rules,
             'react/react-in-jsx-scope': 'off',
             '@typescript-eslint/no-explicit-any': 'warn',
-            '@typescript-eslint/no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }]
+            '@typescript-eslint/no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }],
+            'react/prop-types': 'off'
         }
     }
 ];

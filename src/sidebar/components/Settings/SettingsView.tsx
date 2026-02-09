@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProviderType } from '../../types';
 import * as Storage from '../../storage';
 import { getProvider } from '../../providers';
-import { t } from '../../i18n';
+import { t as translate } from '../../i18n';
 import browser from '../../../polyfills/browser-polyfill';
 
 // Shadcn UI Components
@@ -10,11 +10,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '../ui/select';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '../ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
-import { RefreshCw, Zap, Settings2, Globe, Palette, Languages, ExternalLink, AlertCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { RefreshCw, Zap, Settings2, Palette, Languages, ExternalLink, AlertCircle } from 'lucide-react';
+import { cn as class_name } from '../../lib/utils';
 
 interface SettingsViewProps {
     currentProvider: ProviderType;
@@ -93,7 +93,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 const effectiveKey = manualKey !== undefined ? manualKey : apiKey;
                 const models = await p.getModels(effectiveKey, { baseUrl: url });
                 setAvailableModels(models);
-                if (models.length === 0) setFetchError(t('noModelsFound', language) || 'No models found');
+                if (models.length === 0) setFetchError(translate('noModelsFound', language) || 'No models found');
             } else {
                 setAvailableModels([]);
             }
@@ -109,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const handleSave = async () => {
         const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
         if (!apiKey && !isLocal) {
-            alert(t('alertPleaseEnterKey', language));
+            alert(translate('alertPleaseEnterKey', language));
             return;
         }
 
@@ -120,7 +120,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         
         await Storage.saveLocalSettings(currentProvider, baseUrl, modelName);
 
-        alert(t('alertSettingsSaved', language));
+        alert(translate('alertSettingsSaved', language));
         onClose();
     };
 
@@ -151,25 +151,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
         const instructions: Record<string, { title: string, steps: (string | React.ReactNode)[], note?: string, troubleshoot?: string }> = {
             lmstudio: {
-                title: t('lmstudioInstructionsTitle', language),
+                title: translate('lmstudioInstructionsTitle', language),
                 steps: [
-                    <>{t('lmstudioStep1', language)} <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">lmstudio.ai</a></>,
-                    t('lmstudioStep2', language),
-                    t('lmstudioStep3', language),
-                    t('lmstudioStep4', language),
-                    t('lmstudioStep5', language),
+                    <>{translate('lmstudioStep1', language)} <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">lmstudio.ai</a></>,
+                    translate('lmstudioStep2', language),
+                    translate('lmstudioStep3', language),
+                    translate('lmstudioStep4', language),
+                    translate('lmstudioStep5', language),
                 ],
-                note: t('lmstudioNote', language)
+                note: translate('lmstudioNote', language)
             },
             ollama: {
-                title: t('ollamaInstructionsTitle', language),
+                title: translate('ollamaInstructionsTitle', language),
                 steps: [
-                    <>{t('ollamaStep1', language)} <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ollama.com</a></>,
-                    <>{t('ollamaStep2', language)} <code className="bg-muted px-1 rounded">ollama run llama3</code></>,
-                    t('ollamaStep3', language),
-                    t('ollamaStep4', language),
+                    <>{translate('ollamaStep1', language)} <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ollama.com</a></>,
+                    <>{translate('ollamaStep2', language)} <code className="bg-muted px-1 rounded">ollama run llama3</code></>,
+                    translate('ollamaStep3', language),
+                    translate('ollamaStep4', language),
                 ],
-                note: t('ollamaNote', language)
+                note: translate('ollamaNote', language)
             }
         };
 
@@ -207,46 +207,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         <div className="flex flex-col h-full bg-background overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground">
             <div className="max-w-[500px] mx-auto w-full space-y-6">
                 <header className="flex flex-col gap-1">
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">{t('settingsTitle', language)}</h2>
-                    <p className="text-sm text-muted-foreground">{t('settingsDescription', language)}</p>
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">{translate('settingsTitle', language)}</h2>
+                    <p className="text-sm text-muted-foreground">{translate('settingsDescription', language)}</p>
                 </header>
 
-                <Card className={cn("overflow-hidden transition-all duration-300", 
+                <Card className={class_name("overflow-hidden transition-all duration-300", 
                             providerBackend === 'vercel' && "border-primary/50 shadow-lg shadow-primary/10")}>
                     <CardHeader className="space-y-1 bg-muted/30">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Zap className={cn("w-4 h-4", providerBackend === 'vercel' ? "text-primary" : "text-muted-foreground")} />
-                                <CardTitle className="text-lg">{t('providerEngine', language)}</CardTitle>
+                                <Zap className={class_name("w-4 h-4", providerBackend === 'vercel' ? "text-primary" : "text-muted-foreground")} />
+                                <CardTitle className="text-lg">{translate('providerEngine', language)}</CardTitle>
                             </div>
-                            {providerBackend === 'vercel' && (
-                                <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-                                    {t('vercelBadge', language)}
-                                </span>
-                            )}
                         </div>
                         <CardDescription>
                             {providerBackend === 'vercel' 
-                                ? t('vercelDescription', language)
-                                : t('standardDescription', language)}
+                                ? translate('vercelDescription', language)
+                                : translate('standardDescription', language)}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="backend-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('engineMode', language)}</Label>
+                            <Label htmlFor="backend-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('engineMode', language)}</Label>
                             <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'vercel' | 'ollama' | 'lmstudio')}>
-                                <SelectTrigger className={cn(providerBackend === 'vercel' && "border-primary ring-primary")}>
-                                    <SelectValue placeholder={t('selectEngine', language)} />
+                                <SelectTrigger className={class_name(providerBackend === 'vercel' && "border-primary ring-primary")}>
+                                    <SelectValue placeholder={translate('selectEngine', language)} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="vercel" className="flex items-center gap-2">
-                                        {t('vercelMode', language)}
+                                        {translate('vercelMode', language)}
                                     </SelectItem>
                                     <SelectItem value="ollama" className="flex items-center gap-2">
-                                        {t('providerOllama', language)}
+                                        {translate('providerOllama', language)}
                                     </SelectItem>
                                     <SelectItem value="lmstudio" className="flex items-center gap-2">
-                                        {t('providerLMStudio', language)}
+                                        {translate('providerLMStudio', language)}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -260,7 +255,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
                             <Settings2 className="w-4 h-4 text-primary" />
-                            <CardTitle className="text-sm">{t('modelAndAuth', language)}</CardTitle>
+                            <CardTitle className="text-sm">{translate('modelAndAuth', language)}</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
@@ -268,7 +263,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <div className="space-y-4 animate-in fade-in duration-500">
                                 {(providerBackend === 'ollama' || providerBackend === 'lmstudio') && (
                                     <div className="space-y-2">
-                                        <Label htmlFor="base-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('baseUrl', language)}</Label>
+                                        <Label htmlFor="base-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('baseUrl', language)}</Label>
                                         <Input 
                                             id="base-url"
                                             value={baseUrl} 
@@ -279,20 +274,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                     </div>
                                 )}
                                 <div className="space-y-2">
-                                    <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{t('model', language)}</Label>
+                                    <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('model', language)}</Label>
                                     {isLoadingModels ? (
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-2">
-                                            <RefreshCw className="w-3 h-3 animate-spin" /> {t('loading', language)}...
+                                            <RefreshCw className="w-3 h-3 animate-spin" /> {translate('loading', language)}...
                                         </div>
                                     ) : (
                                         <div className="flex gap-2">
                                             <Select value={modelName} onValueChange={setModelName}>
-                                                <SelectTrigger className={cn("flex-1", availableModels.length === 0 && "border-destructive/50")}>
-                                                    <SelectValue placeholder={availableModels.length > 0 ? t('selectModel', language) : t('noModelsFound', language)} />
+                                                <SelectTrigger className={class_name("flex-1", availableModels.length === 0 && "border-destructive/50")}>
+                                                    <SelectValue placeholder={availableModels.length > 0 ? translate('selectModel', language) : translate('noModelsFound', language)} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {availableModels.length === 0 ? (
-                                                        <SelectItem value="none" disabled>{t('noModelsFound', language)}</SelectItem>
+                                                        <SelectItem value="none" disabled>{translate('noModelsFound', language)}</SelectItem>
                                                     ) : (() => {
                                                         const groups: Record<string, any[]> = {};
                                                         availableModels.forEach(m => {
@@ -312,7 +307,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                                                         : (m.id.includes('/') ? m.id.split('/').slice(1).join('/') : m.id);
                                                                     return (
                                                                         <SelectItem key={m.id} value={m.id}>
-                                                                            {label} <span className="text-[10px] opacity-60 ml-1">{m.pricing ? `(${m.pricing})` : `(${t('free', language)})`}</span>
+                                                                            {label} <span className="text-[10px] opacity-60 ml-1">{m.pricing ? `(${m.pricing})` : `(${translate('free', language)})`}</span>
                                                                         </SelectItem>
                                                                     );
                                                                 })}
@@ -325,10 +320,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => fetchModels(providerBackend === 'vercel' ? 'https://ai-gateway.vercel.sh/v1/models' : baseUrl)}
-                                                title={t('refreshModels', language)}
+                                                title={translate('refreshModels', language)}
                                                 className="shrink-0"
                                             >
-                                                <RefreshCw className={cn("w-4 h-4", isLoadingModels && "animate-spin")} />
+                                                <RefreshCw className={class_name("w-4 h-4", isLoadingModels && "animate-spin")} />
                                             </Button>
                                         </div>
                                     )}
@@ -339,23 +334,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
                         <div className="space-y-2">
                             <Label htmlFor="api-key-input" className="text-xs uppercase font-bold tracking-wider opacity-70">
-                                {providerBackend === 'vercel' ? t('vercelApiKey', language) : t('apiKey', language)}
+                                {providerBackend === 'vercel' ? translate('vercelApiKey', language) : translate('apiKey', language)}
                             </Label>
                             <Input 
                                 id="api-key-input"
                                 type="password" 
                                 value={apiKey} 
                                 onChange={(e) => setApiKey(e.target.value)} 
-                                placeholder={providerBackend === 'vercel' ? t('vercelApiKeyPlaceholder', language) : t('apiKeyPlaceholder', language)} 
-                                className={cn("bg-muted/30 focus-visible:ring-primary", providerBackend === 'vercel' && "border-primary/30")}
+                                placeholder={providerBackend === 'vercel' ? translate('vercelApiKeyPlaceholder', language) : translate('apiKeyPlaceholder', language)} 
+                                className={class_name("bg-muted/30 focus-visible:ring-primary", providerBackend === 'vercel' && "border-primary/30")}
                             />
                             <p className="text-[10px] text-muted-foreground opacity-70">
-                                {providerBackend === 'vercel' ? t('vercelApiKeyHint', language) : t('apiKeyHint', language)}
+                                {providerBackend === 'vercel' ? translate('vercelApiKeyHint', language) : translate('apiKeyHint', language)}
                             </p>
                             {providerBackend === 'vercel' && (
                                 <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded text-[10px] text-primary flex items-start gap-2">
                                     <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{t('vercelVirtualCardNotice', language)}</span>
+                                    <span>{translate('vercelVirtualCardNotice', language)}</span>
                                 </div>
                             )}
                         </div>
@@ -367,27 +362,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         <div className="flex items-center justify-between">
                              <div className="flex items-center gap-2">
                                 <Palette className="w-4 h-4 text-primary" />
-                                <CardTitle className="text-sm">{t('appearanceAndApp', language)}</CardTitle>
+                                <CardTitle className="text-sm">{translate('appearanceAndApp', language)}</CardTitle>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">{t('themeInterface', language)}</Label>
-                                <p className="text-[11px] text-muted-foreground">{t('themeDescription', language)}</p>
+                                <Label className="text-sm font-medium">{translate('themeInterface', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{translate('themeDescription', language)}</p>
                             </div>
                             <Select value={theme} onValueChange={handleThemeChange}>
                                 <SelectTrigger className="w-[140px]">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="default">{t('themeEduPage', language)}</SelectItem>
-                                    <SelectItem value="sms">{t('themeImessage', language)}</SelectItem>
-                                    <SelectItem value="gradient">{t('themeMessenger', language)}</SelectItem>
-                                    <SelectItem value="discord">{t('themeDiscord', language)}</SelectItem>
-                                    <SelectItem value="tokyo">{t('themeTokyo', language)}</SelectItem>
-                                    <SelectItem value="mono">{t('themeMono', language)}</SelectItem>
+                                    <SelectItem value="default">{translate('themeEduPage', language)}</SelectItem>
+                                    <SelectItem value="sms">{translate('themeImessage', language)}</SelectItem>
+                                    <SelectItem value="gradient">{translate('themeMessenger', language)}</SelectItem>
+                                    <SelectItem value="discord">{translate('themeDiscord', language)}</SelectItem>
+                                    <SelectItem value="tokyo">{translate('themeTokyo', language)}</SelectItem>
+                                    <SelectItem value="mono">{translate('themeMono', language)}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -396,8 +391,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label htmlFor="global-theme-toggle" className="text-sm font-medium cursor-pointer">{t('applyThemeGlobal', language)}</Label>
-                                <p className="text-[11px] text-muted-foreground">{t('globalThemeDescription', language)}</p>
+                                <Label htmlFor="global-theme-toggle" className="text-sm font-medium cursor-pointer">{translate('applyThemeGlobal', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{translate('globalThemeDescription', language)}</p>
                             </div>
                             <Switch 
                                 id="global-theme-toggle" 
@@ -408,8 +403,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label htmlFor="auto-update-toggle" className="text-sm font-medium cursor-pointer">{t('autoUpdate', language)}</Label>
-                                <p className="text-[11px] text-muted-foreground">{t('autoUpdateDescription', language)}</p>
+                                <Label htmlFor="auto-update-toggle" className="text-sm font-medium cursor-pointer">{translate('autoUpdate', language)}</Label>
+                                <p className="text-[11px] text-muted-foreground">{translate('autoUpdateDescription', language)}</p>
                             </div>
                             <Switch 
                                 id="auto-update-toggle" 
@@ -423,7 +418,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 mb-1">
                                 <Languages className="w-4 h-4 text-muted-foreground" />
-                                <Label htmlFor="language-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{t('language', language)}</Label>
+                                <Label htmlFor="language-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('language', language)}</Label>
                             </div>
                             <Select value={language} onValueChange={onLanguageChange}>
                                 <SelectTrigger id="language-select">
@@ -443,10 +438,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
                 <footer className="pt-4 flex flex-col gap-3">
                     <Button id="save-key-btn" className="w-full font-bold shadow-md h-12" onClick={handleSave}>
-                        {t('saveKey', language)}
+                        {translate('saveKey', language)}
                     </Button>
                     <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" onClick={onClose}>
-                        {t('backToChat', language)}
+                        {translate('backToChat', language)}
                     </Button>
                 </footer>
             </div>

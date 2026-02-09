@@ -1,5 +1,4 @@
-// Mock Chrome API globals to simulate browser extension environment
-(globalThis as any).chrome = {
+const mockChrome = {
   runtime: {
     id: 'test-extension-id',
     sendMessage: () => Promise.resolve({ ok: true }),
@@ -31,6 +30,12 @@
     create: () => Promise.resolve(),
   },
 };
+
+(global as any).chrome = mockChrome;
+(globalThis as any).chrome = mockChrome;
+if (typeof window !== 'undefined') {
+    (window as any).chrome = mockChrome;
+}
 
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
