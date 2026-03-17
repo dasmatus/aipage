@@ -51,7 +51,7 @@ To install the extension, download the latest build artifacts directly from our 
 2.  Unzip the file to get the application.
 3.  Run the application locally.
 4.  Open Safari Preferences → Extensions.
-5.  Enable the **EduPage AI Sidebar** extension.
+5.  Enable the **AIPage** extension.
 
 ## Setting Up Your AI Provider
 
@@ -59,41 +59,34 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 ### Supported Providers
 
-- **Google Gemini** (Default)
-- **OpenAI ChatGPT**
-- **Anthropic Claude**
-- **Mistral AI**
+- **Vercel AI Gateway**
 - **LM Studio** (Local)
 - **Ollama** (Local)
 
 ### Step 1: Choose Your Provider
 
 1. Navigate to any EduPage site (e.g., `https://yourschool.edupage.org`)
-2. Click the **AI button** (star icon) in the EduPage navbar
+2. Click the **AI button** (star icon with the AI text) in the EduPage navbar
 3. The sidebar will open showing the settings view
 4. Select your preferred AI provider from the dropdown
 
 ### Step 2: Configure Your Provider
 
-#### Google Gemini
+#### Vercel AI Gateway
 
-1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click **"Get API Key"** or **"Create API Key"**
-4. Copy the key (starts with `AIzaSy...`)
-
-> **Troubleshooting**: If you encounter the error _"We are unable to create an API key and a Google Cloud project for you"_, you may need to manually create a project in the [Google Cloud Console](https://console.cloud.google.com/) first. See [this forum post](https://discuss.ai.google.dev/t/cant-create-project-or-apikey-from-ai-stuidio/108979/4) for more details.
-
-#### OpenAI, Claude, Mistral
-
-Follow the links in the sidebar settings to get your API keys from their respective consoles.
+1. Go to **[the AI Gateway site](https://vercel.com/ai-gateway)**.
+2. Click on **Get API key**
+3. Sign up if needed.
+4. Click on **Create Key**,
+5. Choose a name for your key and click **Create Key**.
+6. Paste the key to the AIPage settings.
 
 #### LM Studio (Local)
 
 1. Open LM Studio and start the **Local Inference Server**.
 2. Keep the default Port `1234` or update the **Base URL** in the extension settings.
 3. Ensure a model is loaded in LM Studio.
-4. Enter the **Model Name** if you want to target a specific one (default: `loaded-model`).
+4. Enter the **Model Name** if you want to target a specific one.
 
 #### Ollama (Local)
 
@@ -220,8 +213,8 @@ This project uses GitLab CI for automated building and testing:
 ### "Invalid API Key" Error
 
 - Verify your API key is correct
-- Ensure you copied the entire key (starts with `AIzaSy`)
-- Check that your API key hasn't been restricted or revoked in Google AI Studio
+- Ensure you copied the entire key (starts with `vck_`)
+- Check that your API key hasn't been restricted or revoked in the Vercel settings
 
 ### Sidebar Not Appearing
 
@@ -237,7 +230,7 @@ This project uses GitLab CI for automated building and testing:
 
 ## Privacy & Security
 
-- Your API key is stored locally using Chrome's storage API
+- Your API key is stored locally using your browser's storage API
 - No data is sent to any server except the selected AI provider API
 - Conversations are not stored or logged by this extension
 
@@ -264,6 +257,7 @@ See [the contribution guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main
 
 Built with:
 
-- [Google Gemini API](https://ai.google.dev/)
+- [Vercel AI Gateway](https://vercel.com/ai-gateway)
+- [shadcn/ui](https://ui.shadcn.com)
 - [Playwright](https://playwright.dev/) for testing
 - TypeScript & esbuild
