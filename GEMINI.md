@@ -2,6 +2,18 @@
 
 This guide describes how to use Gemini (and other agentic AI) via the CLI to maintain and extend the AIPage.
 
+## 🌿 Branching
+
+Always create a new branch before making any code changes. Use a descriptive name based on the task:
+
+```bash
+git checkout -b feat/short-description
+# or
+git checkout -b fix/short-description
+```
+
+Never commit directly to `main`.
+
 ## 🚀 CLI Commands
 
 The following commands are the "source of truth" for the AI when interacting with the project:
