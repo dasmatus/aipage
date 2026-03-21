@@ -9,7 +9,7 @@ import * as Storage from './storage';
 import { performRequest } from './providers/utils';
 import { generateImage, ImageGenProvider } from './providers/imagegen';
 import { getProvider } from './providers';
-import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
+import { t, getCurrentLanguage, setLanguage as saveLanguage, LANGUAGE_NAMES } from './i18n';
 import browser from 'webextension-polyfill';
 
 // Shadcn & Icons
@@ -47,48 +47,41 @@ const App: React.FC = () => {
             try {
                 const p = await Storage.getProviderPreference();
                 setProvider(p);
-                const k = await Storage.getApiKey(p);
+
+                const [k, lang, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns, theme] =
+                    await Promise.all([
+                        Storage.getApiKey(p),
+                        getCurrentLanguage(),
+                        Storage.getExaEnabled(),
+                        Storage.getSearXNGEnabled(),
+                        Storage.getSearXNGUrl(),
+                        Storage.getImageGenEnabled(),
+                        Storage.getImageGenProvider(),
+                        Storage.getImageGenSdUrl(),
+                        Storage.getImageGenModel(),
+                        Storage.getImageGenSize(),
+                        Storage.getAutoAnswerEnabled(),
+                        Storage.getThemePreference(),
+                    ]);
+
                 setApiKey(k);
-
-                // Load language
-                const lang = await getCurrentLanguage();
                 setLanguage(lang);
-
-                // Load Exa enabled state
-                const exaEn = await Storage.getExaEnabled();
                 setExaEnabled(exaEn);
-
-                // Load SearXNG settings
-                const sEn = await Storage.getSearXNGEnabled();
                 setSearxngEnabled(sEn);
-                const sUrl = await Storage.getSearXNGUrl();
                 setSearxngUrl(sUrl);
-
-                // Load image generation settings
-                const imgEn = await Storage.getImageGenEnabled();
                 setImageGenEnabled(imgEn);
-                const imgProv = await Storage.getImageGenProvider();
                 setImageGenProvider(imgProv);
-                const imgSdUrl = await Storage.getImageGenSdUrl();
                 setImageGenSdUrl(imgSdUrl);
-                const imgModel = await Storage.getImageGenModel();
                 setImageGenModel(imgModel);
-                const imgSize = await Storage.getImageGenSize();
                 setImageGenSize(imgSize);
-
-                // Load auto-answer setting
-                const autoAns = await Storage.getAutoAnswerEnabled();
                 setAutoAnswerEnabled(autoAns);
+                document.body.dataset.theme = theme;
 
                 // Show settings if no API key for non-local providers
                 const isLocal = p === 'lmstudio' || p === 'ollama';
                 if (!k && !isLocal) {
                     setView('settings');
                 }
-
-                // Check theme
-                const theme = await Storage.getThemePreference();
-                document.body.dataset.theme = theme;
 
                 // Parse user initials from URL hash if present
                 if (window.location.hash.includes('initials=')) {
@@ -215,8 +208,7 @@ const App: React.FC = () => {
 
                 updateLastMessage(`Found ${searchResults.length} results via ${source}. Analyzing...`);
 
-                const languageNames: Record<string, string> = { sk: 'Slovak', en: 'English', cs: 'Czech', de: 'German', hu: 'Hungarian' };
-                const languageName = languageNames[language] || 'Slovak';
+                const languageName = LANGUAGE_NAMES[language] || 'Slovak';
                 const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
 
                 const currentKey = await Storage.getApiKey(provider);
@@ -335,25 +327,28 @@ const App: React.FC = () => {
     };
 
     const handleSettingsClose = async () => {
-        const k = await Storage.getApiKey(provider);
+        const [k, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns] =
+            await Promise.all([
+                Storage.getApiKey(provider),
+                Storage.getExaEnabled(),
+                Storage.getSearXNGEnabled(),
+                Storage.getSearXNGUrl(),
+                Storage.getImageGenEnabled(),
+                Storage.getImageGenProvider(),
+                Storage.getImageGenSdUrl(),
+                Storage.getImageGenModel(),
+                Storage.getImageGenSize(),
+                Storage.getAutoAnswerEnabled(),
+            ]);
         setApiKey(k);
-        const exaEn = await Storage.getExaEnabled();
         setExaEnabled(exaEn);
-        const sEn = await Storage.getSearXNGEnabled();
         setSearxngEnabled(sEn);
-        const sUrl = await Storage.getSearXNGUrl();
         setSearxngUrl(sUrl);
-        const imgEn = await Storage.getImageGenEnabled();
         setImageGenEnabled(imgEn);
-        const imgProv = await Storage.getImageGenProvider();
         setImageGenProvider(imgProv);
-        const imgSdUrl = await Storage.getImageGenSdUrl();
         setImageGenSdUrl(imgSdUrl);
-        const imgModel = await Storage.getImageGenModel();
         setImageGenModel(imgModel);
-        const imgSize = await Storage.getImageGenSize();
         setImageGenSize(imgSize);
-        const autoAns = await Storage.getAutoAnswerEnabled();
         setAutoAnswerEnabled(autoAns);
         setView('chat');
     };
@@ -382,7 +377,7 @@ const App: React.FC = () => {
                         </div>
                     )}
                     <span className="font-bold text-sm tracking-tight">
-                        {view === 'settings' ? t('settings', language) : view === 'widgets' ? 'Widgets' : t('chat', language)}
+                        {view === 'settings' ? t('settings', language) : view === 'widgets' ? t('widgets', language) : t('chat', language)}
                     </span>
                  </div>
 

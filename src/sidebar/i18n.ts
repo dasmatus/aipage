@@ -10,6 +10,14 @@ import { hu } from './locales/hu';
 
 export type { Translation };
 
+export const LANGUAGE_NAMES: Record<string, string> = {
+    sk: 'Slovak',
+    en: 'English',
+    cs: 'Czech',
+    de: 'German',
+    hu: 'Hungarian',
+};
+
 export const translations: Record<string, Translation> = {
     sk,
     en,

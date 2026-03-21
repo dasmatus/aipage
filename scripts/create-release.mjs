@@ -70,13 +70,15 @@ async function upload(localPath, remoteFilename) {
     return url;
 }
 
-const chromeUrl  = await upload('aipage-chrome.zip', 'aipage-chrome.zip');
-const safariUrl  = await upload('aipage-safari.zip', 'aipage-safari.zip');
-
-// Firefox XPI has a generated filename; find it
+// Firefox XPI has a generated filename; find it before uploading
 const xpiFiles = fs.readdirSync('packages').filter(f => f.endsWith('.xpi'));
 if (xpiFiles.length === 0) throw new Error('No .xpi file found in packages/');
-const firefoxUrl = await upload(path.join('packages', xpiFiles[0]), 'aipage-firefox.xpi');
+
+const [chromeUrl, safariUrl, firefoxUrl] = await Promise.all([
+    upload('aipage-chrome.zip', 'aipage-chrome.zip'),
+    upload('aipage-safari.zip', 'aipage-safari.zip'),
+    upload(path.join('packages', xpiFiles[0]), 'aipage-firefox.xpi'),
+]);
 
 // ── 3. Create (or update) the GitLab Release ──────────────────────────────────
 
@@ -125,8 +127,10 @@ async function addLink(name, url) {
     else        console.log(`  ✅ Link: ${name}`);
 }
 
-await addLink('Chrome Extension (.zip)',  chromeUrl);
-await addLink('Firefox Extension (.xpi)', firefoxUrl);
-await addLink('Safari Extension (.zip)',  safariUrl);
+await Promise.all([
+    addLink('Chrome Extension (.zip)',  chromeUrl),
+    addLink('Firefox Extension (.xpi)', firefoxUrl),
+    addLink('Safari Extension (.zip)',  safariUrl),
+]);
 
 console.log(`\n🎉 Done: https://gitlab.com/${PROJECT}/-/releases/${TAG}`);

@@ -113,4 +113,5 @@ export const cs: Translation = {
     imageGenSize: 'Velikost',
     imageGenGenerating: 'Generuji obrázek...',
     imageGenFailed: 'Generování obrázku selhalo',
+    widgets: 'Widgety',
 };

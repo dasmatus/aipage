@@ -4,7 +4,7 @@ import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Timer, NotebookPen, Calculator, Play, Pause, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import browser from 'webextension-polyfill';
+import { getWidgetNotes, saveWidgetNotes } from '../../storage';
 
 // ─── Timer Card ───────────────────────────────────────────────────────────────
 
@@ -130,9 +130,7 @@ const NotesCard: React.FC = () => {
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        browser.storage.local.get('widget_notes').then((res: any) => {
-            setNotes(res.widget_notes || '');
-        });
+        getWidgetNotes().then(setNotes);
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -141,7 +139,7 @@ const NotesCard: React.FC = () => {
         setSaved(false);
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(async () => {
-            await browser.storage.local.set({ widget_notes: val });
+            await saveWidgetNotes(val);
             setSaved(true);
             setTimeout(() => setSaved(false), 1500);
         }, 500);

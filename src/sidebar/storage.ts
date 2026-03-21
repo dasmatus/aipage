@@ -32,6 +32,7 @@ export const STORAGE_KEYS = {
     IMAGE_GEN_MODEL: 'image_gen_model',
     IMAGE_GEN_SIZE: 'image_gen_size',
     AUTO_ANSWER_ENABLED: 'auto_answer_enabled',
+    WIDGET_NOTES: 'widget_notes',
 };
 
 /**
@@ -211,4 +212,13 @@ export async function getAutoAnswerEnabled(): Promise<boolean> {
 
 export async function saveAutoAnswerEnabled(enabled: boolean): Promise<void> {
     await browser.storage.local.set({ [STORAGE_KEYS.AUTO_ANSWER_ENABLED]: enabled });
+}
+
+export async function getWidgetNotes(): Promise<string> {
+    const result = await browser.storage.local.get([STORAGE_KEYS.WIDGET_NOTES]) as Record<string, any>;
+    return (result[STORAGE_KEYS.WIDGET_NOTES] as string) || '';
+}
+
+export async function saveWidgetNotes(notes: string): Promise<void> {
+    await browser.storage.local.set({ [STORAGE_KEYS.WIDGET_NOTES]: notes });
 }

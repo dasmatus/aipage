@@ -126,4 +126,7 @@ export interface Translation {
     imageGenSize: string;
     imageGenGenerating: string;
     imageGenFailed: string;
+
+    // Navigation
+    widgets: string;
 }
