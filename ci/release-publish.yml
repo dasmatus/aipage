@@ -1,0 +1,61 @@
+# Automated changelog + release pipeline
+#
+# Two jobs:
+#
+#  release:bump   – Manual trigger on main. Runs standard-version to bump the
+#                   version in package.json, update CHANGELOG.md, commit, and
+#                   push the new tag. The tag push then triggers release:publish.
+#                   Override the bump type by setting RELEASE_TYPE to "minor"
+#                   or "major" in the pipeline variables (default: patch).
+#
+#  release:publish – Automatically triggered when a "vX.Y.Z" tag is pushed
+#                   (whether by release:bump or manually). Builds all three
+#                   browser targets, packages them, uploads to the GitLab
+#                   Generic Packages Registry, and creates the GitLab Release
+#                   with the matching CHANGELOG.md section attached.
+#
+# Required CI/CD variable (Settings → CI/CD → Variables):
+#   GITLAB_BOT_TOKEN  – personal access token with `api` scope (already set)
+
+# ── Bump version + push tag ───────────────────────────────────────────────────
+
+release:bump:
+  stage: release
+  image: oven/bun:canary-debian
+  variables:
+    GIT_STRATEGY: clone
+    RELEASE_TYPE: patch
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git
+    - git config user.email "bot@noreply.gitlab.com"
+    - git config user.name "AIPage Bot"
+    - git remote set-url origin "https://oauth2:${GITLAB_BOT_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git"
+  script:
+    - bunx standard-version --release-as ${RELEASE_TYPE}
+    - git push origin HEAD:${CI_DEFAULT_BRANCH} --follow-tags
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
+# ── Build, package, and publish a GitLab Release ─────────────────────────────
+
+release:publish:
+  stage: release
+  image: oven/bun:canary-debian
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq zip git
+  script:
+    # Install deps (needed for build + web-ext lint)
+    - bun install
+    # Build all three browser targets
+    - bun run build:chrome
+    - bun run build:firefox
+    - bun run build:safari
+    # Package
+    - cd dist-chrome && zip -r ../aipage-chrome.zip . && cd ..
+    - mkdir -p packages && bunx web-ext build -s dist-firefox -a packages
+    - cd dist-safari && zip -r ../aipage-safari.zip . && cd ..
+    # Create the GitLab Release and upload assets
+    - bun run scripts/create-release.mjs
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
