@@ -113,4 +113,5 @@ export const de: Translation = {
     imageGenSize: 'Größe',
     imageGenGenerating: 'Bild wird generiert...',
     imageGenFailed: 'Bildgenerierung fehlgeschlagen',
+    widgets: 'Widgets',
 };

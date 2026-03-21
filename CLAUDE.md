@@ -6,6 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A cross-browser extension (Chrome, Firefox, Safari) that injects an AI-powered sidebar into [EduPage](https://edupage.org), an educational platform. The sidebar lets students chat with AI, scan page content for context, and run web searches — all without leaving EduPage.
 
+## Branching
+
+Always create a new branch before making any code changes. Use a descriptive name based on the task:
+
+```bash
+git checkout -b feat/short-description
+# or
+git checkout -b fix/short-description
+```
+
+Never commit directly to `main`.
+
 ## Commands
 
 ```bash

@@ -100,12 +100,15 @@ When responding to issues:
 const issues = await getOpenIssues();
 console.log(`Found ${issues.length} open issue(s).`);
 
+// Fetch all issue notes in parallel before processing
+const allNotes = await Promise.all(issues.map(issue => getIssueNotes(issue.iid)));
+
 let replied = 0;
 
-for (const issue of issues) {
-    const notes = await getIssueNotes(issue.iid);
+for (let i = 0; i < issues.length; i++) {
+    const issue = issues[i];
+    const notes = allNotes[i];
 
-    // Skip if Claude already replied
     if (notes.some(n => n.body.includes(BOT_MARKER))) {
         console.log(`  #${issue.iid} — already replied, skipping.`);
         continue;
@@ -138,7 +141,6 @@ ${BOT_MARKER}`;
         console.log(`  #${issue.iid} ✅ replied.`);
         replied++;
 
-        // Brief pause to avoid rate-limiting
         await new Promise(r => setTimeout(r, 500));
     } catch (err) {
         console.error(`  #${issue.iid} ❌ failed: ${err.message}`);

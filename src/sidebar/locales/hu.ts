@@ -113,4 +113,5 @@ export const hu: Translation = {
     imageGenSize: 'Méret',
     imageGenGenerating: 'Kép generálása...',
     imageGenFailed: 'Képgenerálás sikertelen',
+    widgets: 'Widgetek',
 };
