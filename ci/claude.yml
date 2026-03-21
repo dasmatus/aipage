@@ -4,7 +4,7 @@
 #                        finds open issues without a reply and responds to them
 #
 # Required CI/CD variables (Settings → CI/CD → Variables):
-#   ANTHROPIC_API_KEY  – your Anthropic API key (mask it)
+#   VERCEL_API_KEY     – your Vercel API key (mask it)
 #   GITLAB_BOT_TOKEN   – a GitLab personal access token with `api` scope (mask it)
 #                        Comments will appear as the token owner, i.e. you.
 

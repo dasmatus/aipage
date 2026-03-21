@@ -5,7 +5,7 @@
  * Run on a schedule (e.g. every hour) via GitLab CI.
  *
  * Required env vars:
- *   ANTHROPIC_API_KEY  – Anthropic API key
+ *   VERCEL_API_KEY     – Vercel API key (used for the AI Gateway)
  *   GITLAB_BOT_TOKEN   – GitLab personal access token with `api` scope
  *   CI_API_V4_URL      – Set automatically by GitLab CI
  *   CI_PROJECT_ID      – Set automatically by GitLab CI
@@ -14,9 +14,9 @@
 const GITLAB_API = process.env.CI_API_V4_URL ?? 'https://gitlab.com/api/v4';
 const PROJECT_ID = process.env.CI_PROJECT_ID;
 const TOKEN      = process.env.GITLAB_BOT_TOKEN;
-const ANTHROPIC  = process.env.ANTHROPIC_API_KEY;
+const VERCEL_KEY = process.env.VERCEL_API_KEY;
 
-for (const [k, v] of Object.entries({ PROJECT_ID, TOKEN, ANTHROPIC })) {
+for (const [k, v] of Object.entries({ PROJECT_ID, TOKEN, VERCEL_KEY })) {
     if (!v) { console.error(`Missing required env var: ${k}`); process.exit(1); }
 }
 
@@ -54,23 +54,24 @@ async function postIssueNote(iid, body) {
 // ── Claude helper ──────────────────────────────────────────────────────────────
 
 async function callClaude(system, userContent) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
         method: 'POST',
         headers: {
-            'x-api-key': ANTHROPIC,
-            'anthropic-version': '2023-06-01',
+            'Authorization': `Bearer ${VERCEL_KEY}`,
             'content-type': 'application/json',
         },
         body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
+            model: 'anthropic:claude-sonnet-4-6',
             max_tokens: 1024,
-            system,
-            messages: [{ role: 'user', content: userContent }],
+            messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: userContent },
+            ],
         }),
     });
     const data = await res.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error(`Claude returned no content: ${JSON.stringify(data)}`);
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error(`Vercel AI Gateway returned no content: ${JSON.stringify(data)}`);
     return text;
 }
 
