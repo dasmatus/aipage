@@ -6,6 +6,7 @@ stages:
   - lint
   - build
   - test
+  - review
   - package
   - pages
   - release

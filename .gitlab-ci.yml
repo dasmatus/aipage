@@ -7,3 +7,4 @@ include:
   - local: "/ci/build.yml"
   - local: "/ci/package.yml"
   - local: "/ci/release.yml"
+  - local: "/ci/claude.yml"
