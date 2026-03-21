@@ -105,4 +105,25 @@ export interface Translation {
     exaApiKeyPlaceholder: string;
     exaApiKeyHint: string;
     enableExaSearch: string;
+
+    // SearXNG
+    searxngSearch: string;
+    searxngEnabled: string;
+    searxngUrl: string;
+    searxngUrlPlaceholder: string;
+    searxngUrlHint: string;
+
+    // Image Generation
+    imageGen: string;
+    imageGenEnabled: string;
+    imageGenPromptPlaceholder: string;
+    imageGenProvider: string;
+    imageGenVercel: string;
+    imageGenSDWebUI: string;
+    imageGenSdUrl: string;
+    imageGenSdUrlPlaceholder: string;
+    imageGenModel: string;
+    imageGenSize: string;
+    imageGenGenerating: string;
+    imageGenFailed: string;
 }

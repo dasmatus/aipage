@@ -1,8 +1,6 @@
 import browser from '../polyfills/browser-polyfill';
 import { getNavbarHeight, getUserInitials } from './utils';
 
-const NAVBAR_ID = 'edubar';
-
 export class SidebarController {
     public isOpen = false;
     public currentWidth = 320;
@@ -37,76 +35,11 @@ export class SidebarController {
             this.resizer.style.right = `${this.currentWidth}px`;
             this.resizer.style.display = 'block';
         }
-        this.updateLayout(this.currentWidth);
     }
 
     public close() {
         if (this.iframe) this.iframe.style.right = `-${this.currentWidth}px`;
         if (this.resizer) this.resizer.style.display = 'none';
-        this.updateLayout(0);
-    }
-
-    public updateLayout(width: number) {
-        const widthCalc = width > 0 ? `calc(100% - ${width}px)` : '100%';
-        const rightOffset = width > 0 ? `${width}px` : '0px';
-
-        document.body.style.width = widthCalc;
-        document.body.style.position = 'relative';
-        document.body.style.transition = this.isResizing ? 'none' : 'width 0.3s ease';
-
-        const navbar = document.getElementById(NAVBAR_ID);
-        if (navbar) {
-            navbar.style.width = widthCalc;
-            navbar.style.transition = this.isResizing ? 'none' : 'width 0.3s ease';
-        }
-
-        const etestPlayer = document.querySelector('.etest-player') as HTMLElement;
-        if (etestPlayer) {
-            etestPlayer.style.width = widthCalc;
-            etestPlayer.style.right = rightOffset;
-            etestPlayer.style.transition = this.isResizing ? 'none' : 'width 0.3s ease, right 0.3s ease';
-        }
-
-        const mainContent = document.getElementById('bar_mainDiv');
-        if (mainContent) {
-            mainContent.style.width = '100%';
-            mainContent.style.transition = this.isResizing ? 'none' : 'width 0.3s ease';
-        }
-
-        this.updateFloatingActionButtons(width);
-    }
-
-    private updateFloatingActionButtons(width: number) {
-        const selectors = [
-            '.etest-layout-next-button',
-            '.gn-next-button',
-            '.question-context-next',
-            '.finish-button',
-            '.sk-btn-floating',
-            '.floating-action-button',
-            '.btn-floating',
-            '[class*="next-button"]', // Catch-all for next buttons
-            '[class*="finish-test-button"]'
-        ];
-
-        selectors.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(el => this.moveElement(el as HTMLElement, width));
-        });
-    }
-
-    private moveElement(el: HTMLElement, width: number) {
-        if (!el.dataset.originalRight) {
-            const computed = window.getComputedStyle(el);
-            if (computed.position !== 'fixed' && computed.position !== 'absolute') return;
-            el.dataset.originalRight = computed.right !== 'auto' ? computed.right : '20px';
-        }
-        
-        const rightVal = parseInt(el.dataset.originalRight || '20');
-        // If specific button class, we might need extra offset or just the width
-        // Assuming the button is fixed to the right edge.
-        el.style.right = width > 0 ? `${rightVal + width}px` : `${rightVal}px`;
-        el.style.transition = this.isResizing ? 'none' : 'right 0.3s ease';
     }
 
     public cleanup() {
@@ -171,7 +104,6 @@ export class SidebarController {
                 this.currentWidth = newWidth;
                 if (this.iframe) this.iframe.style.width = `${newWidth}px`;
                 if (this.resizer) this.resizer.style.right = `${newWidth}px`;
-                this.updateLayout(newWidth);
             };
 
             const onMouseUp = () => {

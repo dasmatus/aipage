@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Message, ProviderType, Role } from '../types';
 import { getProvider } from '../providers';
+import { generateImage, ImageGenOptions } from '../providers/imagegen';
 import * as Storage from '../storage';
 import browser from 'webextension-polyfill';
 
@@ -17,13 +18,14 @@ export const useChat = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [lastPageContext, setLastPageContext] = useState('');
 
-    const addMessage = (role: Role, content: string, actions?: any[]) => {
+    const addMessage = (role: Role, content: string, actions?: any[], imageUrl?: string) => {
         const msg: Message = {
             id: Date.now().toString() + Math.random(),
             role,
             content,
             timestamp: Date.now(),
-            actions
+            actions,
+            imageUrl
         };
         setMessages(prev => [...prev, msg]);
         return msg;
@@ -31,11 +33,17 @@ export const useChat = () => {
 
     const updateLastMessage = (content: string) => {
         setMessages(prev => {
-            const newMsgs = [...prev];
-            if (newMsgs.length > 0) {
-                newMsgs[newMsgs.length - 1].content = content;
-            }
-            return newMsgs;
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            return [...prev.slice(0, -1), { ...last, content }];
+        });
+    };
+
+    const updateLastMessageImage = (imageUrl: string, content?: string) => {
+        setMessages(prev => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            return [...prev.slice(0, -1), { ...last, imageUrl, ...(content !== undefined ? { content } : {}) }];
         });
     };
 
@@ -65,6 +73,20 @@ export const useChat = () => {
         } catch (error) {
             console.error('AI Error:', error);
             updateLastMessage(`Chyba: ${(error as Error).message}`);
+        } finally {
+            setIsTyping(false);
+        }
+    };
+
+    const sendImageMessage = async (prompt: string, options: ImageGenOptions) => {
+        addMessage('user', `/image ${prompt}`);
+        setIsTyping(true);
+        addMessage('ai', 'Generujem obrázok...');
+        try {
+            const result = await generateImage(prompt, options);
+            updateLastMessageImage(result.dataUrl, result.revisedPrompt || prompt);
+        } catch (e) {
+            updateLastMessage(`Chyba: ${(e as Error).message}`);
         } finally {
             setIsTyping(false);
         }
@@ -142,11 +164,13 @@ export const useChat = () => {
         messages,
         isTyping,
         sendMessage,
+        sendImageMessage,
         handlePageContext,
         generatePromptFromAction,
         lastPageContext,
         addMessage,
         updateLastMessage,
+        updateLastMessageImage,
         setIsTyping
     };
 };

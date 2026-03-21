@@ -2,28 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { MessageList } from './components/Chat/MessageList';
 import { InputArea } from './components/Chat/InputArea';
 import { SettingsView } from './components/Settings/SettingsView';
+import { WidgetsView } from './components/Widgets/WidgetsView';
 import { useChat } from './hooks/useChat';
 import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
 import { performRequest } from './providers/utils';
+import { generateImage, ImageGenProvider } from './providers/imagegen';
+import { getProvider } from './providers';
 import { t, getCurrentLanguage, setLanguage as saveLanguage } from './i18n';
 import browser from 'webextension-polyfill';
 
 // Shadcn & Icons
 import { Button } from './components/ui/button';
-import { Settings, MessageCircle, ChevronLeft } from 'lucide-react';
+import { Settings, MessageCircle, ChevronLeft, LayoutGrid, Wand2 } from 'lucide-react';
 import { cn } from './lib/utils';
+
+type View = 'chat' | 'settings' | 'widgets';
 
 const App: React.FC = () => {
     // State
-    const [view, setView] = useState<'chat' | 'settings'>('chat');
+    const [view, setView] = useState<View>('chat');
     const [provider, setProvider] = useState<ProviderType>('vercel');
     const [, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, setIsTyping } = useChat();
+    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, updateLastMessageImage, setIsTyping } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
     const [exaEnabled, setExaEnabled] = useState(false);
+    const [searxngEnabled, setSearxngEnabled] = useState(false);
+    const [searxngUrl, setSearxngUrl] = useState('');
+    const [imageGenEnabled, setImageGenEnabled] = useState(false);
+    const [imageGenProvider, setImageGenProvider] = useState<ImageGenProvider>('vercel');
+    const [imageGenSdUrl, setImageGenSdUrl] = useState('http://localhost:7860');
+    const [imageGenModel, setImageGenModel] = useState('openai:dall-e-3');
+    const [imageGenSize, setImageGenSize] = useState('1024x1024');
+    const [autoAnswerEnabled, setAutoAnswerEnabled] = useState(false);
+    const [isAutoAnswering, setIsAutoAnswering] = useState(false);
 
     // Initialization
     const [isInitialized, setIsInitialized] = useState(false);
@@ -35,21 +49,43 @@ const App: React.FC = () => {
                 setProvider(p);
                 const k = await Storage.getApiKey(p);
                 setApiKey(k);
-                
+
                 // Load language
                 const lang = await getCurrentLanguage();
                 setLanguage(lang);
-                
+
                 // Load Exa enabled state
                 const exaEn = await Storage.getExaEnabled();
                 setExaEnabled(exaEn);
+
+                // Load SearXNG settings
+                const sEn = await Storage.getSearXNGEnabled();
+                setSearxngEnabled(sEn);
+                const sUrl = await Storage.getSearXNGUrl();
+                setSearxngUrl(sUrl);
+
+                // Load image generation settings
+                const imgEn = await Storage.getImageGenEnabled();
+                setImageGenEnabled(imgEn);
+                const imgProv = await Storage.getImageGenProvider();
+                setImageGenProvider(imgProv);
+                const imgSdUrl = await Storage.getImageGenSdUrl();
+                setImageGenSdUrl(imgSdUrl);
+                const imgModel = await Storage.getImageGenModel();
+                setImageGenModel(imgModel);
+                const imgSize = await Storage.getImageGenSize();
+                setImageGenSize(imgSize);
+
+                // Load auto-answer setting
+                const autoAns = await Storage.getAutoAnswerEnabled();
+                setAutoAnswerEnabled(autoAns);
 
                 // Show settings if no API key for non-local providers
                 const isLocal = p === 'lmstudio' || p === 'ollama';
                 if (!k && !isLocal) {
                     setView('settings');
                 }
-                
+
                 // Check theme
                 const theme = await Storage.getThemePreference();
                 document.body.dataset.theme = theme;
@@ -72,8 +108,8 @@ const App: React.FC = () => {
 
     const handleSend = async (text: string) => {
         const currentKey = await Storage.getApiKey(provider);
-        const options = (provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel') 
-            ? await Storage.getLocalSettings(provider) 
+        const options = (provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel')
+            ? await Storage.getLocalSettings(provider)
             : undefined;
 
         await sendMessage(text, provider, currentKey, options ? { baseUrl: options.url, modelName: options.model } : undefined);
@@ -100,12 +136,6 @@ const App: React.FC = () => {
     };
 
     const handleSearchWeb = async (query: string) => {
-        const isRemoteWithModels = provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel';
-        if (!isRemoteWithModels) {
-            alert('Web search requires a compatible provider (Vercel, LM Studio, or Ollama).');
-            return;
-        }
-
         addMessage('user', `Search web: ${query}`);
         setIsTyping(true);
         addMessage('ai', 'Searching the web...');
@@ -114,11 +144,34 @@ const App: React.FC = () => {
             let searchResults = [];
             let source = 'DuckDuckGo';
 
-            // Check for Exa key if using Vercel
-            if (provider === 'vercel') {
+            // SearXNG takes priority if enabled
+            if (searxngEnabled && searxngUrl) {
+                source = 'SearXNG';
+                try {
+                    const searchUrlEncoded = encodeURIComponent(query.trim());
+                    const data = await performRequest(
+                        `${searxngUrl.replace(/\/$/, '')}/search?q=${searchUrlEncoded}&format=json`,
+                        'GET',
+                        { 'Accept': 'application/json' }
+                    );
+                    if (data?.results?.length) {
+                        searchResults = data.results.slice(0, 5).map((r: any) => ({
+                            title: r.title || 'Untitled',
+                            snippet: r.content || '',
+                            url: r.url
+                        }));
+                    }
+                } catch (e) {
+                    console.warn('SearXNG search failed, falling back', e);
+                    source = 'DuckDuckGo';
+                }
+            }
+
+            // Check for Exa key if using Vercel (and SearXNG not used)
+            if (searchResults.length === 0 && provider === 'vercel') {
                 const exaEnabled = await Storage.getExaEnabled();
                 const exaKey = await Storage.getExaApiKey();
-                
+
                 if (exaEnabled && exaKey) {
                     source = 'Exa.ai';
                     try {
@@ -140,7 +193,6 @@ const App: React.FC = () => {
                         }
                     } catch (e) {
                         console.warn('Exa search failed, falling back to DuckDuckGo', e);
-                        // Fallback will happen below if searchResults is empty
                     }
                 }
             }
@@ -157,17 +209,19 @@ const App: React.FC = () => {
             }
 
             if (searchResults.length > 0) {
-                const formattedResults = searchResults.map((r: any, i: number) => 
+                const formattedResults = searchResults.map((r: any, i: number) =>
                     `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
                 ).join('\n\n');
 
                 updateLastMessage(`Found ${searchResults.length} results via ${source}. Analyzing...`);
 
-                const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in Slovak based on these search results.`;
+                const languageNames: Record<string, string> = { sk: 'Slovak', en: 'English', cs: 'Czech', de: 'German', hu: 'Hungarian' };
+                const languageName = languageNames[language] || 'Slovak';
+                const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
 
                 const currentKey = await Storage.getApiKey(provider);
                 const options = await Storage.getLocalSettings(provider);
-                
+
                 await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
             } else {
                 updateLastMessage('No search results found.');
@@ -182,23 +236,97 @@ const App: React.FC = () => {
 
     const handleActionClick = async (action: string) => {
         if (action === 'search_web') {
-            const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_web') 
-                ? messages[messages.length - 1].content.match(/"([^"]+)"/)?.[1] || lastPageContext 
+            const query = messages[messages.length - 1]?.actions?.find(a => a.action === 'search_web')
+                ? messages[messages.length - 1].content.match(/"([^"]+)"/)?.[1] || lastPageContext
                 : lastPageContext;
 
             if (!query) return;
 
-            const isRemoteWithModels = provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel';
-            if (isRemoteWithModels) {
-                handleSearchWeb(query);
-            } else {
-                window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
-            }
+            handleSearchWeb(query);
             return;
         }
 
         const prompt = generatePromptFromAction(action);
         handleSend(prompt);
+    };
+
+    const handleGenerateImage = async (prompt: string) => {
+        addMessage('user', `🎨 ${prompt}`);
+        setIsTyping(true);
+        addMessage('ai', t('imageGenGenerating', language));
+
+        try {
+            const currentKey = await Storage.getApiKey(provider);
+            const options = await Storage.getLocalSettings(provider);
+            const result = await generateImage(prompt, {
+                provider: imageGenProvider,
+                apiKey: currentKey || '',
+                baseUrl: imageGenProvider === 'sdwebui' ? imageGenSdUrl : (options.url || undefined),
+                model: imageGenModel,
+                size: imageGenSize
+            });
+            updateLastMessageImage(result.dataUrl, result.revisedPrompt || prompt);
+        } catch (error) {
+            updateLastMessage(`${t('imageGenFailed', language)}: ${(error as Error).message}`);
+        } finally {
+            setIsTyping(false);
+        }
+    };
+
+    const handleAutoAnswer = async () => {
+        setIsAutoAnswering(true);
+        try {
+            const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+            if (!tabs[0]?.id) return;
+
+            const qResponse: any = await browser.tabs.sendMessage(tabs[0].id, { action: 'get_exam_question' });
+            if (!qResponse?.ok) {
+                addMessage('ai', '⚠️ No exam question found on this page.');
+                return;
+            }
+
+            let prompt = 'Answer this exam question concisely.\n\n';
+            if (qResponse.inputType === 'choice' && qResponse.choices?.length > 0) {
+                prompt += `Question:\n${qResponse.questionText}\n\nOptions:\n`;
+                prompt += qResponse.choices.map((c: any, i: number) => `${i + 1}. ${c.label} (value: ${c.value})`).join('\n');
+                prompt += '\n\nRespond with ONLY the exact value of the correct option, nothing else.';
+            } else {
+                prompt += `Question:\n${qResponse.questionText}\n\nRespond with a short, direct answer only.`;
+            }
+
+            addMessage('ai', '🤖 Auto-answering...');
+            setIsTyping(true);
+
+            const currentKey = await Storage.getApiKey(provider);
+            const options = await Storage.getLocalSettings(provider);
+            const aiProvider = getProvider(provider);
+            let answer = '';
+
+            await aiProvider.sendMessage(
+                prompt,
+                currentKey || '',
+                { baseUrl: options.url, modelName: options.model },
+                (chunk) => { answer = chunk; updateLastMessage(`🤖 Filling: ${chunk}`); }
+            );
+
+            answer = answer.trim();
+
+            const fillResp: any = await browser.tabs.sendMessage(tabs[0].id, {
+                action: 'fill_answer',
+                payload: { inputType: qResponse.inputType, value: answer }
+            });
+
+            if (fillResp?.ok) {
+                updateLastMessage(`✅ Filled answer: **${answer}**`);
+            } else {
+                updateLastMessage(`⚠️ AI answer: **${answer}**\n\n_Could not auto-fill: ${fillResp?.error || 'unknown'}_`);
+            }
+        } catch (e) {
+            updateLastMessage(`❌ Auto-answer error: ${(e as Error).message}`);
+        } finally {
+            setIsTyping(false);
+            setIsAutoAnswering(false);
+        }
     };
 
     const handleProviderChange = async (p: ProviderType) => {
@@ -211,6 +339,22 @@ const App: React.FC = () => {
         setApiKey(k);
         const exaEn = await Storage.getExaEnabled();
         setExaEnabled(exaEn);
+        const sEn = await Storage.getSearXNGEnabled();
+        setSearxngEnabled(sEn);
+        const sUrl = await Storage.getSearXNGUrl();
+        setSearxngUrl(sUrl);
+        const imgEn = await Storage.getImageGenEnabled();
+        setImageGenEnabled(imgEn);
+        const imgProv = await Storage.getImageGenProvider();
+        setImageGenProvider(imgProv);
+        const imgSdUrl = await Storage.getImageGenSdUrl();
+        setImageGenSdUrl(imgSdUrl);
+        const imgModel = await Storage.getImageGenModel();
+        setImageGenModel(imgModel);
+        const imgSize = await Storage.getImageGenSize();
+        setImageGenSize(imgSize);
+        const autoAns = await Storage.getAutoAnswerEnabled();
+        setAutoAnswerEnabled(autoAns);
         setView('chat');
     };
 
@@ -221,12 +365,14 @@ const App: React.FC = () => {
 
     if (!isInitialized) return null;
 
+    const isSecondaryView = view === 'settings' || view === 'widgets';
+
     return (
         <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
             {/* Header */}
             <header className="flex items-center justify-between px-4 h-12 border-b bg-card/50 backdrop-blur-md z-50 shrink-0">
                  <div className="flex items-center gap-2">
-                    {view === 'settings' ? (
+                    {isSecondaryView ? (
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setView('chat')}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
@@ -236,14 +382,37 @@ const App: React.FC = () => {
                         </div>
                     )}
                     <span className="font-bold text-sm tracking-tight">
-                        {view === 'settings' ? t('settings', language) : t('chat', language)}
+                        {view === 'settings' ? t('settings', language) : view === 'widgets' ? 'Widgets' : t('chat', language)}
                     </span>
                  </div>
-                 
+
                  {view === 'chat' && (
-                     <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
-                         <Settings className="h-4 w-4" />
-                     </Button>
+                     <div className="flex items-center gap-1">
+                         {autoAnswerEnabled && (
+                             <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 className={cn("h-8 w-8 rounded-full text-muted-foreground hover:text-primary", isAutoAnswering && "animate-pulse text-primary")}
+                                 title="Auto-answer current question"
+                                 onClick={handleAutoAnswer}
+                                 disabled={isTyping || isAutoAnswering}
+                             >
+                                 <Wand2 className="h-4 w-4" />
+                             </Button>
+                         )}
+                         <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                             onClick={() => setView('widgets')}
+                             title="Widgets"
+                         >
+                             <LayoutGrid className="h-4 w-4" />
+                         </Button>
+                         <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
+                             <Settings className="h-4 w-4" />
+                         </Button>
+                     </div>
                  )}
             </header>
 
@@ -252,35 +421,44 @@ const App: React.FC = () => {
                     "flex-1 flex flex-col transition-all duration-500 absolute inset-0",
                     view === 'chat' ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
-                    <MessageList 
-                        messages={messages} 
-                        onActionClick={handleActionClick} 
+                    <MessageList
+                        messages={messages}
+                        onActionClick={handleActionClick}
                         disableActions={isTyping}
                         userInitials={userInitials}
                         language={language}
                     />
-                    <InputArea 
-                        onSend={handleSend} 
-                        onScanPage={handleScanPage} 
+                    <InputArea
+                        onSend={handleSend}
+                        onScanPage={handleScanPage}
                         onSearchWeb={handleSearchWeb}
-                        disabled={isTyping} 
+                        onGenerateImage={handleGenerateImage}
+                        disabled={isTyping}
                         isScanning={isScanning}
                         language={language}
                         exaEnabled={exaEnabled}
+                        imageGenEnabled={imageGenEnabled}
                     />
                 </div>
-                
+
                 <div className={cn(
                     "flex-1 transition-all duration-500 absolute inset-0 bg-background",
                     view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
-                    <SettingsView 
-                        currentProvider={provider} 
-                        onProviderChange={handleProviderChange} 
-                        onClose={handleSettingsClose} 
+                    <SettingsView
+                        currentProvider={provider}
+                        onProviderChange={handleProviderChange}
+                        onClose={handleSettingsClose}
                         language={language}
                         onLanguageChange={handleLanguageChange}
                     />
+                </div>
+
+                <div className={cn(
+                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    view === 'widgets' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
+                )}>
+                    <WidgetsView />
                 </div>
             </main>
         </div>

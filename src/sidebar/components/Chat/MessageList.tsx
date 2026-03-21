@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { marked } from 'marked';
 import { Message } from '../../types';
 import { Button } from '../ui/button';
@@ -19,36 +19,36 @@ marked.setOptions({
     breaks: true
 });
 
+// Defined outside MessageList so the component type is stable across renders
+const MarkdownContent = ({ content, role }: { content: string, role: 'user' | 'ai' }) => {
+    const [html, setHtml] = useState(content);
+
+    useEffect(() => {
+        Promise.resolve(marked.parse(content)).then(h => setHtml(h));
+    }, [content]);
+
+    return (
+        <div
+            className={cn(
+                "prose prose-sm max-w-none dark:prose-invert break-words",
+                "text-sm leading-relaxed",
+                role === 'user' ? "text-primary-foreground" : "text-foreground",
+                "[&_p]:mb-2 [&_p:last-child]:mb-0",
+                "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
+                "[&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_code]:font-mono",
+                "[&_pre]:bg-muted [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2"
+            )}
+            dangerouslySetInnerHTML={{ __html: html }}
+        />
+    );
+};
+
 export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClick, disableActions, userInitials, language }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
-    
-    // Helper component for async markdown
-    const MarkdownContent = ({ content, role }: { content: string, role: string }) => {
-        const [html, setHtml] = React.useState('');
-
-        useEffect(() => {
-            Promise.resolve(marked.parse(content)).then(h => setHtml(h));
-        }, [content]);
-
-        return (
-            <div 
-                className={cn(
-                    "prose prose-sm max-w-none dark:prose-invert break-words",
-                    "text-sm leading-relaxed",
-                    role === 'user' ? "text-primary-foreground" : "text-foreground",
-                    "[&_p]:mb-2 [&_p:last-child]:mb-0",
-                    "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
-                    "[&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_code]:font-mono",
-                    "[&_pre]:bg-muted [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2"
-                )}
-                dangerouslySetInnerHTML={{ __html: html }} 
-            />
-        );
-    };
 
     return (
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scroll-smooth" id="chat-history">
@@ -75,11 +75,20 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClic
                     <div className="flex flex-col gap-2 min-w-0">
                         <div className={cn(
                             "px-4 py-3 rounded-2xl shadow-sm border",
-                            msg.role === 'user' 
-                                ? "bg-primary text-primary-foreground border-primary/20 rounded-tr-none" 
+                            msg.role === 'user'
+                                ? "bg-primary text-primary-foreground border-primary/20 rounded-tr-none"
                                 : "bg-card text-foreground border-border rounded-tl-none"
                         )}>
                             <MarkdownContent content={msg.content} role={msg.role} />
+                            {msg.imageUrl && (
+                                <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                    <img
+                                        src={msg.imageUrl}
+                                        alt={msg.content}
+                                        className="rounded-lg max-w-full max-h-64 object-contain border border-border/30 hover:opacity-90 transition-opacity"
+                                    />
+                                </a>
+                            )}
                         </div>
                         
                         {msg.actions && (

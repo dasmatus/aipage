@@ -93,5 +93,24 @@ export const de: Translation = {
     exaApiKey: 'Exa API Schlüssel (Web Search)',
     exaApiKeyPlaceholder: 'exa-...',
     exaApiKeyHint: 'Optional: Ermöglicht die Echtzeit-Websuche für AI-Modelle mit Exa.ai.',
-    enableExaSearch: 'Exa Web Search aktivieren'
+    enableExaSearch: 'Exa Web Search aktivieren',
+
+    searxngSearch: 'SearXNG Suche',
+    searxngEnabled: 'SearXNG für die Websuche verwenden',
+    searxngUrl: 'SearXNG-Instanz-URL',
+    searxngUrlPlaceholder: 'http://localhost:8080',
+    searxngUrlHint: 'Selbst gehostete SearXNG-Instanz. Funktioniert am besten auf localhost; entfernte Instanzen erfordern aktiviertes CORS auf dem SearXNG-Server.',
+
+    imageGen: 'Bildgenerierung',
+    imageGenEnabled: 'Bildgenerierung aktivieren',
+    imageGenPromptPlaceholder: 'Beschreiben Sie das zu generierende Bild...',
+    imageGenProvider: 'Anbieter',
+    imageGenVercel: 'Vercel AI Gateway (DALL-E)',
+    imageGenSDWebUI: 'Stable Diffusion WebUI (Lokal)',
+    imageGenSdUrl: 'SD WebUI URL',
+    imageGenSdUrlPlaceholder: 'http://localhost:7860',
+    imageGenModel: 'Modell',
+    imageGenSize: 'Größe',
+    imageGenGenerating: 'Bild wird generiert...',
+    imageGenFailed: 'Bildgenerierung fehlgeschlagen',
 };

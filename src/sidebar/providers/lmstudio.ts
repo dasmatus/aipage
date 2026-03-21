@@ -54,7 +54,7 @@ export class LMStudioProvider implements AIProvider {
         try {
             const data = await performRequest(`${baseUrl}/v1/models`, 'GET', {});
             // LM Studio /v1/models returns { data: [ { id: "model-id", ... } ] }
-            return data.data.map((m: any) => ({ id: m.id, provider: 'LM Studio' }));
+            return (data.data || []).map((m: any) => ({ id: m.id, provider: 'LM Studio' }));
         } catch (e) {
             console.error('Failed to fetch LM Studio models', e);
             return [];

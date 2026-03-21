@@ -93,5 +93,24 @@ export const hu: Translation = {
     exaApiKey: 'Exa API Kulcs (Web Search)',
     exaApiKeyPlaceholder: 'exa-...',
     exaApiKeyHint: 'Opcionális: Lehetővé teszi az AI modellek valós idejű webes keresését az Exa.ai segítségével.',
-    enableExaSearch: 'Exa Web Search engedélyezése'
+    enableExaSearch: 'Exa Web Search engedélyezése',
+
+    searxngSearch: 'SearXNG Keresés',
+    searxngEnabled: 'SearXNG használata webes kereséshez',
+    searxngUrl: 'SearXNG példány URL',
+    searxngUrlPlaceholder: 'http://localhost:8080',
+    searxngUrlHint: 'Saját SearXNG példány. Legjobban localhoston működik; távoli példányokhoz CORS engedélyezése szükséges a SearXNG szerveren.',
+
+    imageGen: 'Képgenerálás',
+    imageGenEnabled: 'Képgenerálás engedélyezése',
+    imageGenPromptPlaceholder: 'Írja le a generálandó képet...',
+    imageGenProvider: 'Szolgáltató',
+    imageGenVercel: 'Vercel AI Gateway (DALL-E)',
+    imageGenSDWebUI: 'Stable Diffusion WebUI (Helyi)',
+    imageGenSdUrl: 'SD WebUI URL',
+    imageGenSdUrlPlaceholder: 'http://localhost:7860',
+    imageGenModel: 'Modell',
+    imageGenSize: 'Méret',
+    imageGenGenerating: 'Kép generálása...',
+    imageGenFailed: 'Képgenerálás sikertelen',
 };

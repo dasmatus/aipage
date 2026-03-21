@@ -33,5 +33,5 @@ export interface AIProvider {
      * @param apiKey API Key
      * @param options Base URL override
      */
-    getModels?(apiKey: string, options?: { baseUrl?: string }): Promise<any[]>;
+    getModels?(apiKey: string, options?: { baseUrl?: string, type?: 'chat' | 'image' }): Promise<any[]>;
 }

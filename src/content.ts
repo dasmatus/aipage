@@ -72,7 +72,7 @@ import { injectAntiAntiCheat } from './content-scripts/anti-cheat-injector';
         container.insertBefore(btn, container.firstChild);
         btn.addEventListener('click', onAiButtonClick);
 
-        if (sidebar.isOpen) sidebar.updateLayout(sidebar.currentWidth);
+        if (sidebar.isOpen) sidebar.open();
     }
 
     function onAiButtonClick(e: MouseEvent) {
@@ -119,6 +119,52 @@ import { injectAntiAntiCheat } from './content-scripts/anti-cheat-injector';
             return Promise.resolve();
         } 
         
+        if (msg.action === 'get_exam_question') {
+            const container = document.querySelector('.etest-player-content') as HTMLElement;
+            if (!container || !container.offsetParent) return Promise.resolve({ ok: false, error: 'No exam content found' });
+
+            const questionText = container.innerText.trim();
+            const radioInputs = container.querySelectorAll('input[type="radio"]');
+            const textInput = container.querySelector('input[type="text"], textarea') as HTMLInputElement | null;
+
+            const choices = radioInputs.length > 0
+                ? Array.from(radioInputs).map((r: any) => ({
+                      value: r.value,
+                      label: r.closest('label')?.innerText?.trim() || r.parentElement?.innerText?.trim() || r.value,
+                      id: r.id
+                  }))
+                : [];
+
+            return Promise.resolve({
+                ok: true,
+                questionText,
+                inputType: radioInputs.length > 0 ? 'choice' : textInput ? 'text' : 'unknown',
+                choices
+            });
+        }
+
+        if (msg.action === 'fill_answer') {
+            const { inputType, value } = msg.payload || {};
+            if (inputType === 'choice') {
+                const radio = document.querySelector(`input[value="${CSS.escape(value)}"]`) as HTMLInputElement | null;
+                if (radio) {
+                    radio.click();
+                    return Promise.resolve({ ok: true });
+                }
+                return Promise.resolve({ ok: false, error: 'Radio option not found' });
+            } else if (inputType === 'text') {
+                const input = document.querySelector('.etest-player-content input[type="text"], .etest-player-content textarea') as HTMLInputElement | null;
+                if (input) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    return Promise.resolve({ ok: true });
+                }
+                return Promise.resolve({ ok: false, error: 'Text input not found' });
+            }
+            return Promise.resolve({ ok: false, error: 'Unknown input type' });
+        }
+
         if (msg.action === 'get_page_content') {
             return (async () => {
                 try {

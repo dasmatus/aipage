@@ -6,6 +6,7 @@ export interface Message {
     content: string;
     timestamp: number;
     actions?: ContextAction[];
+    imageUrl?: string;
 }
 
 export interface ContextAction {

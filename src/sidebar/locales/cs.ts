@@ -93,5 +93,24 @@ export const cs: Translation = {
     exaApiKey: 'Exa API Klíč (Web Search)',
     exaApiKeyPlaceholder: 'exa-...',
     exaApiKeyHint: 'Volitelné: Umožňuje vyhledávání na webu pro AI modely pomocí Exa.ai.',
-    enableExaSearch: 'Povolit Exa Web Search'
+    enableExaSearch: 'Povolit Exa Web Search',
+
+    searxngSearch: 'SearXNG Vyhledávání',
+    searxngEnabled: 'Použít SearXNG pro vyhledávání',
+    searxngUrl: 'URL SearXNG instance',
+    searxngUrlPlaceholder: 'http://localhost:8080',
+    searxngUrlHint: 'Vlastní SearXNG instance. Funguje nejlépe na localhostu; vzdálené instance vyžadují povolení CORS na SearXNG serveru.',
+
+    imageGen: 'Generování obrázků',
+    imageGenEnabled: 'Povolit generování obrázků',
+    imageGenPromptPlaceholder: 'Popište obrázek, který chcete vygenerovat...',
+    imageGenProvider: 'Poskytovatel',
+    imageGenVercel: 'Vercel AI Gateway (DALL-E)',
+    imageGenSDWebUI: 'Stable Diffusion WebUI (Místní)',
+    imageGenSdUrl: 'URL SD WebUI',
+    imageGenSdUrlPlaceholder: 'http://localhost:7860',
+    imageGenModel: 'Model',
+    imageGenSize: 'Velikost',
+    imageGenGenerating: 'Generuji obrázek...',
+    imageGenFailed: 'Generování obrázku selhalo',
 };

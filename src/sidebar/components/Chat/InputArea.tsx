@@ -2,23 +2,26 @@ import React, { useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { t } from '../../i18n';
-import { FileText, Search, Send, X, Loader2 } from 'lucide-react';
+import { FileText, Search, Send, X, Loader2, ImageIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface InputAreaProps {
     onSend: (text: string) => void;
     onScanPage: () => void;
     onSearchWeb: (query: string) => void;
+    onGenerateImage: (prompt: string) => void;
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
     exaEnabled: boolean;
+    imageGenEnabled: boolean;
 }
 
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, disabled, isScanning, language, exaEnabled }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, onGenerateImage, disabled, isScanning, language, exaEnabled, imageGenEnabled }) => {
     const [text, setText] = useState('');
     const [isSearchMode, setIsSearchMode] = useState(false);
+    const [isImageMode, setIsImageMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +47,11 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
 
     const handleSend = () => {
         if (text.trim() && !disabled) {
-            onSend(text.trim());
+            if (isImageMode) {
+                onGenerateImage(text.trim());
+            } else {
+                onSend(text.trim());
+            }
             setText('');
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
         }
@@ -53,11 +60,22 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
     const handleToggleSearch = () => {
         const nextMode = !isSearchMode;
         setIsSearchMode(nextMode);
+        if (nextMode) setIsImageMode(false);
         if (!nextMode) {
             setSearchQuery('');
         } else {
             setTimeout(() => searchInputRef.current?.focus(), 100);
         }
+    };
+
+    const handleToggleImageMode = () => {
+        const next = !isImageMode;
+        setIsImageMode(next);
+        if (next) {
+            setIsSearchMode(false);
+            setSearchQuery('');
+        }
+        setTimeout(() => textareaRef.current?.focus(), 50);
     };
 
     const handleSearchSubmit = () => {
@@ -93,15 +111,28 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                 </Button>
                 
                 {exaEnabled && (
-                    <Button 
+                    <Button
                         variant={isSearchMode ? "secondary" : "ghost"}
-                        size="icon" 
+                        size="icon"
                         className={cn("h-8 w-8 rounded-full transition-all duration-300", isSearchMode && "bg-primary/20 text-primary")}
                         title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
                         onClick={handleToggleSearch}
                         disabled={disabled}
                     >
                         {isSearchMode ? <X className="h-4 w-4" /> : <Search className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                )}
+
+                {imageGenEnabled && (
+                    <Button
+                        variant={isImageMode ? "secondary" : "ghost"}
+                        size="icon"
+                        className={cn("h-8 w-8 rounded-full transition-all duration-300", isImageMode && "bg-primary/20 text-primary")}
+                        title={t('imageGen', language)}
+                        onClick={handleToggleImageMode}
+                        disabled={disabled}
+                    >
+                        <ImageIcon className="h-4 w-4" />
                     </Button>
                 )}
 
@@ -130,10 +161,10 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
             </div>
 
             <div className="relative flex items-end gap-2 group">
-                <textarea 
-                    id="chat-input" 
+                <textarea
+                    id="chat-input"
                     ref={textareaRef}
-                    placeholder={t('askAnything', language)} 
+                    placeholder={isImageMode ? t('imageGenPromptPlaceholder', language) : t('askAnything', language)}
                     rows={1}
                     value={text}
                     onChange={handleInput}
@@ -158,7 +189,10 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                     disabled={!text.trim() || disabled} 
                     onClick={handleSend}
                 >
-                    <Send className={cn("h-4 w-4 transition-transform", text.trim() && "translate-x-0.5 -translate-y-0.5")} />
+                    {isImageMode
+                        ? <ImageIcon className="h-4 w-4" />
+                        : <Send className={cn("h-4 w-4 transition-transform", text.trim() && "translate-x-0.5 -translate-y-0.5")} />
+                    }
                 </Button>
             </div>
         </div>

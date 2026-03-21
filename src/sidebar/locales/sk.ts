@@ -93,5 +93,24 @@ export const sk: Translation = {
     exaApiKey: 'Exa API Kľúč (Web Search)',
     exaApiKeyPlaceholder: 'exa-...',
     exaApiKeyHint: 'Voliteľné: Umožňuje vyhľadávanie na webe pre AI modely pomocou Exa.ai.',
-    enableExaSearch: 'Povoliť Exa Web Search'
+    enableExaSearch: 'Povoliť Exa Web Search',
+
+    searxngSearch: 'SearXNG Vyhľadávanie',
+    searxngEnabled: 'Použiť SearXNG na vyhľadávanie',
+    searxngUrl: 'URL SearXNG inštancie',
+    searxngUrlPlaceholder: 'http://localhost:8080',
+    searxngUrlHint: 'Vlastná SearXNG inštancia. Funguje najlepšie na localhoste; pre vzdialené inštancie je potrebné povoliť CORS na SearXNG serveri.',
+
+    imageGen: 'Generovanie obrázkov',
+    imageGenEnabled: 'Povoliť generovanie obrázkov',
+    imageGenPromptPlaceholder: 'Popíšte obrázok, ktorý chcete vygenerovať...',
+    imageGenProvider: 'Poskytovateľ',
+    imageGenVercel: 'Vercel AI Gateway (DALL-E)',
+    imageGenSDWebUI: 'Stable Diffusion WebUI (Lokálne)',
+    imageGenSdUrl: 'URL SD WebUI',
+    imageGenSdUrlPlaceholder: 'http://localhost:7860',
+    imageGenModel: 'Model',
+    imageGenSize: 'Veľkosť',
+    imageGenGenerating: 'Generujem obrázok...',
+    imageGenFailed: 'Generovanie obrázka zlyhalo',
 };

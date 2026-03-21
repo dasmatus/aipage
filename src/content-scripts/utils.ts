@@ -12,7 +12,11 @@ export function getNavbarHeight(): number {
 export function getUserInitials(): string {
     const profileBox = document.getElementById('edubarProfileBox');
     if (!profileBox) return '';
-    const name = profileBox.innerText || '';
-    const initials = name.match(/[A-Z]/g) || [];
-    return initials.join('');
+    const name = profileBox.innerText.trim();
+    return name
+        .split(/\s+/)
+        .filter(word => word.length > 0)
+        .map(word => word[0].toUpperCase())
+        .slice(0, 2)
+        .join('');
 }

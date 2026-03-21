@@ -6,6 +6,7 @@ describe('InputArea Component', () => {
     const mockOnSend = jest.fn();
     const mockOnScanPage = jest.fn();
     const mockOnSearchWeb = jest.fn();
+    const mockOnGenerateImage = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -17,8 +18,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={true}
+                imageGenEnabled={false}
             />
         );
 
@@ -32,8 +35,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={true}
+                imageGenEnabled={false}
             />
         );
 
@@ -55,8 +60,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={true}
+                imageGenEnabled={false}
             />
         );
 
@@ -76,8 +83,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={true}
+                imageGenEnabled={false}
             />
         );
 
@@ -96,8 +105,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={true}
+                imageGenEnabled={false}
             />
         );
 
@@ -115,8 +126,10 @@ describe('InputArea Component', () => {
                 onSend={mockOnSend}
                 onScanPage={mockOnScanPage}
                 onSearchWeb={mockOnSearchWeb}
+                onGenerateImage={mockOnGenerateImage}
                 language="en"
                 exaEnabled={false}
+                imageGenEnabled={false}
             />
         );
 
