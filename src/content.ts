@@ -59,7 +59,7 @@ import { injectAntiAntiCheat } from './content-scripts/anti-cheat-injector';
         btn.style.alignItems = 'center';
         btn.style.justifyContent = 'center';
         btn.style.gap = '6px';
-        btn.setAttribute('title', 'AI A');
+        btn.setAttribute('title', 'AI Assistant');
 
         btn.innerHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
