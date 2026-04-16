@@ -3,6 +3,7 @@ import { MessageList } from './components/Chat/MessageList';
 import { InputArea } from './components/Chat/InputArea';
 import { SettingsView } from './components/Settings/SettingsView';
 import { WidgetsView } from './components/Widgets/WidgetsView';
+import { RatehalováView } from './components/Ratehalova/RatehalováView';
 import { useChat } from './hooks/useChat';
 import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
@@ -14,10 +15,10 @@ import browser from 'webextension-polyfill';
 
 // Shadcn & Icons
 import { Button } from './components/ui/button';
-import { Settings, MessageCircle, ChevronLeft, LayoutGrid, Wand2 } from 'lucide-react';
+import { Settings, MessageCircle, ChevronLeft, LayoutGrid, Wand2, School } from 'lucide-react';
 import { cn } from './lib/utils';
 
-type View = 'chat' | 'settings' | 'widgets';
+type View = 'chat' | 'settings' | 'widgets' | 'ratehalova';
 
 const App: React.FC = () => {
     // State
@@ -360,7 +361,7 @@ const App: React.FC = () => {
 
     if (!isInitialized) return null;
 
-    const isSecondaryView = view === 'settings' || view === 'widgets';
+    const isSecondaryView = view === 'settings' || view === 'widgets' || view === 'ratehalova';
 
     return (
         <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
@@ -377,7 +378,7 @@ const App: React.FC = () => {
                         </div>
                     )}
                     <span className="font-bold text-sm tracking-tight">
-                        {view === 'settings' ? t('settings', language) : view === 'widgets' ? t('widgets', language) : t('chat', language)}
+                        {view === 'settings' ? t('settings', language) : view === 'widgets' ? t('widgets', language) : view === 'ratehalova' ? t('ratehalova', language) : t('chat', language)}
                     </span>
                  </div>
 
@@ -395,6 +396,15 @@ const App: React.FC = () => {
                                  <Wand2 className="h-4 w-4" />
                              </Button>
                          )}
+                         <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                             onClick={() => setView('ratehalova')}
+                             title="Ratehalová"
+                         >
+                             <School className="h-4 w-4" />
+                         </Button>
                          <Button
                              variant="ghost"
                              size="icon"
@@ -454,6 +464,13 @@ const App: React.FC = () => {
                     view === 'widgets' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
                     <WidgetsView />
+                </div>
+
+                <div className={cn(
+                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    view === 'ratehalova' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
+                )}>
+                    <RatehalováView />
                 </div>
             </main>
         </div>
