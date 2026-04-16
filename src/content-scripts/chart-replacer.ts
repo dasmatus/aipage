@@ -1,9 +1,10 @@
 /**
  * chart-replacer.ts
  *
- * Detects EduPage's "Leistungen des Schülers" (grafvykonnosti) performance chart,
- * extracts its data from the hidden accessible table, and replaces the static
- * Google Charts SVG with an interactive TradingView lightweight-charts line chart.
+ * Detects EduPage's "Leistungen des Schülers" (grafvykonnosti) performance
+ * chart, extracts its data from the hidden accessible table already in the
+ * DOM, and replaces the static Google Charts SVG with an interactive
+ * TradingView lightweight-charts line chart.
  */
 
 import { createChart, ColorType } from "lightweight-charts";
@@ -28,7 +29,7 @@ const MONTHS: Record<string, number> = {
 
 /**
  * Converts a locale date string like "Jan 19, 2026" to "2026-01-19".
- * Returns null if the string cannot be parsed.
+ * Returns null when the string cannot be parsed.
  */
 function parseTableDate(raw: string): string | null {
   const m = raw.trim().match(/^(\w{3})\s+(\d{1,2}),\s+(\d{4})$/);
@@ -73,6 +74,32 @@ function extractColorMap(legendEl: Element): Map<number, string> {
 }
 
 /**
+ * Finds the accessible data table that EduPage already renders alongside the
+ * SVG. EduPage puts it in a visually-hidden div (left: -10000px) whose
+ * aria-label starts with "A tabular representation". We try several
+ * increasingly-broad selectors so the code survives minor EduPage DOM changes.
+ */
+function findDataTable(chartElem: HTMLElement): HTMLTableElement | null {
+  // Most specific: the exact aria-label Google Charts uses
+  let table = chartElem.querySelector<HTMLTableElement>(
+    'div[aria-label*="tabular representation"] table',
+  );
+  if (table) return table;
+
+  // Fallback: any off-screen div (left: -10000px) containing a table
+  table = chartElem.querySelector<HTMLTableElement>(
+    'div[style*="-10000px"] table',
+  );
+  if (table) return table;
+
+  // Last resort: first table anywhere inside the chart element
+  table = chartElem.querySelector<HTMLTableElement>("table");
+  if (table) return table;
+
+  return null;
+}
+
+/**
  * Parses the hidden accessible <table> into an array of SeriesDef objects,
  * one per subject column that has at least one non-empty data point.
  */
@@ -84,6 +111,11 @@ function extractSeriesData(
     (th) => th.textContent?.trim() ?? "",
   );
   // headers: [ "Datum", subject1, subject2, …, "Notendurchschnitt" ]
+
+  if (headers.length < 2) {
+    console.warn("[AIPage] chart-replacer: table has fewer than 2 columns");
+    return [];
+  }
 
   const lastColIndex = headers.length - 1;
   const colData = new Map<number, { time: string; value: number }[]>();
@@ -110,7 +142,7 @@ function extractSeriesData(
 
     const name = headers[colIndex] ?? `Col ${colIndex}`;
     const isAverage = colIndex === lastColIndex;
-    // legend data-col = table colIndex - 1  (legend omits "Datum" column)
+    // legend data-col = table colIndex - 1  (legend omits the "Datum" column)
     const legendCol = colIndex - 1;
     const color =
       colorMap.get(legendCol) ?? (isAverage ? "#000000" : "#888888");
@@ -124,7 +156,7 @@ function extractSeriesData(
     });
   });
 
-  // Render average series last so it draws on top of subject lines
+  // Render the average series last so it draws on top of subject lines
   return result.sort((a, b) => {
     if (a.isAverage && !b.isAverage) return 1;
     if (!a.isAverage && b.isAverage) return -1;
@@ -139,13 +171,12 @@ function buildChart(
   chartElem: HTMLElement,
   legendEl: HTMLElement,
 ): void {
-  // The data lives in an aria-hidden table inside chartElem —
-  // read it BEFORE we clear chartElem's innerHTML.
-  const dataTable = chartElem.querySelector<HTMLTableElement>(
-    'div[aria-hidden="true"] table',
-  );
+  // Read data BEFORE clearing chartElem's innerHTML
+  const dataTable = findDataTable(chartElem);
   if (!dataTable) {
-    console.warn("[AIPage] Performance chart: hidden data table not found");
+    console.warn(
+      "[AIPage] chart-replacer: data table not found inside .chartElem",
+    );
     return;
   }
 
@@ -153,25 +184,28 @@ function buildChart(
   const allSeries = extractSeriesData(dataTable, colorMap);
 
   if (allSeries.length === 0) {
-    console.warn("[AIPage] Performance chart: no data series found");
+    console.warn("[AIPage] chart-replacer: no data series extracted");
     return;
   }
 
-  // ── dimensions ─────────────────────────────────────────────────────────
-  const LEGEND_W = 220;
+  // ── dimensions ────────────────────────────────────────────────────────────
+  const LEGEND_W = 220; // keep the original EduPage legend visible
   const chartW = Math.max((outerContainer.clientWidth || 1200) - LEGEND_W, 400);
   const chartH = Math.max((outerContainer.clientHeight || 640) - 50, 300);
 
-  // ── DOM: replace SVG with a fresh mount point ──────────────────────────
-  chartElem.style.marginRight = `${LEGEND_W}px`;
-  chartElem.style.height = `${chartH}px`;
-  chartElem.innerHTML = "";
+  // ── DOM: swap SVG for a fresh lightweight-charts mount point ──────────────
+  // Hide the original chart content but keep the legend element untouched
+  const origContent = chartElem.querySelector<HTMLElement>(":scope > div");
+  if (origContent) {
+    origContent.style.display = "none";
+  }
 
   const mountDiv = document.createElement("div");
+  mountDiv.dataset.lwMount = "1";
   mountDiv.style.cssText = `position:relative;width:${chartW}px;height:${chartH}px`;
-  chartElem.appendChild(mountDiv);
+  chartElem.insertBefore(mountDiv, chartElem.firstChild);
 
-  // ── lightweight-charts instance ────────────────────────────────────────
+  // ── lightweight-charts instance ───────────────────────────────────────────
   const chart: IChartApi = createChart(mountDiv, {
     width: chartW,
     height: chartH,
@@ -183,25 +217,25 @@ function buildChart(
     },
     grid: {
       vertLines: { color: "rgba(0,0,0,0.05)" },
-      horzLines: { color: "rgba(0,0,0,0.07)" },
+      horzLines: { color: "rgba(0,0,0,0.08)" },
     },
     rightPriceScale: {
-      borderColor: "rgba(0,0,0,0.12)",
+      borderColor: "rgba(0,0,0,0.15)",
       scaleMargins: { top: 0.06, bottom: 0.06 },
     },
     timeScale: {
-      borderColor: "rgba(0,0,0,0.12)",
+      borderColor: "rgba(0,0,0,0.15)",
       timeVisible: false,
       fixLeftEdge: true,
       fixRightEdge: true,
     },
-    // CrosshairMode.Normal = 0 (always follows cursor)
+    // CrosshairMode.Normal = 0
     crosshair: { mode: 0 },
   });
 
-  // ── add one line series per subject ────────────────────────────────────
-  // addLineSeries is deprecated in v5 but still functional; cast to any to
-  // suppress the TypeScript warning without affecting runtime behaviour.
+  // ── series ────────────────────────────────────────────────────────────────
+  // addLineSeries is deprecated in v5 but still works at runtime; cast to any
+  // to avoid the TS warning without touching runtime behaviour.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chartAny = chart as any;
 
@@ -215,14 +249,13 @@ function buildChart(
       crosshairMarkerRadius: subj.isAverage ? 6 : 4,
       crosshairMarkerBorderWidth: 2,
     });
-
     s.setData(subj.data as { time: Time; value: number }[]);
     return s;
   });
 
   chart.timeScale().fitContent();
 
-  // ── custom tooltip overlay ─────────────────────────────────────────────
+  // ── custom tooltip ────────────────────────────────────────────────────────
   const tooltip = document.createElement("div");
   tooltip.style.cssText = [
     "position:absolute",
@@ -235,7 +268,7 @@ function buildChart(
     "font-family:Arial,sans-serif",
     "font-size:12px",
     "line-height:1.55",
-    "box-shadow:0 3px 12px rgba(0,0,0,0.13)",
+    "box-shadow:0 3px 12px rgba(0,0,0,0.14)",
     "display:none",
     "max-width:270px",
   ].join(";");
@@ -254,7 +287,6 @@ function buildChart(
       return;
     }
 
-    // Gather values for every series at this crosshair position
     const entries = allSeries
       .map((subj, i) => {
         const sd = param.seriesData.get(seriesHandles[i]);
@@ -274,7 +306,6 @@ function buildChart(
       return;
     }
 
-    // Format date label
     const timeStr = param.time as string;
     const dateLabel = timeStr
       ? new Date(`${timeStr}T12:00:00Z`).toLocaleDateString("de-AT", {
@@ -284,7 +315,6 @@ function buildChart(
         })
       : "";
 
-    // Build HTML — sort descending by value, average always at bottom
     const sorted = entries.slice().sort((a, b) => {
       if (a.isAvg && !b.isAvg) return 1;
       if (!a.isAvg && b.isAvg) return -1;
@@ -293,19 +323,17 @@ function buildChart(
 
     let html = `<div style="font-weight:700;color:#222;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee">${dateLabel}</div>`;
     for (const e of sorted) {
-      const boldStyle = e.isAvg
+      const extra = e.isAvg
         ? "font-weight:700;border-top:1px solid #eee;padding-top:4px;margin-top:2px;"
         : "";
-      html += `
-                <div style="${boldStyle}display:flex;align-items:center;gap:7px;padding:1px 0">
-                    <span style="width:10px;height:10px;border-radius:50%;background:${e.color};flex-shrink:0;display:inline-block"></span>
-                    <span style="flex:1;color:#555;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</span>
-                    <span style="color:#222;font-variant-numeric:tabular-nums;font-weight:600">${e.val.toFixed(1)} %</span>
-                </div>`;
+      html += `<div style="${extra}display:flex;align-items:center;gap:7px;padding:1px 0">
+        <span style="width:10px;height:10px;border-radius:50%;background:${e.color};flex-shrink:0;display:inline-block"></span>
+        <span style="flex:1;color:#555;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</span>
+        <span style="color:#222;font-variant-numeric:tabular-nums;font-weight:600">${e.val.toFixed(1)}&nbsp;%</span>
+      </div>`;
     }
     tooltip.innerHTML = html;
 
-    // Position tooltip so it stays within the chart bounds
     const ttW = 270;
     const ttH = tooltip.offsetHeight || 180;
     let tx = param.point.x + 18;
@@ -319,7 +347,7 @@ function buildChart(
     tooltip.style.display = "block";
   });
 
-  // ── responsive resize ─────────────────────────────────────────────────
+  // ── responsive resize ─────────────────────────────────────────────────────
   const ro = new ResizeObserver(() => {
     const w = Math.max((outerContainer.clientWidth || 1200) - LEGEND_W, 400);
     const h = Math.max((outerContainer.clientHeight || 640) - 50, 300);
@@ -328,62 +356,81 @@ function buildChart(
     mountDiv.style.height = `${h}px`;
   });
   ro.observe(outerContainer);
+
+  console.log(
+    `[AIPage] chart-replacer: replaced chart with ${allSeries.length} series`,
+  );
 }
 
-// ── SPA-aware init ─────────────────────────────────────────────────────────────
+// ── SPA-aware init ────────────────────────────────────────────────────────────
 
 /**
- * Attempts to find and replace the performance chart once.
- * Returns true if the chart was already replaced or has just been replaced.
- * Returns false if the chart element or its data is not yet present in the DOM.
+ * Attempts a single replacement pass.
+ *  - Returns "done"    if the chart is already replaced or was just replaced.
+ *  - Returns "waiting" if the outer container exists but data isn't ready yet.
+ *  - Returns "absent"  if .znamkyPerformanceChart is not in the DOM at all.
  */
-function tryReplace(): boolean {
+function tryReplace(): "done" | "waiting" | "absent" {
   const outer = document.querySelector<HTMLElement>(".znamkyPerformanceChart");
-  if (!outer) return false;
+  if (!outer) return "absent";
 
-  // Already replaced – nothing more to do for this instance
-  if (outer.dataset.lwReplaced === "1") return true;
+  // Already handled this exact DOM node
+  if (outer.dataset.lwReplaced === "1") return "done";
 
   const chartElem = outer.querySelector<HTMLElement>(".chartElem");
   const legendEl = outer.querySelector<HTMLElement>(".legendElem");
-  if (!chartElem || !legendEl) return false;
+  if (!chartElem || !legendEl) {
+    console.log(
+      "[AIPage] chart-replacer: .chartElem or .legendElem not yet present",
+    );
+    return "waiting";
+  }
 
-  // EduPage renders the data table asynchronously; wait until it exists
-  if (!chartElem.querySelector('div[aria-hidden="true"] table')) return false;
+  // Wait until EduPage has rendered the data table
+  const dataTable = findDataTable(chartElem);
+  if (!dataTable) {
+    console.log(
+      "[AIPage] chart-replacer: data table not yet present, waiting...",
+    );
+    return "waiting";
+  }
 
-  // Mark before building so a reentrant mutation won't trigger a second build
+  // Guard against re-entrant calls while we're building
   outer.dataset.lwReplaced = "1";
 
   try {
     buildChart(outer, chartElem, legendEl);
   } catch (err) {
-    console.error("[AIPage] Failed to replace performance chart:", err);
+    console.error("[AIPage] chart-replacer: buildChart threw:", err);
     delete outer.dataset.lwReplaced;
-    return false;
+    return "waiting";
   }
 
-  return true;
+  return "done";
 }
 
 /**
- * Initialise the chart replacer. Call this once from content.ts.
+ * Initialise the chart replacer. Call once from content.ts.
  *
- * Handles both classic full-page loads and EduPage's SPA tab-navigation:
- * whenever EduPage inserts a new `.znamkyPerformanceChart` into the DOM
- * (e.g. after the user clicks "Leistungen des Schülers") the observer fires
- * and performs the replacement.
+ * Strategy
+ * ────────
+ * 1. Try immediately (handles full-page loads where the chart is already DOM).
+ * 2. Install a MutationObserver on <body> to catch:
+ *    a. EduPage SPA navigation inserting a fresh .znamkyPerformanceChart node.
+ *    b. The data table being appended asynchronously after the SVG.
+ * 3. Once the chart is built the observer is disconnected to avoid wasted work.
  */
 export function initChartReplacer(): void {
-  if (tryReplace()) return;
+  console.log("[AIPage] chart-replacer: initialising");
 
-  // Keep watching for the chart element to appear (SPA navigation or
-  // deferred rendering of the grade chart view).
+  if (tryReplace() === "done") return;
+
   const obs = new MutationObserver(() => {
-    tryReplace();
+    const result = tryReplace();
+    if (result === "done") {
+      obs.disconnect();
+    }
   });
 
-  obs.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  obs.observe(document.body, { childList: true, subtree: true });
 }
