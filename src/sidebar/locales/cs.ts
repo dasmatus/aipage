@@ -114,5 +114,4 @@ export const cs: Translation = {
     imageGenGenerating: 'Generuji obrázek...',
     imageGenFailed: 'Generování obrázku selhalo',
     widgets: 'Widgety',
-    ratehalova: 'Ratehalová',
 };

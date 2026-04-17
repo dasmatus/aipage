@@ -129,5 +129,4 @@ export interface Translation {
 
     // Navigation
     widgets: string;
-    ratehalova: string;
 }

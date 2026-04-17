@@ -114,5 +114,4 @@ export const hu: Translation = {
     imageGenGenerating: 'Kép generálása...',
     imageGenFailed: 'Képgenerálás sikertelen',
     widgets: 'Widgetek',
-    ratehalova: 'Ratehalová',
 };
