@@ -275,8 +275,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
     const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
 
+    const cardIconTile = (gradient: string, icon: React.ReactNode) => (
+        <div
+            className="w-[22px] h-[22px] rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: gradient }}
+        >
+            <span className="text-white [&_svg]:w-[11px] [&_svg]:h-[11px]">{icon}</span>
+        </div>
+    );
+
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground">
+        <div
+            className="flex flex-col h-full overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground"
+            style={{ background: 'var(--bg-color)' }}
+        >
             <div className="max-w-[500px] mx-auto w-full space-y-6">
                 <header className="flex flex-col gap-1">
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">{translate('settingsTitle', language)}</h2>
@@ -288,8 +300,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <CardHeader className="space-y-1 bg-muted/30">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Zap className={cn("w-4 h-4", providerBackend === 'vercel' ? "text-primary" : "text-muted-foreground")} />
-                                <CardTitle className="text-lg">{translate('providerEngine', language)}</CardTitle>
+                                {cardIconTile('linear-gradient(135deg, #2c70a3, #3b82f6)', <Zap />)}
+                                <CardTitle className="text-base">{translate('providerEngine', language)}</CardTitle>
                             </div>
                         </div>
                         <CardDescription>
@@ -326,7 +338,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <Settings2 className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #0369a1, #38bdf8)', <Settings2 />)}
                             <CardTitle className="text-sm">{translate('modelAndAuth', language)}</CardTitle>
                         </div>
                     </CardHeader>
@@ -467,7 +479,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center justify-between">
                              <div className="flex items-center gap-2">
-                                <Palette className="w-4 h-4 text-primary" />
+                                {cardIconTile('linear-gradient(135deg, #2e7d32, #4ade80)', <Palette />)}
                                 <CardTitle className="text-sm">{translate('appearanceAndApp', language)}</CardTitle>
                             </div>
                         </div>
@@ -546,7 +558,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #d97706, #fbbf24)', <Search />)}
                             <CardTitle className="text-sm">{translate('searxngSearch', language)}</CardTitle>
                         </div>
                     </CardHeader>
@@ -577,7 +589,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #db2777, #f472b6)', <ImageIcon />)}
                             <CardTitle className="text-sm">{translate('imageGen', language)}</CardTitle>
                         </div>
                     </CardHeader>
@@ -693,7 +705,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <Wand2 className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #7c3aed, #a78bfa)', <Wand2 />)}
                             <CardTitle className="text-sm">Exam Tools</CardTitle>
                         </div>
                     </CardHeader>
@@ -709,7 +721,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 </Card>
 
                 <footer className="pt-4 flex flex-col gap-3">
-                    <Button id="save-key-btn" className="w-full font-bold shadow-md h-12" onClick={handleSave}>
+                    <Button
+                        id="save-key-btn"
+                        className="w-full font-bold h-11 rounded-xl text-white border-0"
+                        style={{ background: 'var(--message-user-bg)', boxShadow: '0 4px 14px color-mix(in srgb, var(--accent-color) 28%, transparent)' }}
+                        onClick={handleSave}
+                    >
                         {translate('saveKey', language)}
                     </Button>
                     <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" onClick={onClose}>
