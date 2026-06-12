@@ -363,20 +363,29 @@ const App: React.FC = () => {
     const isSecondaryView = view === 'settings' || view === 'widgets';
 
     return (
-        <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
+        <div
+            className="flex flex-col h-screen text-foreground overflow-hidden font-sans selection:bg-primary/30"
+            style={{ background: 'var(--bg-color)' }}
+        >
             {/* Header */}
-            <header className="flex items-center justify-between px-4 h-12 border-b bg-card/50 backdrop-blur-md z-50 shrink-0">
+            <header
+                className="flex items-center justify-between px-4 border-b backdrop-blur-md z-50 shrink-0"
+                style={{ height: 'var(--header-height)', background: 'var(--header-bg)', borderColor: 'var(--border-color)' }}
+            >
                  <div className="flex items-center gap-2">
                     {isSecondaryView ? (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setView('chat')}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setView('chat')}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
                     ) : (
-                        <div className="bg-primary/10 p-1.5 rounded-lg border border-primary/20">
-                            <MessageCircle className="h-4 w-4 text-primary" />
+                        <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: 'var(--avatar-ai-bg)' }}
+                        >
+                            <MessageCircle className="h-3.5 w-3.5 text-white" />
                         </div>
                     )}
-                    <span className="font-bold text-sm tracking-tight">
+                    <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--text-color)' }}>
                         {view === 'settings' ? t('settings', language) : view === 'widgets' ? t('widgets', language) : t('chat', language)}
                     </span>
                  </div>
@@ -387,7 +396,7 @@ const App: React.FC = () => {
                              <Button
                                  variant="ghost"
                                  size="icon"
-                                 className={cn("h-8 w-8 rounded-full text-muted-foreground hover:text-primary", isAutoAnswering && "animate-pulse text-primary")}
+                                 className={cn("h-8 w-8 rounded-lg text-muted-foreground hover:text-primary", isAutoAnswering && "animate-pulse text-primary")}
                                  title="Auto-answer current question"
                                  onClick={handleAutoAnswer}
                                  disabled={isTyping || isAutoAnswering}
@@ -398,13 +407,13 @@ const App: React.FC = () => {
                          <Button
                              variant="ghost"
                              size="icon"
-                             className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                             className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                              onClick={() => setView('widgets')}
                              title="Widgets"
                          >
                              <LayoutGrid className="h-4 w-4" />
                          </Button>
-                         <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
+                         <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
                              <Settings className="h-4 w-4" />
                          </Button>
                      </div>
@@ -437,7 +446,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className={cn(
-                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    "flex-1 transition-all duration-500 absolute inset-0",
                     view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
                     <SettingsView
@@ -450,7 +459,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className={cn(
-                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    "flex-1 transition-all duration-500 absolute inset-0",
                     view === 'widgets' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
                     <WidgetsView />
