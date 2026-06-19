@@ -74,6 +74,14 @@ async function build() {
     
     copyFileSync(manifestSource, `${distDir}/manifest.json`);
 
+    // Copy the WASM ImageMagick binary used by the Claude SVG → raster image generator.
+    const magickWasm = 'node_modules/@imagemagick/magick-wasm/dist/magick.wasm';
+    if (existsSync(magickWasm)) {
+        copyFileSync(magickWasm, `${distDir}/magick.wasm`);
+    } else {
+        console.warn('⚠️  magick.wasm not found — run `bun install`. Image generation will not work until it is present.');
+    }
+
     console.log(`✅ Build complete for ${target} in ${distDir}/`);
     
     // Browser-specific post-build steps

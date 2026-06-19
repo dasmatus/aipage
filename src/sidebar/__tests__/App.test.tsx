@@ -5,19 +5,28 @@ import App from '../App';
 import * as Storage from '../storage';
 import { useChat } from '../hooks/useChat';
 import browser from 'webextension-polyfill';
-import { performRequest } from '../providers/utils';
 
 // Mock dependencies
 jest.mock('webextension-polyfill');
 jest.mock('../storage');
 jest.mock('../hooks/useChat');
-jest.mock('../providers/utils', () => ({
-    performRequest: jest.fn(),
+
+// Native web search lives on the anthropic provider; local providers have none.
+const mockWebSearch = jest.fn().mockResolvedValue('AI answer');
+jest.mock('../providers', () => ({
+    getProvider: (type: string) =>
+        type === 'anthropic' ? { webSearch: mockWebSearch } : { sendMessage: jest.fn() },
 }));
+// Avoid loading the Anthropic SDK / WASM ImageMagick in jsdom.
+jest.mock('../providers/imagegen', () => ({
+    generateImage: jest.fn(),
+}));
+
 jest.mock('../i18n', () => ({
     t: (k: string) => k,
     getCurrentLanguage: jest.fn().mockResolvedValue('en'),
     setLanguage: jest.fn(),
+    LANGUAGE_NAMES: { en: 'English' },
 }));
 
 // Mock child components
@@ -44,9 +53,13 @@ jest.mock('../components/Settings/SettingsView', () => ({
         </div>
     )
 }));
+jest.mock('../components/Widgets/WidgetsView', () => ({
+    WidgetsView: () => <div data-testid="widgets-view" />,
+}));
 
 describe('App', () => {
     const mockSendMessage = jest.fn();
+    const mockSendAgentMessage = jest.fn();
     const mockAddMessage = jest.fn();
     const mockUpdateLastMessage = jest.fn();
     const mockSetIsTyping = jest.fn();
@@ -55,12 +68,13 @@ describe('App', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        
+
         // Setup useChat mock
         (useChat as jest.Mock).mockReturnValue({
             messages: [],
             isTyping: false,
             sendMessage: mockSendMessage,
+            sendAgentMessage: mockSendAgentMessage,
             addMessage: mockAddMessage,
             updateLastMessage: mockUpdateLastMessage,
             setIsTyping: mockSetIsTyping,
@@ -70,41 +84,31 @@ describe('App', () => {
         });
 
         // Setup Storage mocks
-        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('vercel');
-        (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
+        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('anthropic');
         (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
         (Storage.getThemePreference as jest.Mock).mockResolvedValue('default');
-        (Storage.getExaApiKey as jest.Mock).mockResolvedValue(null);
-        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(false);
+        (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: '', model: '' });
     });
 
     it('renders chat view by default', async () => {
         await act(async () => {
              render(<App />);
         });
-        const v = await Storage.getProviderPreference();
-        // console.log('Mocked Provider:', v);
-        
+
         expect(screen.getByTestId('message-list')).toBeInTheDocument();
         expect(screen.getByTestId('input-area')).toBeInTheDocument();
         const settingsView = screen.getByTestId('settings-view').parentElement;
-        // In App.tsx, initial state is 'chat', so chat view is visible (translate-x-0) 
-        // and settings view is hidden (translate-x-full).
-        // Since we mock child components, we checks styles on container.
-        // Actually, the test checks if it has class 'hidden'?
-        // The implementation: view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
-        // So yes, if view is chat, settings view has 'hidden'.
-         expect(settingsView).toHaveClass('hidden');
+        // view === 'chat' by default, so the settings container is hidden.
+        expect(settingsView).toHaveClass('hidden');
     });
 
     it('switches to settings view', async () => {
         await act(async () => {
             render(<App />);
         });
-        
-        // Settings button has id settings-btn
+
         const settingsBtn = document.getElementById('settings-btn');
-        if (settingsBtn) { 
+        if (settingsBtn) {
             await act(async () => {
                 fireEvent.click(settingsBtn);
             });
@@ -114,7 +118,7 @@ describe('App', () => {
         expect(settingsView).not.toHaveClass('hidden');
     });
 
-    it('sends message calls sendMessage', async () => {
+    it('sends message through the agent for Claude', async () => {
         await act(async () => {
             render(<App />);
         });
@@ -125,21 +129,36 @@ describe('App', () => {
         });
 
         await waitFor(() => {
-             // App calls sendMessage with text, provider, key, options
-             // default mock is 'vercel'
-             expect(mockSendMessage).toHaveBeenCalledWith('hello', 'vercel', 'test-key', undefined);
+             // For the anthropic provider, the main chat runs as a Managed Agents turn.
+             expect(mockSendAgentMessage).toHaveBeenCalledWith('hello', 'test-key', undefined);
         });
     });
 
-    it('handles web search for local provider', async () => {
-        // Change provider to ollama for web search test
+    it('sends message directly for a local provider', async () => {
+        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('ollama');
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        const sendBtn = screen.getByText('Send');
+        await act(async () => {
+            fireEvent.click(sendBtn);
+        });
+
+        await waitFor(() => {
+             expect(mockSendMessage).toHaveBeenCalledWith('hello', 'ollama', 'test-key', { baseUrl: '', modelName: '' });
+        });
+    });
+
+    it('handles web search for local provider via DuckDuckGo', async () => {
+        // Local provider (no native web search) → DuckDuckGo fallback, then summarize.
         (Storage.getProviderPreference as jest.Mock).mockResolvedValue('ollama');
         (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: 'http://localhost', model: 'llama2' });
-        
-        // Mock browser.runtime.sendMessage for search
-        (browser.runtime.sendMessage as jest.Mock).mockResolvedValue({ 
-            ok: true, 
-            results: [{ title: 'Res', snippet: 'Snip', url: 'http://example.com' }] 
+
+        (browser.runtime.sendMessage as jest.Mock).mockResolvedValue({
+            ok: true,
+            results: [{ title: 'Res', snippet: 'Snip', url: 'http://example.com' }]
         });
 
         await act(async () => {
@@ -154,19 +173,13 @@ describe('App', () => {
                 action: 'search_web',
                 payload: { query: 'query' }
             });
-            // Should also call sendMessage with search results prompt
-            expect(mockSendMessage).toHaveBeenCalled(); 
+            // Should summarize the results with the model.
+            expect(mockSendMessage).toHaveBeenCalled();
         });
     });
 
-    it('handles web search for Vercel with Exa', async () => {
-        (performRequest as jest.Mock).mockResolvedValue({
-            results: [{ title: 'ExaRes', text: 'ExaSnip', url: 'http://exa.ai' }]
-        });
-
-        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('vercel');
-        (Storage.getExaApiKey as jest.Mock).mockResolvedValue('exa-key');
-        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
+    it('handles web search for Claude via native web search', async () => {
+        (Storage.getProviderPreference as jest.Mock).mockResolvedValue('anthropic');
         (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: '', model: '' });
 
         await act(async () => {
@@ -177,22 +190,15 @@ describe('App', () => {
         fireEvent.click(searchBtn);
 
         await waitFor(() => {
-            // Should call performRequest for Exa
-            expect(performRequest).toHaveBeenCalledWith(
-                'https://api.exa.ai/search',
-                'POST',
-                expect.objectContaining({ 'x-api-key': 'exa-key' }),
-                expect.stringContaining('query')
+            // Claude searches and answers natively; no DuckDuckGo round-trip.
+            expect(mockWebSearch).toHaveBeenCalledWith(
+                'query',
+                'test-key',
+                expect.anything(),
+                expect.any(Function)
             );
-            
-            // Should NOT call browser.runtime.sendMessage for search_web (DDG)
-            // But how to check? searchResults.length > 0 so it shouldn't call logic for DDG
-            // But we can check if sendMessage was called with Exa context
-            expect(mockSendMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Exa.ai'), 
-                'vercel', 
-                'test-key', 
-                expect.anything()
+            expect(browser.runtime.sendMessage).not.toHaveBeenCalledWith(
+                expect.objectContaining({ action: 'search_web' })
             );
         });
     });

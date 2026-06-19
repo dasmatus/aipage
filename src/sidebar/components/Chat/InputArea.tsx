@@ -10,12 +10,11 @@ interface InputAreaProps {
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
-    exaEnabled: boolean;
     imageGenEnabled: boolean;
 }
 
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, onGenerateImage, disabled, isScanning, language, exaEnabled, imageGenEnabled }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, onGenerateImage, disabled, isScanning, language, imageGenEnabled }) => {
     const [text, setText] = useState('');
     const [isSearchMode, setIsSearchMode] = useState(false);
     const [isImageMode, setIsImageMode] = useState(false);
@@ -114,20 +113,18 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                         : <FileText className="h-3.5 w-3.5" />}
                 </button>
 
-                {exaEnabled && (
-                    <button
-                        className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-                        style={{
-                            color: isSearchMode ? 'var(--accent-color)' : 'var(--secondary-text)',
-                            background: isSearchMode ? 'color-mix(in srgb, var(--accent-color) 12%, transparent)' : 'transparent',
-                        }}
-                        title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
-                        onClick={handleToggleSearch}
-                        disabled={disabled}
-                    >
-                        {isSearchMode ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
-                    </button>
-                )}
+                <button
+                    className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                    style={{
+                        color: isSearchMode ? 'var(--accent-color)' : 'var(--secondary-text)',
+                        background: isSearchMode ? 'color-mix(in srgb, var(--accent-color) 12%, transparent)' : 'transparent',
+                    }}
+                    title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
+                    onClick={handleToggleSearch}
+                    disabled={disabled}
+                >
+                    {isSearchMode ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+                </button>
 
                 {imageGenEnabled && (
                     <button

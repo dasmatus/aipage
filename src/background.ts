@@ -12,13 +12,30 @@ import { initUpdateManager } from './update-manager';
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'proxy_fetch') {
-        const { url, method, headers, body } = message.payload;
+        const { url, method, headers, body, raw } = message.payload;
 
         fetch(url, { method, headers, body })
             .then(async response => {
+                // Raw mode: return an unparsed, Response-reconstructable payload.
+                // Used by the Anthropic SDK fetch bridge (providers/utils.ts → proxyFetch),
+                // which needs status/headers/body to rebuild a real Response for the SDK.
+                if (raw) {
+                    const headersObj: Record<string, string> = {};
+                    response.headers.forEach((value, key) => { headersObj[key] = value; });
+                    const text = await response.text();
+                    sendResponse({
+                        ok: response.ok,
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: headersObj,
+                        body: text
+                    });
+                    return;
+                }
+
                 const contentType = response.headers.get('content-type');
                 let data;
-                
+
                 if (contentType && contentType.includes('application/json')) {
                     data = await response.json();
                     sendResponse({

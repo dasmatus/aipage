@@ -3,7 +3,6 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { SettingsView } from '../SettingsView';
 import * as Storage from '../../../storage';
-import { ProviderType } from '../../../types';
 import browser from '../../../../polyfills/browser-polyfill';
 
 // Mock webextension-polyfill
@@ -37,7 +36,7 @@ jest.mock('../../ui/switch', () => ({
 }));
 
 jest.mock('../../ui/button', () => ({
-    Button: ({ children, onClick, title, id, ...props }: any) => <button id={id} onClick={onClick} title={title}>{children}</button>,
+    Button: ({ children, onClick, title, id }: any) => <button id={id} onClick={onClick} title={title}>{children}</button>,
 }));
 
 jest.mock('../../ui/input', () => ({
@@ -62,7 +61,6 @@ jest.mock('../../ui/separator', () => ({
 }));
 
 // Mock browser polyfill
-// Mock browser polyfill
 jest.mock('../../../../polyfills/browser-polyfill', () => {
     const mockBrowser = {
         storage: {
@@ -79,11 +77,11 @@ jest.mock('../../../../polyfills/browser-polyfill', () => {
     return {
         __esModule: true,
         default: mockBrowser,
-        ...mockBrowser, // for named exports if any are used
+        ...mockBrowser,
     };
 });
 
-// Mock Storage but keep constants
+// Mock Storage but keep constants (STORAGE_KEYS, default getters)
 jest.mock('../../../storage', () => {
     const original = jest.requireActual('../../../storage');
     return {
@@ -93,10 +91,6 @@ jest.mock('../../../storage', () => {
         getLocalSettings: jest.fn(),
         saveLocalSettings: jest.fn(),
         saveThemePreference: jest.fn(),
-        getExaApiKey: jest.fn(),
-        saveExaApiKey: jest.fn(),
-        getExaEnabled: jest.fn(),
-        saveExaEnabled: jest.fn(),
     };
 });
 
@@ -106,11 +100,6 @@ jest.mock('../../../providers', () => ({
         getModels: jest.fn().mockResolvedValue([{ id: 'model1', provider: 'Test' }, { id: 'model2', provider: 'Test' }]),
     })),
     providers: {},
-    ProviderType: {
-        LMSTUDIO: 'lmstudio',
-        OLLAMA: 'ollama',
-        VERCEL: 'vercel',
-    }
 }));
 
 // Mock i18n
@@ -128,15 +117,13 @@ describe('SettingsView', () => {
         (Storage.getApiKey as jest.Mock).mockResolvedValue('test-key');
         (Storage.getThemePreference as jest.Mock).mockResolvedValue('default');
         (Storage.getLocalSettings as jest.Mock).mockResolvedValue({ url: '', model: '' });
-        (Storage.getExaApiKey as jest.Mock).mockResolvedValue('exa-initial');
-        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
     });
 
     it('renders correctly', async () => {
         await act(async () => {
             render(
                 <SettingsView
-                    currentProvider="vercel"
+                    currentProvider="anthropic"
                     onClose={mockOnClose}
                     onProviderChange={mockOnProviderChange}
                     language="en"
@@ -150,11 +137,10 @@ describe('SettingsView', () => {
     });
 
     it('updates API key and saves', async () => {
-        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(false);
         await act(async () => {
             render(
                 <SettingsView
-                    currentProvider="vercel"
+                    currentProvider="anthropic"
                     onClose={mockOnClose}
                     onProviderChange={mockOnProviderChange}
                     language="en"
@@ -163,55 +149,19 @@ describe('SettingsView', () => {
             );
         });
 
-        const input = screen.getByPlaceholderText('vercelApiKeyPlaceholder');
+        const input = screen.getByPlaceholderText('anthropicApiKeyPlaceholder');
         fireEvent.change(input, { target: { value: 'new-key' } });
-        
+
         const saveBtn = screen.getByText('saveKey');
         await act(async () => {
             fireEvent.click(saveBtn);
         });
 
-        // Check if browser.storage.local.set was called with correct key
+        // Check that the Anthropic key was persisted under its storage key.
         expect(browser.storage.local.set).toHaveBeenCalledWith(
-            expect.objectContaining({ vercel_api_key: 'new-key' })
+            expect.objectContaining({ anthropic_api_key: 'new-key' })
         );
-        expect(Storage.saveExaApiKey).toHaveBeenCalledWith('exa-initial');
-        expect(Storage.saveExaEnabled).toHaveBeenCalledWith(false); 
         expect(mockOnClose).toHaveBeenCalled();
-    });
-
-    it('updates Exa API key and saves', async () => {
-        (Storage.getExaEnabled as jest.Mock).mockResolvedValue(true);
-        await act(async () => {
-            render(
-                <SettingsView
-                    currentProvider="vercel"
-                    onClose={mockOnClose}
-                    onProviderChange={mockOnProviderChange}
-                    language="en"
-                    onLanguageChange={mockOnLanguageChange}
-                />
-            );
-        });
-
-        // Now Exa Enabled is mocked as true, so input should be visible
-        // However, in mock Switch, we might not have handled controlled state correctly?
-        // Wait, mocked switch just uses input checkbox. 
-        // With getExaEnabled true, exaEnabled state is true.
-        // Switch checked=true.
-        // Input should be rendered.
-
-        // Actually the placeholder changed to 'exaApiKeyPlaceholder' (mocked as 'exaApiKeyPlaceholder' by t(k)=k)
-        const exaInput = screen.getByPlaceholderText('exaApiKeyPlaceholder');
-        fireEvent.change(exaInput, { target: { value: 'exa-new-key' } });
-        
-        const saveBtn = screen.getByText('saveKey');
-        await act(async () => {
-            fireEvent.click(saveBtn);
-        });
-
-        expect(Storage.saveExaApiKey).toHaveBeenCalledWith('exa-new-key');
-        expect(Storage.saveExaEnabled).toHaveBeenCalledWith(true);
     });
 
     it('handles local provider settings', async () => {
@@ -228,14 +178,13 @@ describe('SettingsView', () => {
         });
 
         expect(screen.getByTitle('refreshModels')).toBeInTheDocument();
-        
-        // Mock getModels to work
+
         const refreshBtn = screen.getByTitle('refreshModels');
         await act(async () => {
             fireEvent.click(refreshBtn);
         });
 
-        // Should populate models
+        // Should populate models from the provider.
         expect(screen.getByText(/model1/)).toBeInTheDocument();
     });
 });

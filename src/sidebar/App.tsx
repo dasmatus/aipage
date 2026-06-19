@@ -6,7 +6,6 @@ import { WidgetsView } from './components/Widgets/WidgetsView';
 import { useChat } from './hooks/useChat';
 import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
-import { performRequest } from './providers/utils';
 import { generateImage, ImageGenProvider } from './providers/imagegen';
 import { getProvider } from './providers';
 import { t, getCurrentLanguage, setLanguage as saveLanguage, LANGUAGE_NAMES } from './i18n';
@@ -22,19 +21,16 @@ type View = 'chat' | 'settings' | 'widgets';
 const App: React.FC = () => {
     // State
     const [view, setView] = useState<View>('chat');
-    const [provider, setProvider] = useState<ProviderType>('vercel');
+    const [provider, setProvider] = useState<ProviderType>('anthropic');
     const [, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, updateLastMessageImage, setIsTyping } = useChat();
+    const { messages, isTyping, sendMessage, sendAgentMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, updateLastMessageImage, setIsTyping } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
-    const [exaEnabled, setExaEnabled] = useState(false);
-    const [searxngEnabled, setSearxngEnabled] = useState(false);
-    const [searxngUrl, setSearxngUrl] = useState('');
     const [imageGenEnabled, setImageGenEnabled] = useState(false);
-    const [imageGenProvider, setImageGenProvider] = useState<ImageGenProvider>('vercel');
+    const [imageGenProvider, setImageGenProvider] = useState<ImageGenProvider>('claude-svg');
     const [imageGenSdUrl, setImageGenSdUrl] = useState('http://localhost:7860');
-    const [imageGenModel, setImageGenModel] = useState('openai:dall-e-3');
+    const [imageGenModel, setImageGenModel] = useState('claude-opus-4-8');
     const [imageGenSize, setImageGenSize] = useState('1024x1024');
     const [autoAnswerEnabled, setAutoAnswerEnabled] = useState(false);
     const [isAutoAnswering, setIsAutoAnswering] = useState(false);
@@ -48,13 +44,10 @@ const App: React.FC = () => {
                 const p = await Storage.getProviderPreference();
                 setProvider(p);
 
-                const [k, lang, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns, theme] =
+                const [k, lang, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns, theme] =
                     await Promise.all([
                         Storage.getApiKey(p),
                         getCurrentLanguage(),
-                        Storage.getExaEnabled(),
-                        Storage.getSearXNGEnabled(),
-                        Storage.getSearXNGUrl(),
                         Storage.getImageGenEnabled(),
                         Storage.getImageGenProvider(),
                         Storage.getImageGenSdUrl(),
@@ -66,9 +59,6 @@ const App: React.FC = () => {
 
                 setApiKey(k);
                 setLanguage(lang);
-                setExaEnabled(exaEn);
-                setSearxngEnabled(sEn);
-                setSearxngUrl(sUrl);
                 setImageGenEnabled(imgEn);
                 setImageGenProvider(imgProv);
                 setImageGenSdUrl(imgSdUrl);
@@ -101,7 +91,16 @@ const App: React.FC = () => {
 
     const handleSend = async (text: string) => {
         const currentKey = await Storage.getApiKey(provider);
-        const options = (provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel')
+
+        // Claude runs as an agent (Managed Agents) that can call the extension's
+        // tools on its own. Local providers use the plain request/response path.
+        if (provider === 'anthropic') {
+            const options = await Storage.getLocalSettings(provider);
+            await sendAgentMessage(text, currentKey || '', options.model || undefined);
+            return;
+        }
+
+        const options = (provider === 'lmstudio' || provider === 'ollama')
             ? await Storage.getLocalSettings(provider)
             : undefined;
 
@@ -134,85 +133,40 @@ const App: React.FC = () => {
         addMessage('ai', 'Searching the web...');
 
         try {
-            let searchResults = [];
-            let source = 'DuckDuckGo';
+            const currentKey = await Storage.getApiKey(provider);
+            const options = await Storage.getLocalSettings(provider);
+            const aiProvider = getProvider(provider);
 
-            // SearXNG takes priority if enabled
-            if (searxngEnabled && searxngUrl) {
-                source = 'SearXNG';
-                try {
-                    const searchUrlEncoded = encodeURIComponent(query.trim());
-                    const data = await performRequest(
-                        `${searxngUrl.replace(/\/$/, '')}/search?q=${searchUrlEncoded}&format=json`,
-                        'GET',
-                        { 'Accept': 'application/json' }
-                    );
-                    if (data?.results?.length) {
-                        searchResults = data.results.slice(0, 5).map((r: any) => ({
-                            title: r.title || 'Untitled',
-                            snippet: r.content || '',
-                            url: r.url
-                        }));
-                    }
-                } catch (e) {
-                    console.warn('SearXNG search failed, falling back', e);
-                    source = 'DuckDuckGo';
-                }
+            // Claude can search the web natively — let it search and answer in one shot.
+            if (aiProvider.webSearch) {
+                let answer = '';
+                await aiProvider.webSearch(
+                    query.trim(),
+                    currentKey || '',
+                    { baseUrl: options.url, modelName: options.model },
+                    (chunk) => { answer = chunk; updateLastMessage(chunk); }
+                );
+                updateLastMessage(answer || 'No results found.');
+                setIsTyping(false);
+                return;
             }
 
-            // Check for Exa key if using Vercel (and SearXNG not used)
-            if (searchResults.length === 0 && provider === 'vercel') {
-                const exaEnabled = await Storage.getExaEnabled();
-                const exaKey = await Storage.getExaApiKey();
-
-                if (exaEnabled && exaKey) {
-                    source = 'Exa.ai';
-                    try {
-                        const data = await performRequest('https://api.exa.ai/search', 'POST', {
-                            'x-api-key': exaKey,
-                            'Content-Type': 'application/json'
-                        }, JSON.stringify({
-                            query: query.trim(),
-                            numResults: 5,
-                            useAutoprompt: true
-                        }));
-
-                        if (data && data.results) {
-                            searchResults = data.results.map((r: any) => ({
-                                title: r.title || 'Untitled',
-                                snippet: r.text || r.snippet || '',
-                                url: r.url
-                            }));
-                        }
-                    } catch (e) {
-                        console.warn('Exa search failed, falling back to DuckDuckGo', e);
-                    }
-                }
-            }
-
-            // Fallback to DuckDuckGo
-            if (searchResults.length === 0) {
-                const response: any = await browser.runtime.sendMessage({
-                    action: 'search_web',
-                    payload: { query: query.trim() }
-                });
-                if (response.ok && response.results) {
-                    searchResults = response.results;
-                }
-            }
+            // Local providers (no native search): fall back to DuckDuckGo, then summarize.
+            const response: any = await browser.runtime.sendMessage({
+                action: 'search_web',
+                payload: { query: query.trim() }
+            });
+            const searchResults = (response?.ok && response.results) ? response.results : [];
 
             if (searchResults.length > 0) {
                 const formattedResults = searchResults.map((r: any, i: number) =>
                     `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
                 ).join('\n\n');
 
-                updateLastMessage(`Found ${searchResults.length} results via ${source}. Analyzing...`);
+                updateLastMessage(`Found ${searchResults.length} results via DuckDuckGo. Analyzing...`);
 
                 const languageName = LANGUAGE_NAMES[language] || 'Slovak';
-                const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
-
-                const currentKey = await Storage.getApiKey(provider);
-                const options = await Storage.getLocalSettings(provider);
+                const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
 
                 await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
             } else {
@@ -327,12 +281,9 @@ const App: React.FC = () => {
     };
 
     const handleSettingsClose = async () => {
-        const [k, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns] =
+        const [k, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns] =
             await Promise.all([
                 Storage.getApiKey(provider),
-                Storage.getExaEnabled(),
-                Storage.getSearXNGEnabled(),
-                Storage.getSearXNGUrl(),
                 Storage.getImageGenEnabled(),
                 Storage.getImageGenProvider(),
                 Storage.getImageGenSdUrl(),
@@ -341,9 +292,6 @@ const App: React.FC = () => {
                 Storage.getAutoAnswerEnabled(),
             ]);
         setApiKey(k);
-        setExaEnabled(exaEn);
-        setSearxngEnabled(sEn);
-        setSearxngUrl(sUrl);
         setImageGenEnabled(imgEn);
         setImageGenProvider(imgProv);
         setImageGenSdUrl(imgSdUrl);
@@ -440,7 +388,6 @@ const App: React.FC = () => {
                         disabled={isTyping}
                         isScanning={isScanning}
                         language={language}
-                        exaEnabled={exaEnabled}
                         imageGenEnabled={imageGenEnabled}
                     />
                 </div>

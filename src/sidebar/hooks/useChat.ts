@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Message, ProviderType, Role } from '../types';
 import { getProvider } from '../providers';
 import { generateImage, ImageGenOptions } from '../providers/imagegen';
+import { runAgentTurn } from '../agent/managed-agent';
 import * as Storage from '../storage';
 import browser from 'webextension-polyfill';
 
@@ -17,6 +18,8 @@ export const useChat = () => {
     ]);
     const [isTyping, setIsTyping] = useState(false);
     const [lastPageContext, setLastPageContext] = useState('');
+    // Managed Agents session, reused across the conversation.
+    const agentSessionRef = useRef<string | null>(null);
 
     const addMessage = (role: Role, content: string, actions?: any[], imageUrl?: string) => {
         const msg: Message = {
@@ -73,6 +76,44 @@ export const useChat = () => {
         } catch (error) {
             console.error('AI Error:', error);
             updateLastMessage(`Chyba: ${(error as Error).message}`);
+        } finally {
+            setIsTyping(false);
+        }
+    };
+
+    /**
+     * Agentic send for the Claude provider: runs a Managed Agents turn where
+     * Claude can call the extension's tools (read page, fill answers, web search)
+     * on its own. Falls back to a direct Claude reply if the agent run fails.
+     */
+    const sendAgentMessage = async (text: string, apiKey: string, model?: string) => {
+        if (!text || !apiKey) return;
+
+        addMessage('user', text);
+        setIsTyping(true);
+        addMessage('ai', 'Rozmýšľam...');
+
+        try {
+            const sid = await runAgentTurn(
+                apiKey,
+                text,
+                agentSessionRef.current,
+                { onText: (t) => updateLastMessage(t) }
+            );
+            agentSessionRef.current = sid;
+        } catch (error) {
+            // Managed Agents unavailable/failed — fall back to a direct Claude reply.
+            console.error('Agent turn failed, falling back to direct chat:', error);
+            try {
+                let resp = '';
+                await getProvider('anthropic').sendMessage(text, apiKey, { modelName: model }, (chunk) => {
+                    resp = chunk;
+                    updateLastMessage(resp);
+                });
+                updateLastMessage(resp || `Chyba: ${(error as Error).message}`);
+            } catch (e2) {
+                updateLastMessage(`Chyba: ${(e2 as Error).message}`);
+            }
         } finally {
             setIsTyping(false);
         }
@@ -164,6 +205,7 @@ export const useChat = () => {
         messages,
         isTyping,
         sendMessage,
+        sendAgentMessage,
         sendImageMessage,
         handlePageContext,
         generatePromptFromAction,

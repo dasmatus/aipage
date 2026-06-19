@@ -41,7 +41,7 @@ export interface Translation {
     // Providers
     providerLMStudio: string;
     providerOllama: string;
-    providerVercel: string;
+    providerAnthropic: string;
     
     // Provider-specific instructions titles & steps
     lmstudioInstructionsTitle: string;
@@ -76,8 +76,8 @@ export interface Translation {
     chat: string;
     engineMode: string;
     standardMode: string;
-    vercelMode: string;
-    vercelDescription: string;
+    anthropicMode: string;
+    anthropicDescription: string;
     standardDescription: string;
     providerEngine: string;
     selectEngine: string;
@@ -88,17 +88,17 @@ export interface Translation {
     search: string;
     closeSearch: string;
     searchWeb: string;
-    vercelApiKey: string;
-    vercelApiKeyPlaceholder: string;
-    vercelApiKeyHint: string;
+    anthropicApiKey: string;
+    anthropicApiKeyPlaceholder: string;
+    anthropicApiKeyHint: string;
     appearanceAndApp: string;
     themeDescription: string;
     globalThemeDescription: string;
     autoUpdateDescription: string;
     user: string;
     ai: string;
-    vercelBadge: string;
-    vercelVirtualCardNotice: string;
+    anthropicBadge: string;
+    anthropicGetKeyNotice: string;
 
     // Exa
     exaApiKey: string;
@@ -118,7 +118,8 @@ export interface Translation {
     imageGenEnabled: string;
     imageGenPromptPlaceholder: string;
     imageGenProvider: string;
-    imageGenVercel: string;
+    imageGenClaudeSvg: string;
+    imageGenClaudeSvgHint: string;
     imageGenSDWebUI: string;
     imageGenSdUrl: string;
     imageGenSdUrlPlaceholder: string;
