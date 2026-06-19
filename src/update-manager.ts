@@ -6,7 +6,7 @@
 
 const UPDATE_CHECK_ALARM = 'check_updates';
 const CHECK_INTERVAL_MINUTES = 60;
-const GITLAB_PROJECT_PATH = 'TenTypekMatus/aipage';
+const GITLAB_PROJECT_PATH = 'tentypekmatus/aipage';
 const GITLAB_API_BASE = 'https://gitlab.com';
 
 interface RemoteManifest {
@@ -82,7 +82,7 @@ export async function checkUpdates(manual: boolean = false) {
         if (!manual && !autoUpdate) return;
 
         // 2. Fetch remote package.json to check version
-        const manifestUrl = `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/raw/main/extension/package.json`;
+        const manifestUrl = `${GITLAB_API_BASE}/${GITLAB_PROJECT_PATH}/-/raw/main/package.json`;
         const response = await fetch(manifestUrl);
         if (!response.ok) throw new Error('Failed to fetch remote manifest');
         
