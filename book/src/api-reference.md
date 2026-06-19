@@ -19,7 +19,7 @@ The API reference includes:
 The extension supports multiple AI providers through a unified interface:
 
 - `AIProvider` - Base interface for all providers
-- Provider implementations for Gemini, ChatGPT, Claude, etc.
+- Provider implementations for Claude (Anthropic), LM Studio, and Ollama
 - See [providers.ts API docs](/api/modules/sidebar_providers.html) for details
 
 ### Storage

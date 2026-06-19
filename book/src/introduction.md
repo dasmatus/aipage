@@ -7,10 +7,10 @@ This is a cross-browser extension that brings AI assistance directly to EduPage.
 ## Features
 
 - **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
-- **Multiple AI Providers**: Support for Gemini, ChatGPT, Claude, Mistral, LM Studio, and Ollama
+- **Claude-powered**: Chat, native web search, and image generation via the official Anthropic API, plus local LM Studio and Ollama
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
 - **Privacy First**: All API keys stored locally, no data collection
-- **Clean Interface**: Vercel-inspired design with responsive sidebar
+- **Clean Interface**: Modern, responsive sidebar design
 
 ## Quick Links
 

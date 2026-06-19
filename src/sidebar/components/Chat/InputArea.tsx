@@ -1,9 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { t } from '../../i18n';
 import { FileText, Search, Send, X, Loader2, ImageIcon } from 'lucide-react';
-import { cn } from '../../lib/utils';
 
 interface InputAreaProps {
     onSend: (text: string) => void;
@@ -13,12 +10,11 @@ interface InputAreaProps {
     disabled?: boolean;
     isScanning?: boolean;
     language: string;
-    exaEnabled: boolean;
     imageGenEnabled: boolean;
 }
 
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, onGenerateImage, disabled, isScanning, language, exaEnabled, imageGenEnabled }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSearchWeb, onGenerateImage, disabled, isScanning, language, imageGenEnabled }) => {
     const [text, setText] = useState('');
     const [isSearchMode, setIsSearchMode] = useState(false);
     const [isImageMode, setIsImageMode] = useState(false);
@@ -97,48 +93,57 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
     };
 
     return (
-        <div className="p-4 border-t bg-card/50 backdrop-blur-sm space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-2">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={cn("h-8 w-8 rounded-full transition-all duration-300", isScanning && "animate-pulse")}
-                    title={t('analyzePage', language)} 
+        <div
+            className="px-3 py-2.5 border-t space-y-2.5 animate-in fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-md"
+            style={{ background: 'var(--header-bg)', borderColor: 'var(--border-color)' }}
+        >
+            {/* Toolbar */}
+            <div className="flex items-center gap-1">
+                <button
+                    className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                    style={{ color: 'var(--secondary-text)' }}
+                    title={t('analyzePage', language)}
                     onClick={onScanPage}
                     disabled={isScanning || disabled}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.06)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                    {isScanning ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <FileText className="h-4 w-4" />}
-                </Button>
-                
-                {exaEnabled && (
-                    <Button
-                        variant={isSearchMode ? "secondary" : "ghost"}
-                        size="icon"
-                        className={cn("h-8 w-8 rounded-full transition-all duration-300", isSearchMode && "bg-primary/20 text-primary")}
-                        title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
-                        onClick={handleToggleSearch}
-                        disabled={disabled}
-                    >
-                        {isSearchMode ? <X className="h-4 w-4" /> : <Search className="h-4 w-4 text-muted-foreground" />}
-                    </Button>
-                )}
+                    {isScanning
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'var(--accent-color)' }} />
+                        : <FileText className="h-3.5 w-3.5" />}
+                </button>
+
+                <button
+                    className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                    style={{
+                        color: isSearchMode ? 'var(--accent-color)' : 'var(--secondary-text)',
+                        background: isSearchMode ? 'color-mix(in srgb, var(--accent-color) 12%, transparent)' : 'transparent',
+                    }}
+                    title={isSearchMode ? t('closeSearch', language) : t('searchWeb', language)}
+                    onClick={handleToggleSearch}
+                    disabled={disabled}
+                >
+                    {isSearchMode ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+                </button>
 
                 {imageGenEnabled && (
-                    <Button
-                        variant={isImageMode ? "secondary" : "ghost"}
-                        size="icon"
-                        className={cn("h-8 w-8 rounded-full transition-all duration-300", isImageMode && "bg-primary/20 text-primary")}
+                    <button
+                        className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                        style={{
+                            color: isImageMode ? 'var(--accent-color)' : 'var(--secondary-text)',
+                            background: isImageMode ? 'color-mix(in srgb, var(--accent-color) 12%, transparent)' : 'transparent',
+                        }}
                         title={t('imageGen', language)}
                         onClick={handleToggleImageMode}
                         disabled={disabled}
                     >
-                        <ImageIcon className="h-4 w-4" />
-                    </Button>
+                        <ImageIcon className="h-3.5 w-3.5" />
+                    </button>
                 )}
 
                 {isSearchMode && (
-                    <div className="flex-1 flex gap-2 animate-in slide-in-from-left-2 fade-in duration-300">
-                        <Input
+                    <div className="flex-1 flex gap-1.5 animate-in slide-in-from-left-2 fade-in duration-200">
+                        <input
                             ref={searchInputRef}
                             id="search-input"
                             placeholder={t('searchPlaceholder', language)}
@@ -146,21 +151,23 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={handleSearchKeyDown}
                             disabled={disabled}
-                            className="h-8 text-xs bg-muted/30 focus-visible:ring-primary border-none"
+                            className="flex-1 h-7 text-xs rounded-lg px-2.5 outline-none"
+                            style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
                         />
-                        <Button
-                            size="sm"
-                            className="h-8 px-3 text-[10px] font-bold"
+                        <button
+                            className="h-7 px-2.5 text-[11px] font-bold rounded-lg text-white cursor-pointer disabled:opacity-50"
+                            style={{ background: 'var(--message-user-bg)' }}
                             onClick={handleSearchSubmit}
                             disabled={!searchQuery.trim() || disabled}
                         >
                             {t('search', language)}
-                        </Button>
+                        </button>
                     </div>
                 )}
             </div>
 
-            <div className="relative flex items-end gap-2 group">
+            {/* Input row */}
+            <div className="flex items-end gap-2">
                 <textarea
                     id="chat-input"
                     ref={textareaRef}
@@ -170,30 +177,35 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onScanPage, onSear
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                     disabled={disabled}
-                    className={cn(
-                        "flex-1 min-h-[44px] max-h-[150px] bg-muted/20 border border-border rounded-2xl px-4 py-2.5 text-sm resize-none outline-none transition-all duration-300",
-                        "focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-card",
-                        "placeholder:text-muted-foreground/50",
-                        disabled && "opacity-50 cursor-not-allowed"
-                    )}
+                    className="flex-1 min-h-[38px] max-h-[150px] rounded-xl px-3.5 py-2.5 text-[13px] resize-none outline-none transition-all duration-200"
+                    style={{
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-color)',
+                        backdropFilter: 'var(--backdrop-blur)',
+                        opacity: disabled ? 0.5 : 1,
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-color)'; e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--accent-color) 12%, transparent)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
-                <Button 
+                <button
                     id="send-btn"
-                    size="icon"
-                    className={cn(
-                        "h-10 w-10 rounded-xl shrink-0 transition-all duration-300",
-                        text.trim() ? "bg-primary scale-100 shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground scale-95"
-                    )}
+                    className="h-[38px] w-[38px] rounded-xl shrink-0 flex items-center justify-center text-white transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                        background: text.trim() ? 'var(--message-user-bg)' : 'var(--border-color)',
+                        transform: text.trim() ? 'scale(1)' : 'scale(0.95)',
+                        boxShadow: text.trim() ? '0 4px 14px color-mix(in srgb, var(--accent-color) 28%, transparent)' : 'none',
+                    }}
                     title={t('send', language)}
-                    aria-label={t('send', language)} 
-                    disabled={!text.trim() || disabled} 
+                    aria-label={t('send', language)}
+                    disabled={!text.trim() || disabled}
                     onClick={handleSend}
                 >
                     {isImageMode
                         ? <ImageIcon className="h-4 w-4" />
-                        : <Send className={cn("h-4 w-4 transition-transform", text.trim() && "translate-x-0.5 -translate-y-0.5")} />
+                        : <Send className="h-4 w-4" />
                     }
-                </Button>
+                </button>
             </div>
         </div>
     );

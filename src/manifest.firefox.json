@@ -10,14 +10,13 @@
     "http://localhost/*",
     "http://127.0.0.1/*",
     "https://gitlab.com/*",
-    "https://ai-gateway.vercel.sh/*",
+    "https://api.anthropic.com/*",
     "https://api.duckduckgo.com/*",
-    "https://api.exa.ai/*",
     "downloads",
     "alarms",
     "notifications"
   ],
-  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; connect-src 'self' https://ai-gateway.vercel.sh https://*.edupage.org https://gitlab.com https://api.duckduckgo.com https://api.exa.ai",
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://*.edupage.org https://gitlab.com https://api.duckduckgo.com",
   "background": {
     "scripts": ["background.js"]
   },
@@ -36,7 +35,8 @@
     "sidebar.html",
     "sidebar.css",
     "sidebar.js",
-    "anti_cheat.js"
+    "anti_cheat.js",
+    "magick.wasm"
   ],
   "browser_action": {
     "default_title": "Open AI Sidebar"

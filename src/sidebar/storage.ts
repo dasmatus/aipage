@@ -14,18 +14,14 @@ export const STORAGE_KEYS = {
     API_KEYS: {
         lmstudio: 'lmstudio_api_key',
         ollama: 'ollama_api_key',
-        vercel: 'vercel_api_key'
+        anthropic: 'anthropic_api_key'
     },
     LOCAL_SETTINGS: {
         lmstudio: { url: 'lmstudio_base_url', model: 'lmstudio_model' },
         ollama: { url: 'ollama_base_url', model: 'ollama_model' },
-        vercel: { url: 'vercel_base_url', model: 'vercel_model' }
+        anthropic: { url: 'anthropic_base_url', model: 'anthropic_model' }
     },
     THEME: 'ai_sidebar_theme',
-    EXA_API_KEY: 'exa_api_key',
-    EXA_ENABLED: 'exa_enabled',
-    SEARXNG_URL: 'searxng_url',
-    SEARXNG_ENABLED: 'searxng_enabled',
     IMAGE_GEN_ENABLED: 'image_gen_enabled',
     IMAGE_GEN_PROVIDER: 'image_gen_provider',
     IMAGE_GEN_SD_URL: 'image_gen_sd_url',
@@ -42,8 +38,8 @@ export const STORAGE_KEYS = {
 export async function getProviderPreference(): Promise<ProviderType> {
     const result = await browser.storage.local.get([STORAGE_KEYS.PROVIDER]) as Record<string, any>;
     const p = result[STORAGE_KEYS.PROVIDER];
-    if (p === 'lmstudio' || p === 'ollama' || p === 'vercel') return p;
-    return 'vercel';
+    if (p === 'lmstudio' || p === 'ollama' || p === 'anthropic') return p;
+    return 'anthropic';
 }
 
 /**
@@ -54,12 +50,12 @@ export async function saveProviderPreference(provider: ProviderType): Promise<vo
     await browser.storage.local.set({ [STORAGE_KEYS.PROVIDER]: provider });
 }
 
-export async function getProviderBackendPreference(): Promise<'vercel' | 'ollama' | 'lmstudio'> {
+export async function getProviderBackendPreference(): Promise<'anthropic' | 'ollama' | 'lmstudio'> {
     const result = await browser.storage.local.get('providerBackend');
-    return (result.providerBackend as 'vercel' | 'ollama' | 'lmstudio') || 'vercel';
+    return (result.providerBackend as 'anthropic' | 'ollama' | 'lmstudio') || 'anthropic';
 }
 
-export async function saveProviderBackendPreference(backend: 'vercel' | 'ollama' | 'lmstudio'): Promise<void> {
+export async function saveProviderBackendPreference(backend: 'anthropic' | 'ollama' | 'lmstudio'): Promise<void> {
     await browser.storage.local.set({ providerBackend: backend });
 }
 
@@ -82,7 +78,7 @@ export async function getApiKey(provider: ProviderType): Promise<string | null> 
  * @param {string} model 
  */
 export async function saveLocalSettings(provider: ProviderType, url: string, model: string): Promise<void> {
-    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'vercel') return;
+    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'anthropic') return;
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
     await browser.storage.local.set({
         [keys.url]: url,
@@ -96,7 +92,7 @@ export async function saveLocalSettings(provider: ProviderType, url: string, mod
  * @returns {Promise<{url: string, model: string}>}
  */
 export async function getLocalSettings(provider: ProviderType): Promise<{ url: string, model: string }> {
-    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'vercel') {
+    if (provider !== 'lmstudio' && provider !== 'ollama' && provider !== 'anthropic') {
         return { url: '', model: '' };
     }
     const keys = STORAGE_KEYS.LOCAL_SETTINGS[provider];
@@ -124,42 +120,6 @@ export async function saveThemePreference(theme: string): Promise<void> {
     await browser.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
 }
 
-export async function getExaApiKey(): Promise<string | null> {
-    const result = await browser.storage.local.get([STORAGE_KEYS.EXA_API_KEY]) as Record<string, any>;
-    return (result[STORAGE_KEYS.EXA_API_KEY] as string) || null;
-}
-
-export async function saveExaApiKey(key: string): Promise<void> {
-    await browser.storage.local.set({ [STORAGE_KEYS.EXA_API_KEY]: key });
-}
-
-export async function getExaEnabled(): Promise<boolean> {
-    const result = await browser.storage.local.get([STORAGE_KEYS.EXA_ENABLED]) as Record<string, any>;
-    return !!result[STORAGE_KEYS.EXA_ENABLED];
-}
-
-export async function saveExaEnabled(enabled: boolean): Promise<void> {
-    await browser.storage.local.set({ [STORAGE_KEYS.EXA_ENABLED]: enabled });
-}
-
-export async function getSearXNGUrl(): Promise<string> {
-    const result = await browser.storage.local.get([STORAGE_KEYS.SEARXNG_URL]) as Record<string, any>;
-    return (result[STORAGE_KEYS.SEARXNG_URL] as string) || '';
-}
-
-export async function saveSearXNGUrl(url: string): Promise<void> {
-    await browser.storage.local.set({ [STORAGE_KEYS.SEARXNG_URL]: url });
-}
-
-export async function getSearXNGEnabled(): Promise<boolean> {
-    const result = await browser.storage.local.get([STORAGE_KEYS.SEARXNG_ENABLED]) as Record<string, any>;
-    return !!result[STORAGE_KEYS.SEARXNG_ENABLED];
-}
-
-export async function saveSearXNGEnabled(enabled: boolean): Promise<void> {
-    await browser.storage.local.set({ [STORAGE_KEYS.SEARXNG_ENABLED]: enabled });
-}
-
 export async function getImageGenEnabled(): Promise<boolean> {
     const result = await browser.storage.local.get([STORAGE_KEYS.IMAGE_GEN_ENABLED]) as Record<string, any>;
     return !!result[STORAGE_KEYS.IMAGE_GEN_ENABLED];
@@ -169,12 +129,15 @@ export async function saveImageGenEnabled(enabled: boolean): Promise<void> {
     await browser.storage.local.set({ [STORAGE_KEYS.IMAGE_GEN_ENABLED]: enabled });
 }
 
-export async function getImageGenProvider(): Promise<'vercel' | 'sdwebui'> {
+export async function getImageGenProvider(): Promise<'claude-svg' | 'sdwebui'> {
     const result = await browser.storage.local.get([STORAGE_KEYS.IMAGE_GEN_PROVIDER]) as Record<string, any>;
-    return (result[STORAGE_KEYS.IMAGE_GEN_PROVIDER] as 'vercel' | 'sdwebui') || 'vercel';
+    const p = result[STORAGE_KEYS.IMAGE_GEN_PROVIDER];
+    // Migrate the retired 'vercel' value to the new default.
+    if (p === 'claude-svg' || p === 'sdwebui') return p;
+    return 'claude-svg';
 }
 
-export async function saveImageGenProvider(provider: 'vercel' | 'sdwebui'): Promise<void> {
+export async function saveImageGenProvider(provider: 'claude-svg' | 'sdwebui'): Promise<void> {
     await browser.storage.local.set({ [STORAGE_KEYS.IMAGE_GEN_PROVIDER]: provider });
 }
 
@@ -189,7 +152,7 @@ export async function saveImageGenSdUrl(url: string): Promise<void> {
 
 export async function getImageGenModel(): Promise<string> {
     const result = await browser.storage.local.get([STORAGE_KEYS.IMAGE_GEN_MODEL]) as Record<string, any>;
-    return (result[STORAGE_KEYS.IMAGE_GEN_MODEL] as string) || 'openai:dall-e-3';
+    return (result[STORAGE_KEYS.IMAGE_GEN_MODEL] as string) || 'claude-opus-4-8';
 }
 
 export async function saveImageGenModel(model: string): Promise<void> {

@@ -13,7 +13,7 @@ import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
-import { RefreshCw, Zap, Settings2, Palette, Languages, AlertCircle, Search, ImageIcon, Wand2 } from 'lucide-react';
+import { RefreshCw, Zap, Settings2, Palette, Languages, AlertCircle, ImageIcon, Wand2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface SettingsViewProps {
@@ -26,12 +26,10 @@ interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onClose, onProviderChange, language, onLanguageChange }) => {
     const [apiKey, setApiKey] = useState('');
-    const [exaApiKey, setExaApiKey] = useState('');
-    const [exaEnabled, setExaEnabled] = useState(false);
     const [theme, setTheme] = useState('default');
     const [globalTheme, setGlobalTheme] = useState(false);
     const [autoUpdate, setAutoUpdate] = useState(false);
-    const [providerBackend, setProviderBackend] = useState<'vercel' | 'ollama' | 'lmstudio'>('vercel');
+    const [providerBackend, setProviderBackend] = useState<'anthropic' | 'ollama' | 'lmstudio'>('anthropic');
 
     // Local settings
     const [baseUrl, setBaseUrl] = useState('');
@@ -40,22 +38,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    // SearXNG
-    const [searxngEnabled, setSearxngEnabled] = useState(false);
-    const [searxngUrl, setSearxngUrl] = useState('');
-
     // Auto-answer
     const [autoAnswerEnabled, setAutoAnswerEnabled] = useState(false);
 
     // Image generation
     const [imageGenEnabled, setImageGenEnabled] = useState(false);
-    const [imageGenProvider, setImageGenProvider] = useState<'vercel' | 'sdwebui'>('vercel');
+    const [imageGenProvider, setImageGenProvider] = useState<'claude-svg' | 'sdwebui'>('claude-svg');
     const [imageGenSdUrl, setImageGenSdUrl] = useState('http://localhost:7860');
-    const [imageGenModel, setImageGenModel] = useState('openai:dall-e-3');
+    const [imageGenModel, setImageGenModel] = useState('claude-opus-4-8');
     const [imageGenSize, setImageGenSize] = useState('1024x1024');
-    const [availableImageModels, setAvailableImageModels] = useState<any[]>([]);
-    const [isLoadingImageModels, setIsLoadingImageModels] = useState(false);
-    const [imageModelError, setImageModelError] = useState<string | null>(null);
     const settingsLoaded = useRef(false);
 
     useEffect(() => {
@@ -65,12 +56,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
     const loadSettings = async () => {
         const key = await Storage.getApiKey(currentProvider);
         setApiKey(key || '');
-
-        const exaKey = await Storage.getExaApiKey();
-        setExaApiKey(exaKey || '');
-
-        const exaEn = await Storage.getExaEnabled();
-        setExaEnabled(exaEn);
 
         const th = await Storage.getThemePreference();
         setTheme(th);
@@ -86,11 +71,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
         const local = await Storage.getLocalSettings(currentProvider);
         setModelName(local.model || '');
-
-        const searxngEn = await Storage.getSearXNGEnabled();
-        setSearxngEnabled(searxngEn);
-        const sUrl = await Storage.getSearXNGUrl();
-        setSearxngUrl(sUrl);
 
         const autoAns = await Storage.getAutoAnswerEnabled();
         setAutoAnswerEnabled(autoAns);
@@ -111,43 +91,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
             const url = local.url || defaultUrl;
             setBaseUrl(url);
             fetchModels(url, key || '');
-        } else if (backend === 'vercel') {
-            fetchModels('https://ai-gateway.vercel.sh/v1/models', key || '');
+        } else if (backend === 'anthropic') {
+            fetchModels('https://api.anthropic.com/v1/models', key || '');
         }
 
-        if (imgEn && imgProv === 'vercel') {
-            fetchImageModels(key || '');
-        }
         settingsLoaded.current = true;
     };
-
-    const fetchImageModels = async (manualKey?: string) => {
-        setIsLoadingImageModels(true);
-        setImageModelError(null);
-        try {
-            const p = getProvider('vercel');
-            if (p.getModels) {
-                const effectiveKey = manualKey !== undefined ? manualKey : apiKey;
-                const models = await p.getModels(effectiveKey, { baseUrl: 'https://ai-gateway.vercel.sh/v1/models', type: 'image' });
-                setAvailableImageModels(models);
-                if (models.length === 0) setImageModelError(translate('noModelsFound', language) || 'No models found');
-            }
-        } catch (e) {
-            setAvailableImageModels([]);
-            setImageModelError((e as Error).message || 'Failed to fetch image models');
-        } finally {
-            setIsLoadingImageModels(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!settingsLoaded.current) return;
-        if (imageGenEnabled && imageGenProvider === 'vercel') {
-            fetchImageModels();
-        } else {
-            setAvailableImageModels([]);
-        }
-    }, [imageGenEnabled, imageGenProvider]);
 
     const fetchModels = async (url: string, manualKey?: string) => {
         if (!url) return;
@@ -183,12 +132,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         if (storageKey) {
             await browser.storage.local.set({ [storageKey]: apiKey });
         }
-        
-        await Storage.saveExaApiKey(exaApiKey);
-        await Storage.saveExaEnabled(exaEnabled);
-
-        await Storage.saveSearXNGEnabled(searxngEnabled);
-        await Storage.saveSearXNGUrl(searxngUrl);
 
         await Storage.saveAutoAnswerEnabled(autoAnswerEnabled);
         await Storage.saveImageGenEnabled(imageGenEnabled);
@@ -219,14 +162,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         await browser.storage.local.set({ autoUpdate: checked });
     };
 
-    const handleBackendChange = async (value: 'vercel' | 'ollama' | 'lmstudio') => {
+    const handleBackendChange = async (value: 'anthropic' | 'ollama' | 'lmstudio') => {
         setProviderBackend(value);
         await Storage.saveProviderBackendPreference(value);
         onProviderChange(value); // Directly map backend to provider
     };
 
     const renderInstructions = () => {
-        if (providerBackend === 'vercel') return null;
+        if (providerBackend === 'anthropic') return null;
 
         const instructions: Record<string, { title: string, steps: (string | React.ReactNode)[], note?: string, troubleshoot?: string }> = {
             lmstudio: {
@@ -273,41 +216,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
         );
     };
 
-    const isLocal = currentProvider === 'lmstudio' || currentProvider === 'ollama';
+    const cardIconTile = (gradient: string, icon: React.ReactNode) => (
+        <div
+            className="w-[22px] h-[22px] rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: gradient }}
+        >
+            <span className="text-white [&_svg]:w-[11px] [&_svg]:h-[11px]">{icon}</span>
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground">
+        <div
+            className="flex flex-col h-full overflow-y-auto px-4 py-6 selection:bg-primary selection:text-primary-foreground"
+            style={{ background: 'var(--bg-color)' }}
+        >
             <div className="max-w-[500px] mx-auto w-full space-y-6">
                 <header className="flex flex-col gap-1">
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">{translate('settingsTitle', language)}</h2>
                     <p className="text-sm text-muted-foreground">{translate('settingsDescription', language)}</p>
                 </header>
 
-                <Card className={cn("overflow-hidden transition-all duration-300", 
-                            providerBackend === 'vercel' && "border-primary/50 shadow-lg shadow-primary/10")}>
+                <Card className={cn("overflow-hidden transition-all duration-300",
+                            providerBackend === 'anthropic' && "border-primary/50 shadow-lg shadow-primary/10")}>
                     <CardHeader className="space-y-1 bg-muted/30">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Zap className={cn("w-4 h-4", providerBackend === 'vercel' ? "text-primary" : "text-muted-foreground")} />
-                                <CardTitle className="text-lg">{translate('providerEngine', language)}</CardTitle>
+                                {cardIconTile('linear-gradient(135deg, #2c70a3, #3b82f6)', <Zap />)}
+                                <CardTitle className="text-base">{translate('providerEngine', language)}</CardTitle>
                             </div>
                         </div>
                         <CardDescription>
-                            {providerBackend === 'vercel' 
-                                ? translate('vercelDescription', language)
+                            {providerBackend === 'anthropic'
+                                ? translate('anthropicDescription', language)
                                 : translate('standardDescription', language)}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="backend-select" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('engineMode', language)}</Label>
-                            <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'vercel' | 'ollama' | 'lmstudio')}>
-                                <SelectTrigger className={cn(providerBackend === 'vercel' && "border-primary ring-primary")}>
+                            <Select value={providerBackend} onValueChange={(v) => handleBackendChange(v as 'anthropic' | 'ollama' | 'lmstudio')}>
+                                <SelectTrigger className={cn(providerBackend === 'anthropic' && "border-primary ring-primary")}>
                                     <SelectValue placeholder={translate('selectEngine', language)} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="vercel" className="flex items-center gap-2">
-                                        {translate('vercelMode', language)}
+                                    <SelectItem value="anthropic" className="flex items-center gap-2">
+                                        {translate('anthropicMode', language)}
                                     </SelectItem>
                                     <SelectItem value="ollama" className="flex items-center gap-2">
                                         {translate('providerOllama', language)}
@@ -326,20 +279,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <Settings2 className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #0369a1, #38bdf8)', <Settings2 />)}
                             <CardTitle className="text-sm">{translate('modelAndAuth', language)}</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                        {(providerBackend === 'ollama' || providerBackend === 'lmstudio' || providerBackend === 'vercel') && (
+                        {(providerBackend === 'ollama' || providerBackend === 'lmstudio' || providerBackend === 'anthropic') && (
                             <div className="space-y-4 animate-in fade-in duration-500">
                                 {(providerBackend === 'ollama' || providerBackend === 'lmstudio') && (
                                     <div className="space-y-2">
                                         <Label htmlFor="base-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('baseUrl', language)}</Label>
-                                        <Input 
+                                        <Input
                                             id="base-url"
-                                            value={baseUrl} 
-                                            onChange={(e) => setBaseUrl(e.target.value)} 
+                                            value={baseUrl}
+                                            onChange={(e) => setBaseUrl(e.target.value)}
                                             placeholder="http://localhost:1234"
                                             className="bg-muted/30 focus-visible:ring-primary"
                                         />
@@ -374,8 +327,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                                                     {provider}
                                                                 </SelectLabel>
                                                                 {models.map(m => {
-                                                                    const label = m.id.includes(':') 
-                                                                        ? m.id.split(':').slice(1).join(':') 
+                                                                    const label = m.id.includes(':')
+                                                                        ? m.id.split(':').slice(1).join(':')
                                                                         : (m.id.includes('/') ? m.id.split('/').slice(1).join('/') : m.id);
                                                                     return (
                                                                         <SelectItem key={m.id} value={m.id}>
@@ -388,10 +341,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                                     })()}
                                                 </SelectContent>
                                             </Select>
-                                            <Button 
+                                            <Button
                                                 variant="outline"
                                                 size="icon"
-                                                onClick={() => fetchModels(providerBackend === 'vercel' ? 'https://ai-gateway.vercel.sh/v1/models' : baseUrl)}
+                                                onClick={() => fetchModels(providerBackend === 'anthropic' ? 'https://api.anthropic.com/v1/models' : baseUrl)}
                                                 title={translate('refreshModels', language)}
                                                 className="shrink-0"
                                             >
@@ -406,57 +359,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
 
                         <div className="space-y-2">
                             <Label htmlFor="api-key-input" className="text-xs uppercase font-bold tracking-wider opacity-70">
-                                {providerBackend === 'vercel' ? translate('vercelApiKey', language) : translate('apiKey', language)}
+                                {providerBackend === 'anthropic' ? translate('anthropicApiKey', language) : translate('apiKey', language)}
                             </Label>
-                            <Input 
+                            <Input
                                 id="api-key-input"
-                                type="password" 
-                                value={apiKey} 
-                                onChange={(e) => setApiKey(e.target.value)} 
-                                placeholder={providerBackend === 'vercel' ? translate('vercelApiKeyPlaceholder', language) : translate('apiKeyPlaceholder', language)} 
-                                className={cn("bg-muted/30 focus-visible:ring-primary", providerBackend === 'vercel' && "border-primary/30")}
+                                type="password"
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                placeholder={providerBackend === 'anthropic' ? translate('anthropicApiKeyPlaceholder', language) : translate('apiKeyPlaceholder', language)}
+                                className={cn("bg-muted/30 focus-visible:ring-primary", providerBackend === 'anthropic' && "border-primary/30")}
                             />
                             <p className="text-[10px] text-muted-foreground opacity-70">
-                                {providerBackend === 'vercel' ? translate('vercelApiKeyHint', language) : translate('apiKeyHint', language)}
+                                {providerBackend === 'anthropic' ? translate('anthropicApiKeyHint', language) : translate('apiKeyHint', language)}
                             </p>
-                            {providerBackend === 'vercel' && (
+                            {providerBackend === 'anthropic' && (
                                 <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded text-[10px] text-primary flex items-start gap-2">
                                     <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{translate('vercelVirtualCardNotice', language)}</span>
-                                </div>
-                            )}
-                            
-                            {providerBackend === 'vercel' && (
-                                <div className="space-y-4 pt-4 border-t border-border/50">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label htmlFor="enable-exa" className="text-sm font-medium cursor-pointer">
-                                                {translate('enableExaSearch', language)}
-                                            </Label>
-                                            <p className="text-[11px] text-muted-foreground">{translate('exaApiKeyHint', language)}</p>
-                                        </div>
-                                        <Switch 
-                                            id="enable-exa" 
-                                            checked={exaEnabled} 
-                                            onCheckedChange={setExaEnabled}
-                                        />
-                                    </div>
-                                    
-                                    {exaEnabled && (
-                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <Label htmlFor="exa-api-key" className="text-xs uppercase font-bold tracking-wider opacity-70">
-                                                {translate('exaApiKey', language)}
-                                            </Label>
-                                            <Input 
-                                                id="exa-api-key"
-                                                type="password" 
-                                                value={exaApiKey} 
-                                                onChange={(e) => setExaApiKey(e.target.value)} 
-                                                placeholder={translate('exaApiKeyPlaceholder', language)}
-                                                className="bg-muted/30 focus-visible:ring-primary border-primary/30"
-                                            />
-                                        </div>
-                                    )}
+                                    <span>{translate('anthropicGetKeyNotice', language)}</span>
                                 </div>
                             )}
                         </div>
@@ -467,7 +386,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center justify-between">
                              <div className="flex items-center gap-2">
-                                <Palette className="w-4 h-4 text-primary" />
+                                {cardIconTile('linear-gradient(135deg, #2e7d32, #4ade80)', <Palette />)}
                                 <CardTitle className="text-sm">{translate('appearanceAndApp', language)}</CardTitle>
                             </div>
                         </div>
@@ -500,9 +419,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                 <Label htmlFor="global-theme-toggle" className="text-sm font-medium cursor-pointer">{translate('applyThemeGlobal', language)}</Label>
                                 <p className="text-[11px] text-muted-foreground">{translate('globalThemeDescription', language)}</p>
                             </div>
-                            <Switch 
-                                id="global-theme-toggle" 
-                                checked={globalTheme} 
+                            <Switch
+                                id="global-theme-toggle"
+                                checked={globalTheme}
                                 onCheckedChange={handleGlobalThemeChange}
                             />
                         </div>
@@ -512,9 +431,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                                 <Label htmlFor="auto-update-toggle" className="text-sm font-medium cursor-pointer">{translate('autoUpdate', language)}</Label>
                                 <p className="text-[11px] text-muted-foreground">{translate('autoUpdateDescription', language)}</p>
                             </div>
-                            <Switch 
-                                id="auto-update-toggle" 
-                                checked={autoUpdate} 
+                            <Switch
+                                id="auto-update-toggle"
+                                checked={autoUpdate}
                                 onCheckedChange={handleAutoUpdateChange}
                             />
                         </div>
@@ -542,42 +461,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                     </CardContent>
                 </Card>
 
-                {/* SearXNG */}
-                <Card>
-                    <CardHeader className="py-4 px-6 bg-muted/10">
-                        <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-primary" />
-                            <CardTitle className="text-sm">{translate('searxngSearch', language)}</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="searxng-toggle" className="text-sm font-medium cursor-pointer">{translate('searxngEnabled', language)}</Label>
-                                <p className="text-[11px] text-muted-foreground">{translate('searxngUrlHint', language)}</p>
-                            </div>
-                            <Switch id="searxng-toggle" checked={searxngEnabled} onCheckedChange={setSearxngEnabled} />
-                        </div>
-                        {searxngEnabled && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <Label htmlFor="searxng-url" className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('searxngUrl', language)}</Label>
-                                <Input
-                                    id="searxng-url"
-                                    value={searxngUrl}
-                                    onChange={(e) => setSearxngUrl(e.target.value)}
-                                    placeholder={translate('searxngUrlPlaceholder', language)}
-                                    className="bg-muted/30 focus-visible:ring-primary"
-                                />
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
                 {/* Image Generation */}
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #db2777, #f472b6)', <ImageIcon />)}
                             <CardTitle className="text-sm">{translate('imageGen', language)}</CardTitle>
                         </div>
                     </CardHeader>
@@ -590,87 +478,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                             <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="space-y-2">
                                     <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('imageGenProvider', language)}</Label>
-                                    <Select value={imageGenProvider} onValueChange={(v) => setImageGenProvider(v as 'vercel' | 'sdwebui')}>
+                                    <Select value={imageGenProvider} onValueChange={(v) => setImageGenProvider(v as 'claude-svg' | 'sdwebui')}>
                                         <SelectTrigger className="bg-muted/30">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="vercel">{translate('imageGenVercel', language)}</SelectItem>
+                                            <SelectItem value="claude-svg">{translate('imageGenClaudeSvg', language)}</SelectItem>
                                             <SelectItem value="sdwebui">{translate('imageGenSDWebUI', language)}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                {imageGenProvider === 'vercel' && (
-                                    <>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('imageGenModel', language)}</Label>
-                                            {isLoadingImageModels ? (
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-2">
-                                                    <RefreshCw className="w-3 h-3 animate-spin" /> {translate('loading', language)}...
-                                                </div>
-                                            ) : (
-                                                <div className="flex gap-2">
-                                                    <Select value={imageGenModel} onValueChange={setImageGenModel}>
-                                                        <SelectTrigger className={cn("flex-1 bg-muted/30", availableImageModels.length === 0 && "border-destructive/50")}>
-                                                            <SelectValue placeholder={availableImageModels.length > 0 ? translate('selectModel', language) : translate('noModelsFound', language)} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {availableImageModels.length === 0 ? (
-                                                                <SelectItem value="none" disabled>{translate('noModelsFound', language)}</SelectItem>
-                                                            ) : (() => {
-                                                                const groups: Record<string, any[]> = {};
-                                                                availableImageModels.forEach(m => {
-                                                                    const prov = m.provider || 'Other';
-                                                                    if (!groups[prov]) groups[prov] = [];
-                                                                    groups[prov].push(m);
-                                                                });
-                                                                return Object.entries(groups).map(([prov, models]) => (
-                                                                    <SelectGroup key={prov}>
-                                                                        <SelectLabel className="bg-muted/50 py-1 px-2 text-[10px] font-black uppercase text-muted-foreground tracking-[2px]">
-                                                                            {prov}
-                                                                        </SelectLabel>
-                                                                        {models.map(m => {
-                                                                            const label = m.id.includes(':')
-                                                                                ? m.id.split(':').slice(1).join(':')
-                                                                                : (m.id.includes('/') ? m.id.split('/').slice(1).join('/') : m.id);
-                                                                            return (
-                                                                                <SelectItem key={m.id} value={m.id}>
-                                                                                    {label}
-                                                                                </SelectItem>
-                                                                            );
-                                                                        })}
-                                                                    </SelectGroup>
-                                                                ));
-                                                            })()}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => fetchImageModels()}
-                                                        title={translate('refreshModels', language)}
-                                                        className="shrink-0"
-                                                    >
-                                                        <RefreshCw className={cn("w-4 h-4", isLoadingImageModels && "animate-spin")} />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            {imageModelError && <p className="text-[10px] text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {imageModelError}</p>}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('imageGenSize', language)}</Label>
-                                            <Select value={imageGenSize} onValueChange={setImageGenSize}>
-                                                <SelectTrigger className="bg-muted/30">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1024x1024">1024×1024</SelectItem>
-                                                    <SelectItem value="1024x1792">1024×1792 (Portrait)</SelectItem>
-                                                    <SelectItem value="1792x1024">1792×1024 (Landscape)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </>
+                                {imageGenProvider === 'claude-svg' && (
+                                    <div className="space-y-2">
+                                        <Label className="text-xs uppercase font-bold tracking-wider opacity-70">{translate('imageGenSize', language)}</Label>
+                                        <Select value={imageGenSize} onValueChange={setImageGenSize}>
+                                            <SelectTrigger className="bg-muted/30">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="1024x1024">1024×1024</SelectItem>
+                                                <SelectItem value="1024x1792">1024×1792 (Portrait)</SelectItem>
+                                                <SelectItem value="1792x1024">1792×1024 (Landscape)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-muted-foreground opacity-70">{translate('imageGenClaudeSvgHint', language)}</p>
+                                    </div>
                                 )}
                                 {imageGenProvider === 'sdwebui' && (
                                     <div className="space-y-2">
@@ -693,7 +525,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 <Card>
                     <CardHeader className="py-4 px-6 bg-muted/10">
                         <div className="flex items-center gap-2">
-                            <Wand2 className="w-4 h-4 text-primary" />
+                            {cardIconTile('linear-gradient(135deg, #7c3aed, #a78bfa)', <Wand2 />)}
                             <CardTitle className="text-sm">Exam Tools</CardTitle>
                         </div>
                     </CardHeader>
@@ -709,7 +541,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentProvider, onC
                 </Card>
 
                 <footer className="pt-4 flex flex-col gap-3">
-                    <Button id="save-key-btn" className="w-full font-bold shadow-md h-12" onClick={handleSave}>
+                    <Button
+                        id="save-key-btn"
+                        className="w-full font-bold h-11 rounded-xl text-white border-0"
+                        style={{ background: 'var(--message-user-bg)', boxShadow: '0 4px 14px color-mix(in srgb, var(--accent-color) 28%, transparent)' }}
+                        onClick={handleSave}
+                    >
                         {translate('saveKey', language)}
                     </Button>
                     <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" onClick={onClose}>

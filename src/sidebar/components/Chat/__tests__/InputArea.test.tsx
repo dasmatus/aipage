@@ -8,64 +8,45 @@ describe('InputArea Component', () => {
     const mockOnSearchWeb = jest.fn();
     const mockOnGenerateImage = jest.fn();
 
+    const renderInput = (extra: Record<string, any> = {}) => render(
+        <InputArea
+            onSend={mockOnSend}
+            onScanPage={mockOnScanPage}
+            onSearchWeb={mockOnSearchWeb}
+            onGenerateImage={mockOnGenerateImage}
+            language="en"
+            imageGenEnabled={false}
+            {...extra}
+        />
+    );
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
     it('should render textarea and send button', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={true}
-                imageGenEnabled={false}
-            />
-        );
-
+        renderInput();
         expect(screen.getByPlaceholderText(/ask anything/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
     });
 
     it('should toggle search mode when search button is clicked', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={true}
-                imageGenEnabled={false}
-            />
-        );
+        renderInput();
 
         const searchButton = screen.getByTitle(/search web/i);
-        
+
         // Should not show search input initially
         expect(screen.queryByPlaceholderText(/search query/i)).not.toBeInTheDocument();
-        
+
         // Click to open search mode
         fireEvent.click(searchButton);
-        
+
         // Should now show search input
         expect(screen.getByPlaceholderText(/search query/i)).toBeInTheDocument();
     });
 
     it('should submit search query when enter is pressed', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={true}
-                imageGenEnabled={false}
-            />
-        );
+        renderInput();
 
         const searchButton = screen.getByTitle(/search web/i);
         fireEvent.click(searchButton);
@@ -78,17 +59,7 @@ describe('InputArea Component', () => {
     });
 
     it('should close search mode on escape key', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={true}
-                imageGenEnabled={false}
-            />
-        );
+        renderInput();
 
         const searchButton = screen.getByTitle(/search web/i);
         fireEvent.click(searchButton);
@@ -100,17 +71,7 @@ describe('InputArea Component', () => {
     });
 
     it('should send message when send button is clicked', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={true}
-                imageGenEnabled={false}
-            />
-        );
+        renderInput();
 
         const textarea = screen.getByPlaceholderText(/ask anything/i);
         const sendButton = screen.getByRole('button', { name: /send/i });
@@ -120,19 +81,9 @@ describe('InputArea Component', () => {
 
         expect(mockOnSend).toHaveBeenCalledWith('Hello AI');
     });
-    it('should hide search button when exaEnabled is false', () => {
-        render(
-            <InputArea
-                onSend={mockOnSend}
-                onScanPage={mockOnScanPage}
-                onSearchWeb={mockOnSearchWeb}
-                onGenerateImage={mockOnGenerateImage}
-                language="en"
-                exaEnabled={false}
-                imageGenEnabled={false}
-            />
-        );
 
-        expect(screen.queryByTitle(/search web/i)).not.toBeInTheDocument();
+    it('should always show the web search button (Claude searches natively)', () => {
+        renderInput();
+        expect(screen.getByTitle(/search web/i)).toBeInTheDocument();
     });
 });

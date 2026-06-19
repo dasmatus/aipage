@@ -72,7 +72,7 @@ We use **MDBook** for documentation.
 - **`src/`**: Source code for the extension.
   - **`sidebar/`**: The main React application for the sidebar UI.
     - **`components/`**: React components (Chat, Settings, etc.).
-    - **`providers.ts`**: AI provider implementations (Gemini, OpenAI, etc.).
+    - **`providers/`**: AI provider implementations (Anthropic/Claude, LM Studio, Ollama).
     - **`i18n.ts`**: Localization configurations.
   - **`background.ts`**: Service worker for handling API requests (CORS proxy) and events.
   - **`content.ts`**: Content script injected into EduPage pages.

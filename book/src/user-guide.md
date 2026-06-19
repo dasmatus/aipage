@@ -7,7 +7,7 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 - AI chat assistant integrated directly into EduPage
 - **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
 - Clean, responsive design that matches EduPage's aesthetic
-- Real-time conversations with multiple AI providers (Gemini, ChatGPT, Claude, Mistral, LM Studio, Ollama)
+- Real-time conversations with Claude via the official Anthropic API, plus local LM Studio and Ollama
 - Secure local storage of API credentials
 - Responsive sidebar that doesn't obscure important UI elements
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
@@ -59,7 +59,7 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 ### Supported Providers
 
-- **Vercel AI Gateway**
+- **Claude (Anthropic)** — chat, native web search, and SVG image generation
 - **LM Studio** (Local)
 - **Ollama** (Local)
 
@@ -72,14 +72,16 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 ### Step 2: Configure Your Provider
 
-#### Vercel AI Gateway
+#### Claude (Anthropic)
 
-1. Go to **[the AI Gateway site](https://vercel.com/ai-gateway)**.
-2. Click on **Get API key**
-3. Sign up if needed.
-4. Click on **Create Key**,
-5. Choose a name for your key and click **Create Key**.
-6. Paste the key to the AIPage settings.
+The cloud provider talks directly to Claude through the official Anthropic API.
+
+1. Go to **[the Anthropic Console](https://console.anthropic.com)** and sign in (or create an account).
+2. Open **Settings → API Keys** (direct link: `https://console.anthropic.com/settings/keys`).
+3. Click **Create Key**, give it a name, and copy it — the key starts with `sk-ant-`.
+4. Paste the key into the AIPage settings and pick a Claude model (e.g. `claude-opus-4-8`).
+
+> The key is stored locally in your browser and is only ever sent to `api.anthropic.com` (through the extension's background proxy). Claude also powers **web search** — its built-in search tool, so no extra key is needed — and **image generation**: Claude draws an SVG that the extension renders to a PNG in-browser with WebAssembly ImageMagick.
 
 #### LM Studio (Local)
 
@@ -213,8 +215,8 @@ This project uses GitLab CI for automated building and testing:
 ### "Invalid API Key" Error
 
 - Verify your API key is correct
-- Ensure you copied the entire key (starts with `vck_`)
-- Check that your API key hasn't been restricted or revoked in the Vercel settings
+- Ensure you copied the entire key (it starts with `sk-ant-`)
+- Check that your API key hasn't been deactivated or revoked in the [Anthropic Console](https://console.anthropic.com/settings/keys)
 
 ### Sidebar Not Appearing
 
@@ -257,7 +259,8 @@ See [the contribution guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main
 
 Built with:
 
-- [Vercel AI Gateway](https://vercel.com/ai-gateway)
+- [Anthropic API](https://www.anthropic.com/api)
+- [@imagemagick/magick-wasm](https://github.com/dlemstra/magick-wasm) for SVG → image conversion
 - [shadcn/ui](https://ui.shadcn.com)
 - [Playwright](https://playwright.dev/) for testing
 - TypeScript & esbuild

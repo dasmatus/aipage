@@ -2,19 +2,19 @@ export * from './types';
 export * from './utils';
 export * from './lmstudio';
 export * from './ollama';
-export * from './vercel';
+export * from './anthropic';
 
 import { AIProvider, ProviderType } from './types';
 import { LMStudioProvider } from './lmstudio';
 import { OllamaProvider } from './ollama';
-import { VercelSDKProvider } from './vercel';
+import { AnthropicProvider } from './anthropic';
 
 const providers: Record<ProviderType, AIProvider> = {
-    vercel: new VercelSDKProvider(),
+    anthropic: new AnthropicProvider(),
     lmstudio: new LMStudioProvider(),
     ollama: new OllamaProvider()
 };
 
 export function getProvider(type: ProviderType): AIProvider {
-    return providers[type] || providers['vercel'];
+    return providers[type] || providers['anthropic'];
 }

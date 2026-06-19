@@ -41,3 +41,64 @@ export async function performRequest(url: string, method: string, headers: Recor
         throw error;
     }
 }
+
+/**
+ * A `fetch` implementation that routes through the background CORS proxy and
+ * reconstructs a standard `Response`.
+ *
+ * The sidebar runs in a cross-origin iframe and cannot fetch external APIs
+ * directly (see CLAUDE.md → "CORS proxy is mandatory"). The official Anthropic
+ * SDK does its own `fetch`, so we hand it this bridge via `new Anthropic({ fetch: proxyFetch })`.
+ * The background script performs the real request in `raw` mode and returns
+ * { status, statusText, headers, body }, which we turn back into a `Response`.
+ */
+export const proxyFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const reqObj = typeof input !== 'string' && !(input instanceof URL) ? (input as Request) : null;
+    const url = reqObj ? reqObj.url : input.toString();
+    const method = (init?.method || reqObj?.method || 'GET').toUpperCase();
+
+    // Normalize headers (Headers | array | record) to a plain object.
+    const headers: Record<string, string> = {};
+    const headerSource = init?.headers ?? (reqObj ? reqObj.headers : undefined);
+    if (headerSource) {
+        if (typeof (headerSource as any).forEach === 'function') {
+            // Headers-like (DOM Headers / undici Headers)
+            (headerSource as any).forEach((v: string, k: string) => { headers[k] = v; });
+        } else if (Array.isArray(headerSource)) {
+            for (const [k, v] of headerSource as [string, string][]) headers[k] = v;
+        } else {
+            Object.assign(headers, headerSource as Record<string, string>);
+        }
+    }
+    // Strip headers the background `fetch` is not allowed to set.
+    for (const k of Object.keys(headers)) {
+        const lk = k.toLowerCase();
+        if (lk === 'user-agent' || lk === 'content-length' || lk === 'connection' || lk === 'host') {
+            delete headers[k];
+        }
+    }
+
+    let body: string | null = null;
+    if (init?.body != null) {
+        body = typeof init.body === 'string' ? init.body : await new Response(init.body as BodyInit).text();
+    } else if (reqObj) {
+        body = (await reqObj.clone().text()) || null;
+    }
+
+    const res: any = await browser.runtime.sendMessage({
+        action: 'proxy_fetch',
+        payload: { url, method, headers, body, raw: true }
+    });
+
+    if (!res) throw new Error('No response from background script');
+    if (res.ok === false && res.status == null) {
+        // Network-level failure surfaced by the background script (no HTTP status).
+        throw new Error(res.error || 'Network error');
+    }
+
+    return new Response(res.body ?? '', {
+        status: res.status ?? 502,
+        statusText: res.statusText ?? '',
+        headers: res.headers ?? {}
+    });
+};

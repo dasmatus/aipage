@@ -6,7 +6,6 @@ import { WidgetsView } from './components/Widgets/WidgetsView';
 import { useChat } from './hooks/useChat';
 import { ProviderType, PageContentResponse } from './types';
 import * as Storage from './storage';
-import { performRequest } from './providers/utils';
 import { generateImage, ImageGenProvider } from './providers/imagegen';
 import { getProvider } from './providers';
 import { t, getCurrentLanguage, setLanguage as saveLanguage, LANGUAGE_NAMES } from './i18n';
@@ -22,19 +21,16 @@ type View = 'chat' | 'settings' | 'widgets';
 const App: React.FC = () => {
     // State
     const [view, setView] = useState<View>('chat');
-    const [provider, setProvider] = useState<ProviderType>('vercel');
+    const [provider, setProvider] = useState<ProviderType>('anthropic');
     const [, setApiKey] = useState<string | null>(null);
-    const { messages, isTyping, sendMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, updateLastMessageImage, setIsTyping } = useChat();
+    const { messages, isTyping, sendMessage, sendAgentMessage, handlePageContext, generatePromptFromAction, lastPageContext, addMessage, updateLastMessage, updateLastMessageImage, setIsTyping } = useChat();
     const [isScanning, setIsScanning] = useState(false);
     const [userInitials, setUserInitials] = useState<string>('U');
     const [language, setLanguage] = useState('sk');
-    const [exaEnabled, setExaEnabled] = useState(false);
-    const [searxngEnabled, setSearxngEnabled] = useState(false);
-    const [searxngUrl, setSearxngUrl] = useState('');
     const [imageGenEnabled, setImageGenEnabled] = useState(false);
-    const [imageGenProvider, setImageGenProvider] = useState<ImageGenProvider>('vercel');
+    const [imageGenProvider, setImageGenProvider] = useState<ImageGenProvider>('claude-svg');
     const [imageGenSdUrl, setImageGenSdUrl] = useState('http://localhost:7860');
-    const [imageGenModel, setImageGenModel] = useState('openai:dall-e-3');
+    const [imageGenModel, setImageGenModel] = useState('claude-opus-4-8');
     const [imageGenSize, setImageGenSize] = useState('1024x1024');
     const [autoAnswerEnabled, setAutoAnswerEnabled] = useState(false);
     const [isAutoAnswering, setIsAutoAnswering] = useState(false);
@@ -48,13 +44,10 @@ const App: React.FC = () => {
                 const p = await Storage.getProviderPreference();
                 setProvider(p);
 
-                const [k, lang, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns, theme] =
+                const [k, lang, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns, theme] =
                     await Promise.all([
                         Storage.getApiKey(p),
                         getCurrentLanguage(),
-                        Storage.getExaEnabled(),
-                        Storage.getSearXNGEnabled(),
-                        Storage.getSearXNGUrl(),
                         Storage.getImageGenEnabled(),
                         Storage.getImageGenProvider(),
                         Storage.getImageGenSdUrl(),
@@ -66,9 +59,6 @@ const App: React.FC = () => {
 
                 setApiKey(k);
                 setLanguage(lang);
-                setExaEnabled(exaEn);
-                setSearxngEnabled(sEn);
-                setSearxngUrl(sUrl);
                 setImageGenEnabled(imgEn);
                 setImageGenProvider(imgProv);
                 setImageGenSdUrl(imgSdUrl);
@@ -101,7 +91,16 @@ const App: React.FC = () => {
 
     const handleSend = async (text: string) => {
         const currentKey = await Storage.getApiKey(provider);
-        const options = (provider === 'lmstudio' || provider === 'ollama' || provider === 'vercel')
+
+        // Claude runs as an agent (Managed Agents) that can call the extension's
+        // tools on its own. Local providers use the plain request/response path.
+        if (provider === 'anthropic') {
+            const options = await Storage.getLocalSettings(provider);
+            await sendAgentMessage(text, currentKey || '', options.model || undefined);
+            return;
+        }
+
+        const options = (provider === 'lmstudio' || provider === 'ollama')
             ? await Storage.getLocalSettings(provider)
             : undefined;
 
@@ -134,85 +133,40 @@ const App: React.FC = () => {
         addMessage('ai', 'Searching the web...');
 
         try {
-            let searchResults = [];
-            let source = 'DuckDuckGo';
+            const currentKey = await Storage.getApiKey(provider);
+            const options = await Storage.getLocalSettings(provider);
+            const aiProvider = getProvider(provider);
 
-            // SearXNG takes priority if enabled
-            if (searxngEnabled && searxngUrl) {
-                source = 'SearXNG';
-                try {
-                    const searchUrlEncoded = encodeURIComponent(query.trim());
-                    const data = await performRequest(
-                        `${searxngUrl.replace(/\/$/, '')}/search?q=${searchUrlEncoded}&format=json`,
-                        'GET',
-                        { 'Accept': 'application/json' }
-                    );
-                    if (data?.results?.length) {
-                        searchResults = data.results.slice(0, 5).map((r: any) => ({
-                            title: r.title || 'Untitled',
-                            snippet: r.content || '',
-                            url: r.url
-                        }));
-                    }
-                } catch (e) {
-                    console.warn('SearXNG search failed, falling back', e);
-                    source = 'DuckDuckGo';
-                }
+            // Claude can search the web natively — let it search and answer in one shot.
+            if (aiProvider.webSearch) {
+                let answer = '';
+                await aiProvider.webSearch(
+                    query.trim(),
+                    currentKey || '',
+                    { baseUrl: options.url, modelName: options.model },
+                    (chunk) => { answer = chunk; updateLastMessage(chunk); }
+                );
+                updateLastMessage(answer || 'No results found.');
+                setIsTyping(false);
+                return;
             }
 
-            // Check for Exa key if using Vercel (and SearXNG not used)
-            if (searchResults.length === 0 && provider === 'vercel') {
-                const exaEnabled = await Storage.getExaEnabled();
-                const exaKey = await Storage.getExaApiKey();
-
-                if (exaEnabled && exaKey) {
-                    source = 'Exa.ai';
-                    try {
-                        const data = await performRequest('https://api.exa.ai/search', 'POST', {
-                            'x-api-key': exaKey,
-                            'Content-Type': 'application/json'
-                        }, JSON.stringify({
-                            query: query.trim(),
-                            numResults: 5,
-                            useAutoprompt: true
-                        }));
-
-                        if (data && data.results) {
-                            searchResults = data.results.map((r: any) => ({
-                                title: r.title || 'Untitled',
-                                snippet: r.text || r.snippet || '',
-                                url: r.url
-                            }));
-                        }
-                    } catch (e) {
-                        console.warn('Exa search failed, falling back to DuckDuckGo', e);
-                    }
-                }
-            }
-
-            // Fallback to DuckDuckGo
-            if (searchResults.length === 0) {
-                const response: any = await browser.runtime.sendMessage({
-                    action: 'search_web',
-                    payload: { query: query.trim() }
-                });
-                if (response.ok && response.results) {
-                    searchResults = response.results;
-                }
-            }
+            // Local providers (no native search): fall back to DuckDuckGo, then summarize.
+            const response: any = await browser.runtime.sendMessage({
+                action: 'search_web',
+                payload: { query: query.trim() }
+            });
+            const searchResults = (response?.ok && response.results) ? response.results : [];
 
             if (searchResults.length > 0) {
                 const formattedResults = searchResults.map((r: any, i: number) =>
                     `${i + 1}. **${r.title}**\n   ${r.snippet}\n   Source: ${r.url}`
                 ).join('\n\n');
 
-                updateLastMessage(`Found ${searchResults.length} results via ${source}. Analyzing...`);
+                updateLastMessage(`Found ${searchResults.length} results via DuckDuckGo. Analyzing...`);
 
                 const languageName = LANGUAGE_NAMES[language] || 'Slovak';
-                const searchPrompt = `Based on these web search results for "${query}" (Source: ${source}):\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
-
-                const currentKey = await Storage.getApiKey(provider);
-                const options = await Storage.getLocalSettings(provider);
+                const searchPrompt = `Based on these web search results for "${query}":\n\n${formattedResults}\n\nPlease provide a comprehensive answer in ${languageName} based on these search results.`;
 
                 await sendMessage(searchPrompt, provider, currentKey, { baseUrl: options.url, modelName: options.model });
             } else {
@@ -327,12 +281,9 @@ const App: React.FC = () => {
     };
 
     const handleSettingsClose = async () => {
-        const [k, exaEn, sEn, sUrl, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns] =
+        const [k, imgEn, imgProv, imgSdUrl, imgModel, imgSize, autoAns] =
             await Promise.all([
                 Storage.getApiKey(provider),
-                Storage.getExaEnabled(),
-                Storage.getSearXNGEnabled(),
-                Storage.getSearXNGUrl(),
                 Storage.getImageGenEnabled(),
                 Storage.getImageGenProvider(),
                 Storage.getImageGenSdUrl(),
@@ -341,9 +292,6 @@ const App: React.FC = () => {
                 Storage.getAutoAnswerEnabled(),
             ]);
         setApiKey(k);
-        setExaEnabled(exaEn);
-        setSearxngEnabled(sEn);
-        setSearxngUrl(sUrl);
         setImageGenEnabled(imgEn);
         setImageGenProvider(imgProv);
         setImageGenSdUrl(imgSdUrl);
@@ -363,20 +311,29 @@ const App: React.FC = () => {
     const isSecondaryView = view === 'settings' || view === 'widgets';
 
     return (
-        <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
+        <div
+            className="flex flex-col h-screen text-foreground overflow-hidden font-sans selection:bg-primary/30"
+            style={{ background: 'var(--bg-color)' }}
+        >
             {/* Header */}
-            <header className="flex items-center justify-between px-4 h-12 border-b bg-card/50 backdrop-blur-md z-50 shrink-0">
+            <header
+                className="flex items-center justify-between px-4 border-b backdrop-blur-md z-50 shrink-0"
+                style={{ height: 'var(--header-height)', background: 'var(--header-bg)', borderColor: 'var(--border-color)' }}
+            >
                  <div className="flex items-center gap-2">
                     {isSecondaryView ? (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setView('chat')}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setView('chat')}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
                     ) : (
-                        <div className="bg-primary/10 p-1.5 rounded-lg border border-primary/20">
-                            <MessageCircle className="h-4 w-4 text-primary" />
+                        <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: 'var(--avatar-ai-bg)' }}
+                        >
+                            <MessageCircle className="h-3.5 w-3.5 text-white" />
                         </div>
                     )}
-                    <span className="font-bold text-sm tracking-tight">
+                    <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--text-color)' }}>
                         {view === 'settings' ? t('settings', language) : view === 'widgets' ? t('widgets', language) : t('chat', language)}
                     </span>
                  </div>
@@ -387,7 +344,7 @@ const App: React.FC = () => {
                              <Button
                                  variant="ghost"
                                  size="icon"
-                                 className={cn("h-8 w-8 rounded-full text-muted-foreground hover:text-primary", isAutoAnswering && "animate-pulse text-primary")}
+                                 className={cn("h-8 w-8 rounded-lg text-muted-foreground hover:text-primary", isAutoAnswering && "animate-pulse text-primary")}
                                  title="Auto-answer current question"
                                  onClick={handleAutoAnswer}
                                  disabled={isTyping || isAutoAnswering}
@@ -398,13 +355,13 @@ const App: React.FC = () => {
                          <Button
                              variant="ghost"
                              size="icon"
-                             className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                             className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                              onClick={() => setView('widgets')}
                              title="Widgets"
                          >
                              <LayoutGrid className="h-4 w-4" />
                          </Button>
-                         <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
+                         <Button id="settings-btn" variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={() => setView('settings')}>
                              <Settings className="h-4 w-4" />
                          </Button>
                      </div>
@@ -431,13 +388,12 @@ const App: React.FC = () => {
                         disabled={isTyping}
                         isScanning={isScanning}
                         language={language}
-                        exaEnabled={exaEnabled}
                         imageGenEnabled={imageGenEnabled}
                     />
                 </div>
 
                 <div className={cn(
-                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    "flex-1 transition-all duration-500 absolute inset-0",
                     view === 'settings' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
                     <SettingsView
@@ -450,7 +406,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className={cn(
-                    "flex-1 transition-all duration-500 absolute inset-0 bg-background",
+                    "flex-1 transition-all duration-500 absolute inset-0",
                     view === 'widgets' ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none hidden"
                 )}>
                     <WidgetsView />

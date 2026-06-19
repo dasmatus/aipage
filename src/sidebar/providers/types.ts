@@ -2,7 +2,7 @@
  * AI Provider Types
  */
 
-export type ProviderType = 'vercel' | 'lmstudio' | 'ollama';
+export type ProviderType = 'anthropic' | 'lmstudio' | 'ollama';
 
 export const SYSTEM_PROMPT = "You are a helpful assistant that answers questions correctly.";
 
@@ -34,4 +34,16 @@ export interface AIProvider {
      * @param options Base URL override
      */
     getModels?(apiKey: string, options?: { baseUrl?: string, type?: 'chat' | 'image' }): Promise<any[]>;
+
+    /**
+     * Optional native web search. Implemented only by providers whose model can
+     * search the web itself (Claude's server-side web_search tool). Searches and
+     * answers in one call; returns the answer text.
+     */
+    webSearch?(
+        query: string,
+        apiKey: string,
+        options?: { baseUrl?: string, modelName?: string },
+        onProgress?: (chunk: string) => void
+    ): Promise<string>;
 }

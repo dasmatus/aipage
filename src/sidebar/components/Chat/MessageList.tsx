@@ -19,7 +19,6 @@ marked.setOptions({
     breaks: true
 });
 
-// Defined outside MessageList so the component type is stable across renders
 const MarkdownContent = ({ content, role }: { content: string, role: 'user' | 'ai' }) => {
     const [html, setHtml] = useState(content);
 
@@ -30,13 +29,12 @@ const MarkdownContent = ({ content, role }: { content: string, role: 'user' | 'a
     return (
         <div
             className={cn(
-                "prose prose-sm max-w-none dark:prose-invert break-words",
-                "text-sm leading-relaxed",
-                role === 'user' ? "text-primary-foreground" : "text-foreground",
+                "prose prose-sm max-w-none break-words",
+                "text-[13px] leading-relaxed",
                 "[&_p]:mb-2 [&_p:last-child]:mb-0",
                 "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
-                "[&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_code]:font-mono",
-                "[&_pre]:bg-muted [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2"
+                "[&_code]:bg-black/10 [&_code]:px-1 [&_code]:rounded [&_code]:font-mono",
+                "[&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:mb-2 [&_pre]:text-[12px]"
             )}
             dangerouslySetInnerHTML={{ __html: html }}
         />
@@ -51,57 +49,70 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClic
     }, [messages]);
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scroll-smooth" id="chat-history">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth" id="chat-history">
             {messages.map((msg) => (
                 <div key={msg.id} className={cn(
-                    "flex gap-3 max-w-[90%] animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    "flex gap-2.5 max-w-[92%] animate-in fade-in slide-in-from-bottom-2 duration-200",
                     msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
                 )}>
-                    <div 
-                        className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                            msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted text-foreground border border-border"
-                        )}
+                    {/* Avatar */}
+                    <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: msg.role === 'user' ? 'var(--avatar-user-bg)' : 'var(--avatar-ai-bg)' }}
                         aria-label={msg.role === 'user' ? t('user', language) : t('ai', language)}
                         data-testid={`avatar-${msg.role}`}
                     >
                         {msg.role === 'user' ? (
-                            userInitials ? <span className="text-[10px] font-bold">{userInitials}</span> : <User className="w-4 h-4" />
+                            userInitials
+                                ? <span className="text-[10px] font-bold text-white">{userInitials}</span>
+                                : <User className="w-3.5 h-3.5 text-white" />
                         ) : (
-                            <Bot className="w-4 h-4" aria-hidden="true" />
+                            <Bot className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                         )}
                     </div>
-                    
-                    <div className="flex flex-col gap-2 min-w-0">
-                        <div className={cn(
-                            "px-4 py-3 rounded-2xl shadow-sm border",
-                            msg.role === 'user'
-                                ? "bg-primary text-primary-foreground border-primary/20 rounded-tr-none"
-                                : "bg-card text-foreground border-border rounded-tl-none"
-                        )}>
+
+                    {/* Bubble + actions */}
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                        <div
+                            className={cn(
+                                "px-3.5 py-2.5 shadow-sm border text-sm leading-relaxed",
+                                msg.role === 'user'
+                                    ? "rounded-[16px_16px_4px_16px] text-white"
+                                    : "rounded-[16px_16px_16px_4px]"
+                            )}
+                            style={{
+                                background: msg.role === 'user'
+                                    ? 'var(--message-user-bg)'
+                                    : 'var(--message-ai-bg)',
+                                borderColor: 'var(--border-color)',
+                                backdropFilter: msg.role === 'ai' ? 'var(--backdrop-blur)' : undefined,
+                                color: msg.role === 'ai' ? 'var(--text-color)' : undefined,
+                            }}
+                        >
                             <MarkdownContent content={msg.content} role={msg.role} />
                             {msg.imageUrl && (
                                 <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
                                     <img
                                         src={msg.imageUrl}
                                         alt={msg.content}
-                                        className="rounded-lg max-w-full max-h-64 object-contain border border-border/30 hover:opacity-90 transition-opacity"
+                                        className="rounded-xl max-w-full max-h-64 object-contain border border-border/30 hover:opacity-90 transition-opacity"
                                     />
                                 </a>
                             )}
                         </div>
-                        
+
                         {msg.actions && (
-                            <div className="flex flex-wrap gap-2 mt-1 px-1">
+                            <div className="flex flex-wrap gap-1.5 mt-0.5 px-1">
                                 {msg.actions.map((act, idx) => (
                                     <Button
                                         key={idx}
                                         variant={act.primary ? "default" : "outline"}
                                         size="sm"
                                         className={cn(
-                                            "h-7 text-[10px] font-bold py-1",
-                                            act.primary && "shadow-lg shadow-primary/20"
+                                            "h-7 text-[11px] font-semibold py-1 rounded-full cursor-pointer",
+                                            act.primary && "shadow-md"
                                         )}
+                                        style={act.primary ? { background: 'var(--message-user-bg)', color: 'white', borderColor: 'transparent' } : undefined}
                                         onClick={() => onActionClick?.(act.action)}
                                         disabled={disableActions}
                                     >
@@ -114,7 +125,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, onActionClic
                     </div>
                 </div>
             ))}
-            <div ref={bottomRef} className="h-4" />
+            <div ref={bottomRef} className="h-3" />
         </div>
     );
 };
