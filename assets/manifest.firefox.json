@@ -1,0 +1,54 @@
+{
+  "manifest_version": 2,
+  "name": "AIPage",
+  "version": "1.7.0",
+  "description": "AIPage for the rest of us with some neat features.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "*://*.edupage.org/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://gitlab.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.duckduckgo.com/*",
+    "downloads",
+    "alarms",
+    "notifications"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://*.edupage.org https://gitlab.com https://api.duckduckgo.com",
+  "background": {
+    "scripts": ["background.js", "background_loader.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.edupage.org/*"
+      ],
+      "js": [
+        "content.js",
+        "content_loader.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    "sidebar.html",
+    "sidebar.css",
+    "tailwind.css",
+    "sidebar.js",
+    "sidebar_loader.js",
+    "sidebar_bg.wasm",
+    "content_bg.wasm",
+    "anti_cheat.js"
+  ],
+  "browser_action": {
+    "default_title": "Open AI Sidebar"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "edupage-ai-sidebar@hesburger.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}

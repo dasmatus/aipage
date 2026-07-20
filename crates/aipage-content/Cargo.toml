@@ -1,0 +1,47 @@
+[package]
+name = "aipage-content"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+aipage-bindings = { workspace = true }
+aipage-core = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+gloo-events = { workspace = true }
+console_error_panic_hook = { workspace = true }
+
+[dependencies.web-sys]
+workspace = true
+features = [
+    "console",
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlIFrameElement",
+    "HtmlDivElement",
+    "HtmlStyleElement",
+    "HtmlScriptElement",
+    "HtmlHeadElement",
+    "Node",
+    "NodeList",
+    "CssStyleDeclaration",
+    "Event",
+    "EventInit",
+    "EventTarget",
+    "MouseEvent",
+    "Selection",
+    "MutationObserver",
+    "MutationObserverInit",
+    "Location",
+    "DomTokenList",
+]
