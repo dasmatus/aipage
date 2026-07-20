@@ -16,7 +16,7 @@ This guide will help you get started with setting up the project, understanding 
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://gitlab.com/TenTypekMatus/aipage.git
+    git clone https://codeberg.org/dasmatus/aipage.git
     cd aipage/extension
     ```
 
@@ -98,6 +98,6 @@ We use **MDBook** for documentation.
 
 ## 🐛 Reporting Issues
 
-If you find a bug or have a feature request, please open an issue on our [GitLab Issue Tracker](https://gitlab.com/TenTypekMatus/aipage/-/issues). Provide as much detail as possible, including steps to reproduce the issue.
+If you find a bug or have a feature request, please open an issue on our [Codeberg Issue Tracker](https://codeberg.org/dasmatus/aipage/issues). Provide as much detail as possible, including steps to reproduce the issue.
 
 Thank you for contributing!

@@ -8,9 +8,9 @@
 
 # Development
 
-- [Contributing Guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/contributing.md?ref_type=heads)
+- [Contributing Guide](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/contributing.md)
 
 # Reference
 
-- [Changelog](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/changelog.md?ref_type=heads)
+- [Changelog](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/changelog.md)
 - [API Reference](api-reference.md)

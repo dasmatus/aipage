@@ -1,33 +1,41 @@
 #!/usr/bin/env bun
 /**
- * Creates a GitLab Release for the current tag:
- *   1. Extracts the changelog section from book/src/changelog.md
- *   2. Uploads built packages to the GitLab Generic Packages Registry
- *   3. Creates the GitLab Release with the changelog as description
- *   4. Attaches download links for Chrome/Firefox/Safari packages
+ * Creates a Forgejo (Codeberg) Release for the current tag and attaches the
+ * built browser artifacts as downloadable release assets. Replaces the old
+ * GitLab package-registry + asset-links flow with Forgejo's native release
+ * assets (uploaded directly to the release).
  *
- * Required env vars (all set automatically in GitLab CI except GITLAB_BOT_TOKEN):
- *   GITLAB_BOT_TOKEN  – personal access token with `api` scope
- *   CI_COMMIT_TAG     – e.g. "v1.8.0"
- *   CI_PROJECT_ID
- *   CI_API_V4_URL
- *   CI_PROJECT_PATH   – e.g. "TenTypekMatus/aipage"
+ *   1. Extracts the changelog section from book/src/changelog.md
+ *   2. Creates the Forgejo Release (or updates its description if it exists)
+ *   3. Uploads aipage-chrome.zip / aipage-firefox.xpi / aipage-safari.zip as
+ *      release assets, so the extension's update-checker can fetch
+ *      /releases/latest and download the matching asset.
+ *
+ * Required env vars (set by the Forgejo Actions release workflow):
+ *   FORGEJO_API   – e.g. "https://codeberg.org/api/v1"   (default below)
+ *   REPOSITORY    – "owner/repo", e.g. "dasmatus/aipage"
+ *   TAG           – e.g. "v1.8.0"  (github.ref_name)
+ *   TOKEN         – the GITHUB_TOKEN (or a bot token) with `contents: write`
  */
 
 import fs from 'fs';
 import path from 'path';
 
-const GITLAB_API = process.env.CI_API_V4_URL ?? 'https://gitlab.com/api/v4';
-const PROJECT_ID = process.env.CI_PROJECT_ID;
-const TOKEN      = process.env.GITLAB_BOT_TOKEN;
-const TAG        = process.env.CI_COMMIT_TAG;
-const PROJECT    = process.env.CI_PROJECT_PATH ?? '';
+const API_BASE = process.env.FORGEJO_API ?? 'https://codeberg.org/api/v1';
+const REPO     = process.env.REPOSITORY ?? '';
+const TAG      = process.env.TAG ?? '';
+const TOKEN    = process.env.TOKEN ?? '';
+const WEB_BASE = process.env.FORGEJO_WEB ?? 'https://codeberg.org';
 
-for (const [k, v] of Object.entries({ PROJECT_ID, TOKEN, TAG })) {
+for (const [k, v] of Object.entries({ REPOSITORY: REPO, TAG, TOKEN })) {
     if (!v) { console.error(`Missing required env var: ${k}`); process.exit(1); }
 }
 
 const VERSION = TAG.replace(/^v/, ''); // "1.8.0"
+
+function authHeaders(extra = {}) {
+    return { Authorization: `token ${TOKEN}`, ...extra };
+}
 
 // ── 1. Extract changelog section ──────────────────────────────────────────────
 
@@ -53,84 +61,67 @@ function extractChangelogSection(version) {
 const releaseNotes = extractChangelogSection(VERSION);
 console.log(`Changelog section: ${releaseNotes.length} chars`);
 
-// ── 2. Upload packages to Generic Packages Registry ───────────────────────────
+// ── 2. Create (or fetch existing) Forgejo Release ──────────────────────────────
 
-async function upload(localPath, remoteFilename) {
-    if (!fs.existsSync(localPath)) throw new Error(`Package not found: ${localPath}`);
-    console.log(`Uploading ${localPath} → ${remoteFilename} …`);
-    const body = fs.readFileSync(localPath);
-    const url = `${GITLAB_API}/projects/${PROJECT_ID}/packages/generic/aipage/${VERSION}/${remoteFilename}`;
-    const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'PRIVATE-TOKEN': TOKEN, 'Content-Type': 'application/octet-stream' },
-        body,
-    });
-    if (!res.ok) throw new Error(`Upload of ${remoteFilename} failed (${res.status}): ${await res.text()}`);
-    console.log(`  ✅ ${remoteFilename}`);
-    return url;
-}
+const releaseBody = {
+    tag_name: TAG,
+    name:     `AIPage ${TAG}`,
+    body:     releaseNotes || `Release ${TAG}`,
+};
 
-// Firefox XPI has a generated filename; find it before uploading
-const xpiFiles = fs.readdirSync('packages').filter(f => f.endsWith('.xpi'));
-if (xpiFiles.length === 0) throw new Error('No .xpi file found in packages/');
-
-const [chromeUrl, safariUrl, firefoxUrl] = await Promise.all([
-    upload('aipage-chrome.zip', 'aipage-chrome.zip'),
-    upload('aipage-safari.zip', 'aipage-safari.zip'),
-    upload(path.join('packages', xpiFiles[0]), 'aipage-firefox.xpi'),
-]);
-
-// ── 3. Create (or update) the GitLab Release ──────────────────────────────────
-
-console.log(`\nCreating GitLab Release ${TAG} …`);
-
-async function glFetch(method, path, body) {
-    const res = await fetch(`${GITLAB_API}${path}`, {
+async function apiFetch(method, urlPath, { json, body, headers } = {}) {
+    const res = await fetch(`${API_BASE}${urlPath}`, {
         method,
-        headers: { 'PRIVATE-TOKEN': TOKEN, 'Content-Type': 'application/json' },
-        body: body ? JSON.stringify(body) : undefined,
+        headers: authHeaders(json || body ? { 'Content-Type': 'application/json', ...(headers ?? {}) } : (headers ?? {})),
+        body: json ? JSON.stringify(json) : body,
     });
     return { ok: res.ok, status: res.status, text: await res.text() };
 }
 
-const releaseBody = {
-    tag_name:    TAG,
-    name:        `AIPage ${TAG}`,
-    description: releaseNotes || `Release ${TAG}`,
-};
+console.log(`\nCreating Forgejo Release ${TAG} …`);
+let releaseId;
+let r = await apiFetch('POST', `/repos/${REPO}/releases`, { json: releaseBody });
 
-let r = await glFetch('POST', `/projects/${PROJECT_ID}/releases`, releaseBody);
-
-if (!r.ok) {
-    if (r.status === 409) {
-        // Already exists — update description
-        console.log('Release already exists, updating description …');
-        r = await glFetch('PUT', `/projects/${PROJECT_ID}/releases/${encodeURIComponent(TAG)}`, {
-            name:        releaseBody.name,
-            description: releaseBody.description,
-        });
-        if (!r.ok) throw new Error(`Release update failed (${r.status}): ${r.text}`);
-    } else {
-        throw new Error(`Release creation failed (${r.status}): ${r.text}`);
-    }
+if (r.ok) {
+    releaseId = JSON.parse(r.text).id;
+} else if (r.status === 409) {
+    // Release already exists — look it up by tag and update the description.
+    console.log('Release already exists, fetching + updating description …');
+    const g = await apiFetch('GET', `/repos/${REPO}/releases/tags/${encodeURIComponent(TAG)}`);
+    if (!g.ok) throw new Error(`Could not fetch existing release (${g.status}): ${g.text}`);
+    releaseId = JSON.parse(g.text).id;
+    const u = await apiFetch('PATCH', `/repos/${REPO}/releases/${releaseId}`, {
+        json: { name: releaseBody.name, body: releaseBody.body },
+    });
+    if (!u.ok) throw new Error(`Release update failed (${u.status}): ${u.text}`);
+} else {
+    throw new Error(`Release creation failed (${r.status}): ${r.text}`);
 }
+console.log(`  ✅ release id ${releaseId}`);
 
-// ── 4. Attach asset links ─────────────────────────────────────────────────────
+// ── 3. Upload assets as release attachments ───────────────────────────────────
 
-async function addLink(name, url) {
-    const r = await glFetch(
-        'POST',
-        `/projects/${PROJECT_ID}/releases/${encodeURIComponent(TAG)}/assets/links`,
-        { name, url, link_type: 'package' },
+// Forgejo upload endpoint expects multipart/form-data with an `attachment` field.
+async function uploadAsset(localPath, assetName) {
+    if (!fs.existsSync(localPath)) throw new Error(`Asset not found: ${localPath}`);
+    const bytes = fs.readFileSync(localPath);
+    console.log(`Uploading ${localPath} → ${assetName} …`);
+    const form = new FormData();
+    form.append('attachment', new Blob([bytes]), assetName);
+    const res = await fetch(
+        `${API_BASE}/repos/${REPO}/releases/${releaseId}/assets?name=${encodeURIComponent(assetName)}`,
+        { method: 'POST', headers: authHeaders(), body: form },
     );
-    if (!r.ok) console.warn(`  ⚠️  Link '${name}' failed (${r.status}): ${r.text}`);
-    else        console.log(`  ✅ Link: ${name}`);
+    if (!res.ok) throw new Error(`Upload of ${assetName} failed (${res.status}): ${await res.text()}`);
+    console.log(`  ✅ ${assetName}`);
 }
 
-await Promise.all([
-    addLink('Chrome Extension (.zip)',  chromeUrl),
-    addLink('Firefox Extension (.xpi)', firefoxUrl),
-    addLink('Safari Extension (.zip)',  safariUrl),
-]);
+// Firefox XPI has a generated filename; find it before uploading.
+const xpiFiles = fs.readdirSync('packages').filter((f) => f.endsWith('.xpi'));
+if (xpiFiles.length === 0) throw new Error('No .xpi file found in packages/');
 
-console.log(`\n🎉 Done: https://gitlab.com/${PROJECT}/-/releases/${TAG}`);
+await uploadAsset('aipage-chrome.zip', 'aipage-chrome.zip');
+await uploadAsset('aipage-safari.zip', 'aipage-safari.zip');
+await uploadAsset(path.join('packages', xpiFiles[0]), 'aipage-firefox.xpi');
+
+console.log(`\n🎉 Done: ${WEB_BASE}/${REPO}/releases/tag/${TAG}`);

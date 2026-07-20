@@ -1,7 +1,11 @@
 //! Auto-update manager. Mirrors `src/update-manager.ts`.
 //!
-//! Periodically checks GitLab for a newer `package.json` version and, if found,
-//! shows a notification that downloads the right browser artifact on click.
+//! Periodically checks the Codeberg (Forgejo) repository for a newer **release**
+//! and, if found, shows a notification that downloads the matching browser
+//! asset on click. Maps the old GitLab CI-artifact flow onto Forgejo Releases:
+//! the version is read from the latest release's `tag_name`, and the download
+//! is the release asset whose name matches the current browser
+//! (`aipage-chrome.zip` / `aipage-firefox.xpi` / `aipage-safari.zip`).
 
 use std::cell::RefCell;
 
@@ -13,8 +17,12 @@ use aipage_bindings::{alarms, downloads, notifications, storage};
 
 const UPDATE_CHECK_ALARM: &str = "check_updates";
 const CHECK_INTERVAL_MINUTES: f64 = 60.0;
-const GITLAB_PROJECT_PATH: &str = "TenTypekMatus/aipage";
-const GITLAB_API_BASE: &str = "https://gitlab.com";
+/// Forgejo web base, used for logging the release URL.
+const FORGEJO_BASE: &str = "https://codeberg.org";
+/// Forgejo REST API base.
+const API_BASE: &str = "https://codeberg.org/api/v1";
+/// `owner/repo` of the published extension.
+const REPO: &str = "dasmatus/aipage";
 
 thread_local! {
     /// Version offered by the most recent "update available" notification.
@@ -69,19 +77,38 @@ fn browser_type() -> BrowserType {
     }
 }
 
-/// Download URL for the latest artifact for the current browser.
-fn artifact_url() -> String {
-    match browser_type() {
-        BrowserType::Firefox => format!(
-            "{GITLAB_API_BASE}/{GITLAB_PROJECT_PATH}/-/artifacts/main/download?job=package:firefox"
-        ),
-        BrowserType::Safari => format!(
-            "{GITLAB_API_BASE}/{GITLAB_PROJECT_PATH}/-/artifacts/main/raw/aipage-safari.zip?job=package:safari"
-        ),
-        BrowserType::Chrome => format!(
-            "{GITLAB_API_BASE}/{GITLAB_PROJECT_PATH}/-/artifacts/main/raw/aipage-chrome.zip?job=package:chrome"
-        ),
+/// Substring matched (case-insensitively) against a release asset's filename
+/// to pick the right build for the current browser.
+fn asset_name_fragment(b: BrowserType) -> &'static str {
+    match b {
+        BrowserType::Chrome => "chrome",
+        BrowserType::Firefox => "firefox",
+        BrowserType::Safari => "safari",
     }
+}
+
+/// Fetch the latest Forgejo release (`GET /repos/{owner}/{repo}/releases/latest`).
+async fn latest_release() -> Result<Value, String> {
+    crate::fetch_json(&format!("{API_BASE}/repos/{REPO}/releases/latest")).await
+}
+
+/// Find the download URL + filename of the asset matching the current browser
+/// in the given release object.
+fn matching_asset(release: &Value) -> Option<(String, String)> {
+    let target = asset_name_fragment(browser_type());
+    release
+        .get("assets")
+        .and_then(Value::as_array)?
+        .iter()
+        .find_map(|a| {
+            let name = a.get("name").and_then(Value::as_str).unwrap_or("");
+            if name.to_lowercase().contains(target) {
+                let url = a.get("browser_download_url").and_then(Value::as_str)?;
+                Some((url.to_string(), name.to_string()))
+            } else {
+                None
+            }
+        })
 }
 
 fn current_version() -> String {
@@ -122,34 +149,54 @@ fn notify(id: &str, title: &str, message: &str, with_buttons: bool) {
 }
 
 fn trigger_download() {
-    let version = PENDING_VERSION.with(|p| p.borrow().clone()).unwrap_or_default();
-    let opts = crate::obj(&[
-        ("url", JsValue::from_str(&artifact_url())),
-        ("filename", JsValue::from_str(&format!("aipage-update-{version}.zip"))),
-    ]);
     wasm_bindgen_futures::spawn_local(async move {
+        let release = match latest_release().await {
+            Ok(v) => v,
+            Err(e) => {
+                aipage_bindings::console::error(format!("Update download failed: {e}"));
+                notifications::clear("update-available");
+                return;
+            }
+        };
+        let (url, filename) = match matching_asset(&release) {
+            Some(pair) => pair,
+            None => {
+                let target = asset_name_fragment(browser_type());
+                aipage_bindings::console::error(format!(
+                    "No {target} asset in latest release; open {FORGEJO_BASE}/{REPO}/releases to download manually"
+                ));
+                notifications::clear("update-available");
+                return;
+            }
+        };
+        let opts = crate::obj(&[
+            ("url", JsValue::from_str(&url)),
+            ("filename", JsValue::from_str(&filename)),
+        ]);
         let _ = downloads::download(&opts).await;
+        notifications::clear("update-available");
     });
-    notifications::clear("update-available");
 }
 
-/// Check GitLab for a newer version. `manual` forces a notification either way.
+/// Check the Forgejo repo for a newer release. `manual` forces a notification
+/// either way. A 404 (no published release yet) is treated as "nothing to update
+/// to" rather than an error.
 pub(crate) async fn check_updates(manual: bool) {
     if !manual && !auto_update_enabled().await {
         return;
     }
 
-    let manifest_url =
-        format!("{GITLAB_API_BASE}/{GITLAB_PROJECT_PATH}/-/raw/main/extension/package.json");
-    let remote = match crate::fetch_json(&manifest_url).await {
+    let release = match latest_release().await {
         Ok(v) => v,
         Err(e) => {
-            aipage_bindings::console::error(format!("Update check failed: {e}"));
+            if !e.contains("404") {
+                aipage_bindings::console::error(format!("Update check failed: {e}"));
+            }
             if manual {
                 notify(
-                    "update-error",
-                    "Update check failed",
-                    "Could not check for updates. Check internet connection.",
+                    "no-update",
+                    "AIPage is up to date",
+                    "No published release was found to update to.",
                     false,
                 );
             }
@@ -157,7 +204,8 @@ pub(crate) async fn check_updates(manual: bool) {
         }
     };
 
-    let remote_version = remote.get("version").and_then(Value::as_str).unwrap_or("").to_string();
+    let tag = release.get("tag_name").and_then(Value::as_str).unwrap_or("").to_string();
+    let remote_version = tag.trim_start_matches('v').to_string();
     let current = current_version();
 
     if compare_versions(&remote_version, &current) > 0 {

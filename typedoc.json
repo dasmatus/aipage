@@ -10,7 +10,7 @@
   "name": "AIPage API",
   "navigationLinks": {
     "Documentation": "../index.html",
-    "GitLab": "https://gitlab.com/TenTypekMatus/aipage"
+    "Codeberg": "https://codeberg.org/dasmatus/aipage"
   },
   "customCss": "./docs/typedoc-theme.css",
   "sort": ["source-order"],
