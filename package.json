@@ -5,7 +5,7 @@
     "description": "AI Sidebar for EduPage (Rust/WASM extension)",
     "repository": {
         "type": "git",
-        "url": "https://gitlab.com/TenTypekMatus/aipage.git"
+        "url": "https://codeberg.org/dasmatus/aipage.git"
     },
     "scripts": {
         "build": "cargo run -p xtask -- build --target chrome",
@@ -13,8 +13,9 @@
         "build:firefox": "cargo run -p xtask -- build --target firefox",
         "build:safari": "cargo run -p xtask -- build --target safari",
         "build:all": "cargo run -p xtask -- build-all",
-        "package:chrome": "cd dist-chrome && zip -r ../edupage-ai-sidebar-chrome.zip .",
+        "package:chrome": "cd dist-chrome && zip -r ../aipage-chrome.zip .",
         "package:firefox": "bunx web-ext build -s dist-firefox -a packages",
+        "package:safari": "cd dist-safari && zip -r ../aipage-safari.zip .",
         "lint": "cargo clippy --workspace --all-targets",
         "test": "cargo test --workspace",
         "test:e2e": "env -u LD_PRELOAD playwright test",

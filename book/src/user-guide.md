@@ -15,15 +15,14 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 
 ## Installation
 
-To install the extension, download the latest build artifacts directly from our GitLab CI pipelines.
+To install the extension, download the latest build directly from our Codeberg Releases (every pushed `v*` tag triggers the Forgejo Actions release workflow, which builds all three targets and attaches them as release assets).
 
-1.  Visit the [GitLab Pipelines](https://gitlab.com/TenTypekMatus/aipage/-/pipelines) page.
-2.  Locate the latest successful pipeline for the `main` branch (status: Passed).
-3.  Click the **Download artifacts** icon (or access the pipeline details).
-4.  Download the artifact for your specific browser job:
-    - **Chrome**: Look for the `package:chrome` job artifact (contains `aipage-chrome.zip`).
-    - **Firefox**: Look for the `package:firefox` job artifact (contains `.xpi` file).
-    - **Safari**: Look for the `package:safari` job artifact (contains `aipage-safari.zip`).
+1.  Visit the [Codeberg Releases](https://codeberg.org/dasmatus/aipage/releases) page.
+2.  Open the latest release.
+3.  Download the asset for your browser:
+    - **Chrome**: `aipage-chrome.zip`
+    - **Firefox**: `aipage-firefox.xpi`
+    - **Safari**: `aipage-safari.zip`
 
 ### Chrome
 
@@ -203,12 +202,12 @@ bun run package:firefox
 
 ### CI/CD Pipeline
 
-This project uses GitLab CI for automated building and testing:
+This project uses [Forgejo Actions](https://codeberg.org/dasmatus/aipage/src/branch/main/.forgejo/workflows) (see `.forgejo/workflows/`) running entirely inside the pinned [Nix flake](https://codeberg.org/dasmatus/aipage/src/branch/main/flake.nix) devShell:
 
-- **Lint Stage**: Runs ESLint on all TypeScript files
-- **Build Stage**: Builds extensions for Chrome, Firefox, and Safari in parallel
-- **Test Stage**: Runs Playwright tests on Chrome build
-- **Package Stage**: Creates distribution packages for all browsers
+- **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
+- **Build job**: `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), then packages `aipage-chrome.zip`, `aipage-safari.zip`, and the Firefox `.xpi`
+- **E2e job** (best-effort): Playwright against the built Chrome dist
+- **Release job**: on a pushed `v*` tag, builds all targets and calls `scripts/create-release.mjs` to create the Forgejo Release and upload the artifacts as release assets
 
 ## Troubleshooting
 
@@ -253,7 +252,7 @@ dual licensed as above, without any additional terms or conditions.
 
 ## Contribution
 
-See [the contribution guide](https://gitlab.com/TenTypekMatus/aipage/-/blob/main/book/src/contributing.md?ref_type=heads).
+See [the contribution guide](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/contributing.md).
 
 ## Credits
 

@@ -1,0 +1,87 @@
+# Forgejo Actions CI for AIPage.
+# Replaces the old GitLab CI pipeline (`.gitlab-ci.yml` + `ci/*.yml`).
+# Everything runs inside the Nix flake devShell (`.#devShells.x86_64-linux.default`)
+# so the toolchain — Rust + wasm32 target, version-matched wasm-bindgen-cli 0.2.125,
+# wasm-opt, bun, dart-sass, web-ext — is exactly what `flake.nix` pins, independent
+# of whatever the runner happens to have installed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Codeberg/Forgejo cancels superseded runs automatically, but being explicit
+# is cheap and documents intent.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - name: clippy + tests (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo clippy --workspace --all-targets -- -D warnings
+            cargo test --workspace
+          '
+
+  build:
+    name: Build all targets
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - name: build chrome / firefox / safari
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build-all
+          '
+      - name: package artifacts
+        run: |
+          # Canonical asset names match what scripts/create-release.mjs uploads
+          # and what the in-extension update-checker matches on (name fragment).
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          bunx web-ext build -s dist-firefox -a packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aipage-build
+          path: |
+            aipage-chrome.zip
+            aipage-safari.zip
+            packages/*.xpi
+
+  e2e:
+    name: Playwright (best-effort)
+    runs-on: ubuntu-latest
+    needs: build
+    # Browser-on-CI is inherently flaky and the secureblue dev box needs
+    # patchelf/NixOS-specific fixes that an Ubuntu runner does not — keep
+    # this non-blocking until it's been proven green on Codeberg's runners.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - name: build + e2e (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build --target chrome
+            bunx playwright install --with-deps chromium
+            env -u LD_PRELOAD bun run test:e2e
+          '

@@ -1,0 +1,48 @@
+# Forgejo Actions release pipeline for AIPage.
+# Triggers on a pushed `v*` tag (created by `bun run release`, i.e. standard-version).
+# Builds all three browser targets inside the Nix devShell, packages them with
+# the canonical asset names, then calls scripts/create-release.mjs to create the
+# Forgejo Release and upload the artifacts as release assets — which the
+# extension's in-app update-checker (crates/aipage-content/src/update.rs) then
+# discovers via GET /api/v1/repos/{owner}/{repo}/releases/latest.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # GITHUB_TOKEN must be allowed to create releases + assets
+
+jobs:
+  release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+
+      - name: Build all targets (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build-all
+          '
+
+      - name: Package artifacts (canonical names)
+        run: |
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          bunx web-ext build -s dist-firefox -a packages
+
+      - name: Create Forgejo Release + upload assets
+        env:
+          FORGEJO_API: https://codeberg.org/api/v1
+          FORGEJO_WEB: https://codeberg.org
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun scripts/create-release.mjs
