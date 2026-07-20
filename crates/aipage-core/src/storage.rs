@@ -26,7 +26,7 @@ fn api_key_key(p: ProviderType) -> &'static str {
     match p {
         ProviderType::Lmstudio => "lmstudio_api_key",
         ProviderType::Ollama => "ollama_api_key",
-        ProviderType::Anthropic => "anthropic_api_key",
+        ProviderType::OllamaCloud => "ollama_cloud_api_key",
     }
 }
 
@@ -35,7 +35,7 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
     match p {
         ProviderType::Lmstudio => ("lmstudio_base_url", "lmstudio_model"),
         ProviderType::Ollama => ("ollama_base_url", "ollama_model"),
-        ProviderType::Anthropic => ("anthropic_base_url", "anthropic_model"),
+        ProviderType::OllamaCloud => ("ollama_cloud_base_url", "ollama_cloud_model"),
     }
 }
 
@@ -72,7 +72,7 @@ async fn set_string(key: &str, value: &str) {
 pub async fn get_provider_preference() -> ProviderType {
     match get_string(KEY_PROVIDER).await.as_deref() {
         Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::Anthropic,
+        None => ProviderType::OllamaCloud,
     }
 }
 
@@ -83,7 +83,7 @@ pub async fn save_provider_preference(p: ProviderType) {
 pub async fn get_provider_backend_preference() -> ProviderType {
     match get_string(KEY_PROVIDER_BACKEND).await.as_deref() {
         Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::Anthropic,
+        None => ProviderType::OllamaCloud,
     }
 }
 
@@ -154,11 +154,14 @@ pub async fn save_image_gen_enabled(enabled: bool) {
     set_value(KEY_IMAGE_GEN_ENABLED, JsValue::from_bool(enabled)).await;
 }
 
-/// `"claude-svg"` or `"sdwebui"`, defaulting to `claude-svg`.
+/// `"ollama-svg"` or `"sdwebui"`, defaulting to `ollama-svg`. A stored legacy
+/// `"claude-svg"` value is treated as the svg path.
 pub async fn get_image_gen_provider() -> String {
     match get_string(KEY_IMAGE_GEN_PROVIDER).await.as_deref() {
         Some("sdwebui") => "sdwebui".to_string(),
-        _ => "claude-svg".to_string(),
+        Some("ollama-svg") => "ollama-svg".to_string(),
+        // legacy "claude-svg" or anything else → svg path
+        _ => "ollama-svg".to_string(),
     }
 }
 
@@ -175,7 +178,7 @@ pub async fn save_image_gen_sd_url(url: &str) {
 }
 
 pub async fn get_image_gen_model() -> String {
-    get_string(KEY_IMAGE_GEN_MODEL).await.unwrap_or_else(|| "claude-opus-4-8".to_string())
+    get_string(KEY_IMAGE_GEN_MODEL).await.unwrap_or_else(|| "gpt-oss:120b-cloud".to_string())
 }
 
 pub async fn save_image_gen_model(model: &str) {

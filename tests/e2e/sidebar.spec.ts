@@ -26,7 +26,7 @@ test.describe('AIPage sidebar (WASM)', () => {
   });
 
   test('shows the settings view when no API key is stored', async ({ page }) => {
-    // The chrome mock has empty storage → anthropic provider, no key → settings.
+    // The chrome mock has empty storage → Ollama Cloud provider, no key → settings.
     await page.goto('/sidebar.html');
     // The settings "save" footer button is present in that view.
     await expect(page.locator('#root')).toContainText(/.+/);

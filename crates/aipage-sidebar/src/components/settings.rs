@@ -10,8 +10,6 @@ use aipage_core::storage;
 use crate::icons::{self, icon};
 use crate::state::AppState;
 
-const ANTHROPIC_MODELS_URL: &str = "https://api.anthropic.com/v1/models";
-
 fn set_body_theme(theme: &str) {
     if let Some(body) = web_sys::window().and_then(|w| w.document()).and_then(|d| d.body()) {
         let _ = body.set_attribute("data-theme", theme);
@@ -44,7 +42,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let fetch_error = create_rw_signal::<Option<String>>(None);
     let auto_answer = create_rw_signal(false);
     let image_gen_enabled = create_rw_signal(false);
-    let image_gen_provider = create_rw_signal("claude-svg".to_string());
+    let image_gen_provider = create_rw_signal("ollama-svg".to_string());
     let image_gen_sd_url = create_rw_signal("http://localhost:7860".to_string());
     let image_gen_size = create_rw_signal("1024x1024".to_string());
 
@@ -84,6 +82,11 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             image_gen_size.set(storage::get_image_gen_size().await);
 
             match provider {
+                ProviderType::OllamaCloud => {
+                    let url = if local.url.is_empty() { "https://ollama.com".to_string() } else { local.url };
+                    base_url.set(url.clone());
+                    fetch_models(url, key);
+                }
                 ProviderType::Lmstudio | ProviderType::Ollama => {
                     let default_url = if provider == ProviderType::Lmstudio {
                         "http://localhost:1234/v1"
@@ -94,7 +97,6 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     base_url.set(url.clone());
                     fetch_models(url, key);
                 }
-                ProviderType::Anthropic => fetch_models(ANTHROPIC_MODELS_URL.to_string(), key),
             }
         });
     });
@@ -102,7 +104,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let save = move |_| {
         let provider = app.provider.get_untracked();
         let key = api_key.get_untracked();
-        if key.is_empty() && provider == ProviderType::Anthropic {
+        if key.is_empty() && provider == ProviderType::OllamaCloud {
             if let Some(w) = web_sys::window() {
                 let _ = w.alert_with_message(&app.tr().alert_please_enter_key);
             }
@@ -170,7 +172,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     <div class="p-4 space-y-2">
                         <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().engine_mode}</label>
                         <select class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || app.provider.get().as_str().to_string() on:change=change_backend>
-                            <option value="anthropic">{move || app.tr().anthropic_mode}</option>
+                            <option value="ollama-cloud">{move || app.tr().ollama_cloud_mode}</option>
                             <option value="ollama">{move || app.tr().provider_ollama}</option>
                             <option value="lmstudio">{move || app.tr().provider_lmstudio}</option>
                         </select>
@@ -181,12 +183,10 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                 <Card>
                     <CardHeader gradient="linear-gradient(135deg, #0369a1, #38bdf8)" icon_svg=icons::SETTINGS2 title=Signal::derive(move || app.tr().model_and_auth)/>
                     <div class="p-4 space-y-4">
-                        <Show when=move || matches!(backend(), ProviderType::Lmstudio | ProviderType::Ollama)>
-                            <div class="space-y-2">
-                                <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().base_url}</label>
-                                <input class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || base_url.get() on:input=move |ev| base_url.set(event_target_value(&ev)) placeholder="http://localhost:1234"/>
-                            </div>
-                        </Show>
+                        <div class="space-y-2">
+                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().base_url}</label>
+                            <input class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || base_url.get() on:input=move |ev| base_url.set(event_target_value(&ev)) placeholder="https://ollama.com"/>
+                        </div>
                         <div class="space-y-2">
                             <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().model}</label>
                             {move || if loading_models.get() {
@@ -208,8 +208,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                                         <button class="h-9 px-3 rounded-lg border shrink-0" style="border-color: var(--border-color)"
                                             title=app.tr().refresh_models
                                             on:click=move |_| {
-                                                let url = if app.provider.get_untracked() == ProviderType::Anthropic { ANTHROPIC_MODELS_URL.to_string() } else { base_url.get_untracked() };
-                                                fetch_models(url, api_key.get_untracked());
+                                                fetch_models(base_url.get_untracked(), api_key.get_untracked());
                                             }>
                                             {icon(icons::REFRESH_CW, "w-4 h-4")}
                                         </button>
@@ -219,11 +218,11 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                             {move || fetch_error.get().map(|e| view! { <p class="text-[10px] text-destructive mt-1 flex items-center gap-1">{icon(icons::ALERT_CIRCLE, "w-3 h-3")}{e}</p> })}
                         </div>
                         <div class="space-y-2">
-                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || if backend() == ProviderType::Anthropic { app.tr().anthropic_api_key } else { app.tr().api_key }}</label>
+                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key } else { app.tr().api_key }}</label>
                             <input type="password" class="w-full h-9 rounded-lg px-2 outline-none" style=select_style
                                 prop:value=move || api_key.get() on:input=move |ev| api_key.set(event_target_value(&ev))
-                                placeholder=move || if backend() == ProviderType::Anthropic { app.tr().anthropic_api_key_placeholder } else { app.tr().api_key_placeholder }/>
-                            <p class="text-[10px] text-muted-foreground opacity-70">{move || if backend() == ProviderType::Anthropic { app.tr().anthropic_api_key_hint } else { app.tr().api_key_hint }}</p>
+                                placeholder=move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key_placeholder } else { app.tr().api_key_placeholder }/>
+                            <p class="text-[10px] text-muted-foreground opacity-70">{move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key_hint } else { app.tr().api_key_hint }}</p>
                         </div>
                     </div>
                 </Card>
@@ -274,11 +273,11 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                                 <div class="space-y-2">
                                     <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().image_gen_provider}</label>
                                     <select class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || image_gen_provider.get() on:change=move |ev| image_gen_provider.set(event_target_value(&ev))>
-                                        <option value="claude-svg">{move || app.tr().image_gen_claude_svg}</option>
+                                        <option value="ollama-svg">{move || app.tr().image_gen_ollama_svg}</option>
                                         <option value="sdwebui">{move || app.tr().image_gen_sd_webui}</option>
                                     </select>
                                 </div>
-                                <Show when=move || image_gen_provider.get() == "claude-svg">
+                                <Show when=move || image_gen_provider.get() == "ollama-svg">
                                     <div class="space-y-2">
                                         <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().image_gen_size}</label>
                                         <select class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || image_gen_size.get() on:change=move |ev| image_gen_size.set(event_target_value(&ev))>

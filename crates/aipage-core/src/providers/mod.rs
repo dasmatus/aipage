@@ -5,9 +5,9 @@
 //! CORS proxy via [`crate::proxy`]. Pure helpers (URL normalization, response
 //! parsing) are split out so they can be unit-tested natively.
 
-pub mod anthropic;
 pub mod lmstudio;
 pub mod ollama;
+pub mod ollama_cloud;
 
 use crate::types::ProviderType;
 
@@ -39,7 +39,7 @@ pub async fn send_message(
     opts: &SendOptions,
 ) -> Result<String, String> {
     match provider {
-        ProviderType::Anthropic => anthropic::send_message(prompt, api_key, opts).await,
+        ProviderType::OllamaCloud => ollama_cloud::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, api_key, opts).await,
         ProviderType::Lmstudio => lmstudio::send_message(prompt, api_key, opts).await,
     }
@@ -52,13 +52,15 @@ pub async fn get_models(
     opts: &SendOptions,
 ) -> Vec<ModelInfo> {
     match provider {
-        ProviderType::Anthropic => anthropic::get_models(api_key).await,
+        ProviderType::OllamaCloud => ollama_cloud::get_models(api_key, opts).await,
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
     }
 }
 
-/// Native web search. Only Claude implements it (server-side `web_search` tool).
+/// Native web search. Ollama Cloud implements it via a tool-calling round over
+/// the background DuckDuckGo searcher; local providers return an error and the
+/// sidebar falls back to its own DuckDuckGo + summarize path.
 pub async fn web_search(
     provider: ProviderType,
     query: &str,
@@ -66,7 +68,7 @@ pub async fn web_search(
     opts: &SendOptions,
 ) -> Result<String, String> {
     match provider {
-        ProviderType::Anthropic => anthropic::web_search(query, api_key, opts).await,
+        ProviderType::OllamaCloud => ollama_cloud::web_search(query, api_key, opts).await,
         _ => Err("This provider does not support native web search".to_string()),
     }
 }
