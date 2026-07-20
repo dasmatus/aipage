@@ -43,7 +43,6 @@ pub struct ChatState {
     pub messages: RwSignal<Vec<Message>>,
     pub is_typing: RwSignal<bool>,
     pub last_page_context: RwSignal<String>,
-    pub agent_session: RwSignal<Option<String>>,
 }
 
 impl ChatState {
@@ -53,7 +52,6 @@ impl ChatState {
             messages: create_rw_signal(vec![greeting]),
             is_typing: create_rw_signal(false),
             last_page_context: create_rw_signal(String::new()),
-            agent_session: create_rw_signal(None),
         }
     }
 
@@ -108,13 +106,13 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             view: create_rw_signal(View::Chat),
-            provider: create_rw_signal(ProviderType::Anthropic),
+            provider: create_rw_signal(ProviderType::OllamaCloud),
             language: create_rw_signal("sk".to_string()),
             user_initials: create_rw_signal("U".to_string()),
             image_gen_enabled: create_rw_signal(false),
-            image_gen_provider: create_rw_signal("claude-svg".to_string()),
+            image_gen_provider: create_rw_signal("ollama-svg".to_string()),
             image_gen_sd_url: create_rw_signal("http://localhost:7860".to_string()),
-            image_gen_model: create_rw_signal("claude-opus-4-8".to_string()),
+            image_gen_model: create_rw_signal("gpt-oss:120b-cloud".to_string()),
             image_gen_size: create_rw_signal("1024x1024".to_string()),
             auto_answer_enabled: create_rw_signal(false),
             is_scanning: create_rw_signal(false),
@@ -168,14 +166,15 @@ fn local_opts(url: String, model: String) -> SendOptions {
 
 // --- actions ---
 
-/// `App.handleSend`: agentic path for Claude, direct path for local providers.
+/// `App.handleSend`: agentic (tool-calling) path for the cloud provider, direct
+/// one-shot path for local providers.
 pub async fn handle_send(app: AppState, chat: ChatState, text: String) {
     let provider = app.provider.get_untracked();
     let key = storage::get_api_key(provider).await.unwrap_or_default();
 
-    if provider == ProviderType::Anthropic {
+    if provider == ProviderType::OllamaCloud {
         let local = storage::get_local_settings(provider).await;
-        send_agent_message(chat, key, text, local.model).await;
+        send_agent_message(chat, key, text, local.url, local.model).await;
         return;
     }
 
@@ -188,7 +187,7 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
     if text.trim().is_empty() {
         return;
     }
-    if key.is_empty() && provider == ProviderType::Anthropic {
+    if key.is_empty() && provider == ProviderType::OllamaCloud {
         return;
     }
     chat.add(Role::User, text.clone(), None, None);
@@ -203,7 +202,7 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
 }
 
 /// Agentic send (`useChat.sendAgentMessage`) with fallback to a direct reply.
-pub async fn send_agent_message(chat: ChatState, key: String, text: String, model: String) {
+pub async fn send_agent_message(chat: ChatState, key: String, text: String, base_url: String, model: String) {
     if text.trim().is_empty() || key.is_empty() {
         return;
     }
@@ -211,14 +210,13 @@ pub async fn send_agent_message(chat: ChatState, key: String, text: String, mode
     chat.is_typing.set(true);
     chat.add(Role::Ai, chat::THINKING_PLACEHOLDER, None, None);
 
-    let session = chat.agent_session.get_untracked();
     let on_text = move |t: String| chat.update_last(t);
-    match agent::run_agent_turn(&key, &text, session, on_text).await {
-        Ok(sid) => chat.agent_session.set(Some(sid)),
+    let opts = local_opts(base_url, model);
+    match agent::run_agent_turn(&key, &text, &opts, on_text).await {
+        Ok(()) => {}
         Err(_) => {
-            // Fall back to a direct Claude reply.
-            let opts = SendOptions::with_model(model);
-            match providers::send_message(ProviderType::Anthropic, &text, &key, &opts).await {
+            // Fall back to a direct (no-tools) cloud reply.
+            match providers::send_message(ProviderType::OllamaCloud, &text, &key, &opts).await {
                 Ok(resp) => chat.update_last(resp),
                 Err(e) => chat.update_last(format!("Chyba: {e}")),
             }
@@ -303,7 +301,7 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     let local = storage::get_local_settings(provider).await;
     let opts = local_opts(local.url.clone(), local.model.clone());
 
-    if provider == ProviderType::Anthropic {
+    if provider == ProviderType::OllamaCloud {
         match providers::web_search(provider, query.trim(), &key, &opts).await {
             Ok(answer) => chat.update_last(if answer.is_empty() { "No results found.".to_string() } else { answer }),
             Err(e) => chat.update_last(format!("Search error: {e}")),

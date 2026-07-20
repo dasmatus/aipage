@@ -1,13 +1,17 @@
-//! Image generation (Claude-SVG + SD WebUI). Mirrors `providers/imagegen.ts`.
+//! Image generation (Ollama-SVG + SD WebUI). Mirrors `providers/imagegen.ts`.
 //!
-//! The Claude-SVG path asks Claude for a self-contained SVG and rasterizes it to
-//! PNG with the pure-Rust `resvg`/`tiny-skia` stack (replacing the WASM
-//! ImageMagick dependency). SD WebUI returns base64 PNG directly.
+//! The Ollama-SVG path asks an OpenAI-compatible chat model (Ollama Cloud by
+//! default; also works against local Ollama / LM Studio) for a self-contained
+//! SVG and rasterizes it to PNG with the pure-Rust `resvg`/`tiny-skia` stack
+//! (replacing the WASM ImageMagick dependency). SD WebUI returns base64 PNG
+//! directly.
 
 use std::collections::HashMap;
 
 use serde_json::{json, Value};
 
+use crate::providers::ollama_cloud::{auth_headers, chat_url};
+use crate::providers::SendOptions;
 use crate::proxy::{perform_request, post_json};
 
 const SVG_SYSTEM_PROMPT: &str = "You are an SVG illustration generator. Given a description, respond with ONE complete, self-contained SVG document and nothing else.\nRules:\n- Output ONLY the <svg>...</svg> markup. No markdown fences, no commentary, no explanation.\n- Include an explicit viewBox plus width and height attributes.\n- Use only inline shapes, paths, gradients, and style attributes. No external images, fonts, scripts, or network references.";
@@ -15,7 +19,7 @@ const SVG_SYSTEM_PROMPT: &str = "You are an SVG illustration generator. Given a 
 /// Options for an image-generation request.
 #[derive(Clone, Debug)]
 pub struct ImageGenOptions {
-    /// `"claude-svg"` or `"sdwebui"`.
+    /// `"ollama-svg"` or `"sdwebui"`. Legacy `"claude-svg"` is treated as the svg path.
     pub provider: String,
     pub api_key: String,
     pub base_url: Option<String>,
@@ -40,39 +44,28 @@ pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<I
             .unwrap_or_else(|| "http://localhost:7860".to_string());
         generate_sdwebui(prompt, &base).await
     } else {
-        generate_claude_svg(prompt, &options.api_key, &options.model, &options.size).await
+        generate_ollama_svg(prompt, &options.api_key, options.base_url.as_deref().unwrap_or(""), &options.model, &options.size).await
     }
 }
 
-async fn generate_claude_svg(prompt: &str, api_key: &str, model: &str, size: &str) -> Result<ImageResult, String> {
-    if api_key.is_empty() {
-        return Err("Anthropic API key required for image generation".to_string());
-    }
-    let model = if model.is_empty() { "claude-opus-4-8" } else { model };
-    let mut headers = HashMap::new();
-    headers.insert("content-type".to_string(), "application/json".to_string());
-    headers.insert("x-api-key".to_string(), api_key.to_string());
-    headers.insert("anthropic-version".to_string(), "2023-06-01".to_string());
-
+async fn generate_ollama_svg(prompt: &str, api_key: &str, base_url: &str, model: &str, size: &str) -> Result<ImageResult, String> {
+    let model = if model.is_empty() { "gpt-oss:120b-cloud" } else { model };
+    let opts = SendOptions { base_url: (!base_url.is_empty()).then_some(base_url.to_string()), model_name: Some(model.to_string()) };
     let body = json!({
         "model": model,
-        "max_tokens": 16000,
-        "system": SVG_SYSTEM_PROMPT,
-        "messages": [{ "role": "user", "content": format!("Create an SVG illustration of: {prompt}") }],
+        "messages": [
+            { "role": "system", "content": SVG_SYSTEM_PROMPT },
+            { "role": "user", "content": format!("Create an SVG illustration of: {prompt}") }
+        ],
+        "stream": false,
     });
-    let resp = post_json("https://api.anthropic.com/v1/messages", &headers, &body).await?;
+    let resp = post_json(&chat_url(&opts), &auth_headers(api_key), &body).await?;
 
-    let text: String = resp
-        .get("content")
-        .and_then(Value::as_array)
-        .map(|blocks| {
-            blocks
-                .iter()
-                .filter(|b| b.get("type").and_then(Value::as_str) == Some("text"))
-                .filter_map(|b| b.get("text").and_then(Value::as_str))
-                .collect()
-        })
-        .unwrap_or_default();
+    let text = resp
+        .pointer("/choices/0/message/content")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
 
     let svg = extract_svg(&text).ok_or("The model did not return a valid SVG document")?;
     let (width, height) = parse_size(size);
