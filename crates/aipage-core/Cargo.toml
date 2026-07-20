@@ -1,0 +1,27 @@
+[package]
+name = "aipage-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+aipage-bindings = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+futures = { workspace = true }
+gloo-timers = { workspace = true }
+pulldown-cmark = { workspace = true }
+# SVG → PNG rasterization (replaces @imagemagick/magick-wasm). default-features
+# off to drop text/system-font/mmap features that don't fit wasm.
+resvg = { version = "0.44", default-features = false }
+
+[dependencies.web-sys]
+workspace = true
+features = ["console"]

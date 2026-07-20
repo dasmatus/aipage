@@ -24,11 +24,21 @@ Thumbs.db
 
 # Testing
 coverage/
+test-results/
+playwright-report/
+.playwright/
+
+# Rust
+/target/
+**/*.rs.bk
 
 # Editor
 .vscode/
 .idea/
 *.swp
+
+# Local agent/skill tooling
+.superpowers/
 
 # Vercel
 .vercel
