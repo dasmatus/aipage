@@ -202,7 +202,7 @@ bun run package:firefox
 
 ### CI/CD Pipeline
 
-This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) running entirely inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
+This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
 - **Build job**: `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), then packages `aipage-chrome.zip`, `aipage-safari.zip`, and the Firefox `.xpi`

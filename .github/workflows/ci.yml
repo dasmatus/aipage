@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -45,14 +48,17 @@ jobs:
         run: |
           ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
           ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          mkdir -p packages
+          rm -f packages/*.xpi
           bunx web-ext build -s dist-firefox -a packages
+          cp packages/*.xpi aipage-firefox.xpi
       - uses: actions/upload-artifact@v4
         with:
           name: aipage-build
           path: |
             aipage-chrome.zip
+            aipage-firefox.xpi
             aipage-safari.zip
-            packages/*.xpi
 
   e2e:
     name: Playwright (best-effort)
