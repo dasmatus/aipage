@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+
+      - name: Build all targets (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build-all
+          '
+
+      - name: Package artifacts (canonical names)
+        run: |
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          mkdir -p packages
+          rm -f packages/*.xpi
+          bunx web-ext build -s dist-firefox -a packages
+          cp packages/*.xpi aipage-firefox.xpi
+
+      - name: Create or update GitHub release and upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes_file="$(mktemp)"
+          node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" > "$notes_file"
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "AIPage $GITHUB_REF_NAME" \
+              --notes-file "$notes_file"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "AIPage $GITHUB_REF_NAME" \
+              --notes-file "$notes_file"
+          fi
+
+          existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq '.assets[].name' || true)"
+          for asset in $existing_assets; do
+            case "$asset" in
+              aipage-chrome.zip|aipage-firefox.xpi|aipage-safari.zip) ;;
+              *) gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes ;;
+            esac
+          done
+          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip; do
+            gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes >/dev/null 2>&1 || true
+          done
+
+          gh release upload "$GITHUB_REF_NAME" \
+            aipage-chrome.zip \
+            aipage-firefox.xpi \
+            aipage-safari.zip

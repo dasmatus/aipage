@@ -15,9 +15,9 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 
 ## Installation
 
-To install the extension, download the latest build directly from our Codeberg Releases (every pushed `v*` tag triggers the Forgejo Actions release workflow, which builds all three targets and attaches them as release assets).
+To install the extension, download the latest build directly from our GitHub Releases (every pushed `v*` tag triggers the GitHub Actions release workflow, which builds all three targets and attaches them as release assets).
 
-1.  Visit the [Codeberg Releases](https://codeberg.org/dasmatus/aipage/releases) page.
+1.  Visit the [GitHub Releases](https://github.com/dasmatus/aipage/releases) page.
 2.  Open the latest release.
 3.  Download the asset for your browser:
     - **Chrome**: `aipage-chrome.zip`
@@ -202,12 +202,12 @@ bun run package:firefox
 
 ### CI/CD Pipeline
 
-This project uses [Forgejo Actions](https://codeberg.org/dasmatus/aipage/src/branch/main/.forgejo/workflows) (see `.forgejo/workflows/`) running entirely inside the pinned [Nix flake](https://codeberg.org/dasmatus/aipage/src/branch/main/flake.nix) devShell:
+This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
 - **Build job**: `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), then packages `aipage-chrome.zip`, `aipage-safari.zip`, and the Firefox `.xpi`
 - **E2e job** (best-effort): Playwright against the built Chrome dist
-- **Release job**: on a pushed `v*` tag, builds all targets and calls `scripts/create-release.mjs` to create the Forgejo Release and upload the artifacts as release assets
+- **Release job**: on a pushed `v*` tag, builds all targets and publishes a GitHub Release with the packaged assets
 
 ## Troubleshooting
 
