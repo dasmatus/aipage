@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+
+      - name: Build all targets (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build-all
+          '
+
+      - name: Package artifacts (canonical names)
+        run: |
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          bunx web-ext build -s dist-firefox -a packages
+          cp packages/*.xpi aipage-firefox.xpi
+
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            aipage-chrome.zip
+            aipage-firefox.xpi
+            aipage-safari.zip
