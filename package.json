@@ -29,7 +29,7 @@
     "devDependencies": {
         "@playwright/test": "^1.61.0",
         "@types/bun": "^1.4.2",
-        "autoprefixer": "^10.4.24",
+        "autoprefixer": "^10.6.1",
         "postcss": "^8.5.6",
         "postcss-cli": "^11.0.1",
         "sass": "^1.97.3",
