@@ -49,7 +49,7 @@ jobs:
           ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
           ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
           mkdir -p packages
-          rm -f packages/*.xpi
+          rm -f packages/*.zip
           # bun ships in the flake's devShell, not on the bare runner; this
           # step must enter it for bunx to resolve.
           nix develop --accept-flake-config -c bash -c '
@@ -57,7 +57,7 @@ jobs:
             bun install --frozen-lockfile
             bunx web-ext build -s dist-firefox -a packages
           '
-          cp packages/*.xpi aipage-firefox.xpi
+          cp packages/*.zip aipage-firefox.xpi
       - uses: actions/upload-artifact@v4
         with:
           name: aipage-build
