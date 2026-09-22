@@ -36,6 +36,7 @@
         "standard-version": "^9.5.0",
         "tailwindcss": "4.3.3",
         "tailwindcss-animate": "^1.0.7",
-        "web-ext": "^8.10.0"
+        "web-ext": "^8.10.0",
+        "@tailwindcss/postcss": "^4.3.3"
     }
 }
