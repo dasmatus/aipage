@@ -50,7 +50,13 @@ jobs:
           ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
           mkdir -p packages
           rm -f packages/*.xpi
-          bunx web-ext build -s dist-firefox -a packages
+          # bun ships in the flake's devShell, not on the bare runner; this
+          # step must enter it for bunx to resolve.
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            bunx web-ext build -s dist-firefox -a packages
+          '
           cp packages/*.xpi aipage-firefox.xpi
       - uses: actions/upload-artifact@v4
         with:
