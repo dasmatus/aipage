@@ -1,10 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
-  content: [
-    './crates/**/*.rs',
-    './assets/**/*.html',
-  ],
   theme: {
     container: {
       center: true,
@@ -70,5 +66,4 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
 }
