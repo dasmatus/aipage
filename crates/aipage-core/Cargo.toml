@@ -20,7 +20,7 @@ gloo-timers = { workspace = true }
 pulldown-cmark = { workspace = true }
 # SVG → PNG rasterization (replaces @imagemagick/magick-wasm). default-features
 # off to drop text/system-font/mmap features that don't fit wasm.
-resvg = { version = "0.44", default-features = false }
+resvg = { version = "0.48", default-features = false }
 
 [dependencies.web-sys]
 workspace = true
