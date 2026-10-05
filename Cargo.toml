@@ -13,7 +13,7 @@ members = [
 version = "1.7.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-rust-version = "1.80"
+rust-version = "1.88"
 
 [workspace.dependencies]
 aipage-bindings = { path = "crates/aipage-bindings" }
@@ -30,7 +30,7 @@ console_error_panic_hook = "0.1"
 futures = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
 gloo-events = "0.2"
-leptos = { version = "0.6", features = ["csr"] }
+leptos = { version = "0.8", features = ["csr"] }
 pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
 
 # Size-optimised release profile for the WASM bundles.

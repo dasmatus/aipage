@@ -3,7 +3,7 @@
 
 use std::cell::Cell;
 
-use leptos::*;
+use leptos::prelude::*;
 use serde::Serialize;
 use serde_json::{json, Value};
 use wasm_bindgen::JsValue;
@@ -49,9 +49,9 @@ impl ChatState {
     pub fn new() -> Self {
         let greeting = Message::new("init", Role::Ai, chat::INITIAL_GREETING, now());
         Self {
-            messages: create_rw_signal(vec![greeting]),
-            is_typing: create_rw_signal(false),
-            last_page_context: create_rw_signal(String::new()),
+            messages: RwSignal::new(vec![greeting]),
+            is_typing: RwSignal::new(false),
+            last_page_context: RwSignal::new(String::new()),
         }
     }
 
@@ -105,18 +105,18 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            view: create_rw_signal(View::Chat),
-            provider: create_rw_signal(ProviderType::OllamaCloud),
-            language: create_rw_signal("sk".to_string()),
-            user_initials: create_rw_signal("U".to_string()),
-            image_gen_enabled: create_rw_signal(false),
-            image_gen_provider: create_rw_signal("ollama-svg".to_string()),
-            image_gen_sd_url: create_rw_signal("http://localhost:7860".to_string()),
-            image_gen_model: create_rw_signal("gpt-oss:120b-cloud".to_string()),
-            image_gen_size: create_rw_signal("1024x1024".to_string()),
-            auto_answer_enabled: create_rw_signal(false),
-            is_scanning: create_rw_signal(false),
-            is_auto_answering: create_rw_signal(false),
+            view: RwSignal::new(View::Chat),
+            provider: RwSignal::new(ProviderType::OllamaCloud),
+            language: RwSignal::new("sk".to_string()),
+            user_initials: RwSignal::new("U".to_string()),
+            image_gen_enabled: RwSignal::new(false),
+            image_gen_provider: RwSignal::new("ollama-svg".to_string()),
+            image_gen_sd_url: RwSignal::new("http://localhost:7860".to_string()),
+            image_gen_model: RwSignal::new("gpt-oss:120b-cloud".to_string()),
+            image_gen_size: RwSignal::new("1024x1024".to_string()),
+            auto_answer_enabled: RwSignal::new(false),
+            is_scanning: RwSignal::new(false),
+            is_auto_answering: RwSignal::new(false),
         }
     }
 

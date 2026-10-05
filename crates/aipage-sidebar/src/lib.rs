@@ -6,7 +6,6 @@ mod icons;
 mod state;
 mod util;
 
-use leptos::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -21,5 +20,6 @@ pub fn start() {
         .and_then(|w| w.document())
         .and_then(|d| d.get_element_by_id("root"))
         .expect("#root element");
-    leptos::mount_to(root.unchecked_into(), || view! { <App/> });
+    // The handle unmounts the app when dropped; the sidebar lives for the page.
+    leptos::mount::mount_to(root.unchecked_into(), App).forget();
 }

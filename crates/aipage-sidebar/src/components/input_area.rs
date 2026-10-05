@@ -2,7 +2,8 @@
 //! `components/Chat/InputArea.tsx`.
 
 use gloo_timers::callback::Timeout;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos::html::{Input, Textarea};
 
 use crate::icons::{self, icon};
@@ -13,20 +14,21 @@ pub fn InputArea() -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
     let chat = use_context::<ChatState>().unwrap();
 
-    let text = create_rw_signal(String::new());
-    let search_mode = create_rw_signal(false);
-    let image_mode = create_rw_signal(false);
-    let search_query = create_rw_signal(String::new());
-    let textarea_ref = create_node_ref::<Textarea>();
-    let search_input_ref = create_node_ref::<Input>();
+    let text = RwSignal::new(String::new());
+    let search_mode = RwSignal::new(false);
+    let image_mode = RwSignal::new(false);
+    let search_query = RwSignal::new(String::new());
+    let textarea_ref = NodeRef::<Textarea>::new();
+    let search_input_ref = NodeRef::<Input>::new();
 
     let disabled = move || chat.is_typing.get();
 
     let auto_resize = move || {
         if let Some(ta) = textarea_ref.get() {
             let el: &web_sys::HtmlTextAreaElement = &ta;
-            let _ = el.style().set_property("height", "auto");
-            let _ = el.style().set_property("height", &format!("{}px", el.scroll_height()));
+            // Fully qualified: leptos' `ElementExt::style` shadows the web-sys getter.
+            let _ = web_sys::HtmlElement::style(el).set_property("height", "auto");
+            let _ = web_sys::HtmlElement::style(el).set_property("height", &format!("{}px", el.scroll_height()));
         }
     };
 
@@ -44,7 +46,7 @@ pub fn InputArea() -> impl IntoView {
         text.set(String::new());
         if let Some(ta) = textarea_ref.get() {
             let el: &web_sys::HtmlTextAreaElement = &ta;
-            let _ = el.style().set_property("height", "auto");
+            let _ = web_sys::HtmlElement::style(el).set_property("height", "auto");
         }
     };
 
@@ -107,9 +109,9 @@ pub fn InputArea() -> impl IntoView {
                     on:click=move |_| spawn_local(scan_page(app, chat))
                 >
                     {move || if app.is_scanning.get() {
-                        icon(icons::LOADER2, "h-3.5 w-3.5 animate-spin").into_view()
+                        icon(icons::LOADER2, "h-3.5 w-3.5 animate-spin").into_any()
                     } else {
-                        icon(icons::FILE_TEXT, "h-3.5 w-3.5").into_view()
+                        icon(icons::FILE_TEXT, "h-3.5 w-3.5").into_any()
                     }}
                 </button>
 
@@ -125,9 +127,9 @@ pub fn InputArea() -> impl IntoView {
                     on:click=toggle_search
                 >
                     {move || if search_mode.get() {
-                        icon(icons::X, "h-3.5 w-3.5").into_view()
+                        icon(icons::X, "h-3.5 w-3.5").into_any()
                     } else {
-                        icon(icons::SEARCH, "h-3.5 w-3.5").into_view()
+                        icon(icons::SEARCH, "h-3.5 w-3.5").into_any()
                     }}
                 </button>
 
@@ -204,9 +206,9 @@ pub fn InputArea() -> impl IntoView {
                     on:click=move |_| do_send()
                 >
                     {move || if image_mode.get() {
-                        icon(icons::IMAGE, "h-4 w-4").into_view()
+                        icon(icons::IMAGE, "h-4 w-4").into_any()
                     } else {
-                        icon(icons::SEND, "h-4 w-4").into_view()
+                        icon(icons::SEND, "h-4 w-4").into_any()
                     }}
                 </button>
             </div>

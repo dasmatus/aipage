@@ -2,7 +2,8 @@
 //! `components/Widgets/WidgetsView.tsx`.
 
 use gloo_timers::callback::{Interval, Timeout};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use aipage_core::storage;
 
@@ -41,7 +42,7 @@ fn WidgetCard(
     default_open: bool,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let open = create_rw_signal(default_open);
+    let open = RwSignal::new(default_open);
     view! {
         <div class="rounded-xl border overflow-hidden" style="border-color: var(--border-color)">
             <div
@@ -54,9 +55,9 @@ fn WidgetCard(
                         {title}
                     </div>
                     {move || if open.get() {
-                        icon(icons::CHEVRON_UP, "h-3.5 w-3.5 text-muted-foreground").into_view()
+                        icon(icons::CHEVRON_UP, "h-3.5 w-3.5 text-muted-foreground").into_any()
                     } else {
-                        icon(icons::CHEVRON_DOWN, "h-3.5 w-3.5 text-muted-foreground").into_view()
+                        icon(icons::CHEVRON_DOWN, "h-3.5 w-3.5 text-muted-foreground").into_any()
                     }}
                 </div>
             </div>
@@ -69,15 +70,16 @@ fn WidgetCard(
 
 #[component]
 fn TimerCard() -> impl IntoView {
-    let countdown = create_rw_signal(false);
-    let running = create_rw_signal(false);
-    let elapsed = create_rw_signal(0.0_f64);
-    let minutes = create_rw_signal("5".to_string());
-    let total = create_rw_signal(5.0 * 60.0 * 1000.0);
+    let countdown = RwSignal::new(false);
+    let running = RwSignal::new(false);
+    let elapsed = RwSignal::new(0.0_f64);
+    let minutes = RwSignal::new("5".to_string());
+    let total = RwSignal::new(5.0 * 60.0 * 1000.0);
 
-    let interval = store_value::<Option<Interval>>(None);
-    let start_time = store_value(0.0_f64);
-    let base = store_value(0.0_f64);
+    // gloo timers hold JS closures (not `Send`), so they need local storage.
+    let interval = StoredValue::new_local(None::<Interval>);
+    let start_time = StoredValue::new(0.0_f64);
+    let base = StoredValue::new(0.0_f64);
 
     let stop = move || {
         interval.set_value(None); // dropping the Interval cancels it
@@ -170,9 +172,9 @@ fn TimerCard() -> impl IntoView {
             <div class="flex gap-2 justify-center">
                 <button class="h-8 px-4 rounded-lg text-white inline-flex items-center" style="background: var(--message-user-bg)" on:click=toggle>
                     {move || if running.get() {
-                        view! { {icon(icons::PAUSE, "h-3 w-3 mr-1")} "Pause" }.into_view()
+                        view! { {icon(icons::PAUSE, "h-3 w-3 mr-1")} "Pause" }.into_any()
                     } else {
-                        view! { {icon(icons::PLAY, "h-3 w-3 mr-1")} "Start" }.into_view()
+                        view! { {icon(icons::PLAY, "h-3 w-3 mr-1")} "Start" }.into_any()
                     }}
                 </button>
                 <button class="h-8 px-3 rounded-lg border" style="border-color: var(--border-color)" on:click=move |_| reset()>
@@ -185,9 +187,9 @@ fn TimerCard() -> impl IntoView {
 
 #[component]
 fn NotesCard() -> impl IntoView {
-    let notes = create_rw_signal(String::new());
-    let saved = create_rw_signal(false);
-    let debounce = store_value::<Option<Timeout>>(None);
+    let notes = RwSignal::new(String::new());
+    let saved = RwSignal::new(false);
+    let debounce = StoredValue::new_local(None::<Timeout>);
 
     spawn_local(async move {
         notes.set(storage::get_widget_notes().await);
@@ -228,10 +230,10 @@ fn NotesCard() -> impl IntoView {
 
 #[component]
 fn CalculatorCard() -> impl IntoView {
-    let expr = create_rw_signal(String::new());
-    let result = create_rw_signal::<Option<String>>(None);
-    let error = create_rw_signal(false);
-    let history = create_rw_signal::<Vec<String>>(Vec::new());
+    let expr = RwSignal::new(String::new());
+    let result = RwSignal::<Option<String>>::new(None);
+    let error = RwSignal::new(false);
+    let history = RwSignal::<Vec<String>>::new(Vec::new());
 
     let evaluate_expr = move || {
         let e = expr.get_untracked();

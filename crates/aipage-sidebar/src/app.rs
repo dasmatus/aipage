@@ -1,7 +1,8 @@
 //! Root sidebar component. Mirrors `App.tsx`: header, view switching and the
 //! initial storage-driven setup.
 
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use aipage_core::storage;
 use aipage_core::types::ProviderType;
@@ -32,7 +33,7 @@ pub fn App() -> impl IntoView {
     provide_context(app);
     provide_context(chat);
 
-    let initialized = create_rw_signal(false);
+    let initialized = RwSignal::new(false);
 
     // Initial load from storage.
     spawn_local(async move {
@@ -102,13 +103,13 @@ pub fn App() -> impl IntoView {
                                 <button class="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-black/5" on:click=move |_| app.view.set(View::Chat)>
                                     {icon(icons::CHEVRON_LEFT, "h-4 w-4")}
                                 </button>
-                            }.into_view()
+                            }.into_any()
                         } else {
                             view! {
                                 <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style="background: var(--avatar-ai-bg)">
                                     {icon(icons::MESSAGE_CIRCLE, "h-3.5 w-3.5 text-white")}
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         }}
                         <span class="font-bold text-sm tracking-tight" style="color: var(--text-color)">
                             {move || match app.view.get() {
