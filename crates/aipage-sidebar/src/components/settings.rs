@@ -1,7 +1,8 @@
 //! Settings view. Mirrors `components/Settings/SettingsView.tsx`. Uses native
 //! `<select>` elements in place of the shadcn Select (same behavior + storage).
 
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use aipage_core::providers::{self, ModelInfo, SendOptions};
 use aipage_core::types::ProviderType;
@@ -31,20 +32,20 @@ fn model_label(id: &str) -> String {
 pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
 
-    let api_key = create_rw_signal(String::new());
-    let theme = create_rw_signal("default".to_string());
-    let global_theme = create_rw_signal(false);
-    let auto_update = create_rw_signal(false);
-    let base_url = create_rw_signal(String::new());
-    let model_name = create_rw_signal(String::new());
-    let available_models = create_rw_signal::<Vec<ModelInfo>>(Vec::new());
-    let loading_models = create_rw_signal(false);
-    let fetch_error = create_rw_signal::<Option<String>>(None);
-    let auto_answer = create_rw_signal(false);
-    let image_gen_enabled = create_rw_signal(false);
-    let image_gen_provider = create_rw_signal("ollama-svg".to_string());
-    let image_gen_sd_url = create_rw_signal("http://localhost:7860".to_string());
-    let image_gen_size = create_rw_signal("1024x1024".to_string());
+    let api_key = RwSignal::new(String::new());
+    let theme = RwSignal::new("default".to_string());
+    let global_theme = RwSignal::new(false);
+    let auto_update = RwSignal::new(false);
+    let base_url = RwSignal::new(String::new());
+    let model_name = RwSignal::new(String::new());
+    let available_models = RwSignal::<Vec<ModelInfo>>::new(Vec::new());
+    let loading_models = RwSignal::new(false);
+    let fetch_error = RwSignal::<Option<String>>::new(None);
+    let auto_answer = RwSignal::new(false);
+    let image_gen_enabled = RwSignal::new(false);
+    let image_gen_provider = RwSignal::new("ollama-svg".to_string());
+    let image_gen_sd_url = RwSignal::new("http://localhost:7860".to_string());
+    let image_gen_size = RwSignal::new("1024x1024".to_string());
 
     // Current backend == current provider.
     let backend = move || app.provider.get();
@@ -65,7 +66,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     };
 
     // (Re)load whenever the provider changes.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let provider = app.provider.get();
         spawn_local(async move {
             let key = storage::get_api_key(provider).await.unwrap_or_default();
@@ -129,7 +130,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             if let Some(w) = web_sys::window() {
                 let _ = w.alert_with_message(&app.tr().alert_settings_saved);
             }
-            on_close.call(());
+            on_close.run(());
         });
     };
 
@@ -190,19 +191,19 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                         <div class="space-y-2">
                             <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().model}</label>
                             {move || if loading_models.get() {
-                                view! { <div class="flex items-center gap-2 text-xs text-muted-foreground py-2">{icon(icons::REFRESH_CW, "w-3 h-3 animate-spin")}{move || app.tr().loading}</div> }.into_view()
+                                view! { <div class="flex items-center gap-2 text-xs text-muted-foreground py-2">{icon(icons::REFRESH_CW, "w-3 h-3 animate-spin")}{move || app.tr().loading}</div> }.into_any()
                             } else {
                                 let models = available_models.get();
                                 view! {
                                     <div class="flex gap-2">
                                         <select class="flex-1 h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || model_name.get() on:change=move |ev| model_name.set(event_target_value(&ev))>
                                             {if models.is_empty() {
-                                                view! { <option value="" disabled=true>{app.tr().no_models_found}</option> }.into_view()
+                                                view! { <option value="" disabled=true>{app.tr().no_models_found}</option> }.into_any()
                                             } else {
                                                 models.into_iter().map(|m| {
                                                     let id = m.id.clone();
                                                     view! { <option value=id.clone()>{format!("{} ({})", model_label(&id), m.provider)}</option> }
-                                                }).collect_view()
+                                                }).collect_view().into_any()
                                             }}
                                         </select>
                                         <button class="h-9 px-3 rounded-lg border shrink-0" style="border-color: var(--border-color)"
@@ -213,7 +214,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                                             {icon(icons::REFRESH_CW, "w-4 h-4")}
                                         </button>
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             }}
                             {move || fetch_error.get().map(|e| view! { <p class="text-[10px] text-destructive mt-1 flex items-center gap-1">{icon(icons::ALERT_CIRCLE, "w-3 h-3")}{e}</p> })}
                         </div>
@@ -310,7 +311,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     <button class="w-full font-bold h-11 rounded-xl text-white border-0" style="background: var(--message-user-bg); box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-color) 28%, transparent);" on:click=save>
                         {move || app.tr().save_key}
                     </button>
-                    <button class="w-full text-muted-foreground hover:text-foreground py-2" on:click=move |_| on_close.call(())>
+                    <button class="w-full text-muted-foreground hover:text-foreground py-2" on:click=move |_| on_close.run(())>
                         {move || app.tr().back_to_chat}
                     </button>
                 </footer>
@@ -347,7 +348,7 @@ fn Toggle(#[prop(into)] label: Signal<String>, checked: RwSignal<bool>, #[prop(i
                 role="switch"
                 class=move || format!("w-9 h-5 rounded-full transition-colors relative shrink-0 {}", if checked.get() { "bg-primary" } else { "bg-muted" })
                 style=move || if checked.get() { "background: var(--accent-color)".to_string() } else { "background: var(--border-color)".to_string() }
-                on:click=move |_| on_toggle.call(!checked.get_untracked())
+                on:click=move |_| on_toggle.run(!checked.get_untracked())
             >
                 <span class=move || format!("block w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all {}", if checked.get() { "left-[18px]" } else { "left-0.5" })></span>
             </button>

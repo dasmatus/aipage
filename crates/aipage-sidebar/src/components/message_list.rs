@@ -1,7 +1,8 @@
 //! Chat message list with markdown rendering, avatars and action buttons.
 //! Mirrors `components/Chat/MessageList.tsx`.
 
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos::html::Div;
 
 use aipage_core::markdown;
@@ -16,9 +17,9 @@ pub fn MessageList() -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
     let chat = use_context::<ChatState>().unwrap();
 
-    let bottom_ref = create_node_ref::<Div>();
+    let bottom_ref = NodeRef::<Div>::new();
     // Auto-scroll to the newest message.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         chat.messages.get();
         if let Some(el) = bottom_ref.get() {
             el.scroll_into_view();
@@ -61,17 +62,18 @@ fn message_row(msg: Message, initials: String, disable: bool, app: AppState, cha
 
     let avatar = if is_user {
         if initials.is_empty() {
-            icon(icons::USER, "w-3.5 h-3.5 text-white").into_view()
+            icon(icons::USER, "w-3.5 h-3.5 text-white").into_any()
         } else {
-            view! { <span class="text-[10px] font-bold text-white">{initials}</span> }.into_view()
+            view! { <span class="text-[10px] font-bold text-white">{initials}</span> }.into_any()
         }
     } else {
-        icon(icons::BOT, "w-3.5 h-3.5 text-white").into_view()
+        icon(icons::BOT, "w-3.5 h-3.5 text-white").into_any()
     };
 
     let image = msg.image_url.clone().map(|url| {
+        let href = url.clone();
         view! {
-            <a href=url.clone() target="_blank" rel="noopener noreferrer" class="block mt-2">
+            <a href=href target="_blank" rel="noopener noreferrer" class="block mt-2">
                 <img
                     src=url
                     alt=msg.content.clone()

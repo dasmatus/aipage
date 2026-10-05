@@ -1,7 +1,7 @@
 //! Inline Lucide-style SVG icons. Replaces `lucide-react`. Each constant holds
 //! the inner SVG markup; [`icon`] wraps it in a sized, stroked `<svg>`.
 
-use leptos::*;
+use leptos::prelude::*;
 
 /// Render an icon with the given inner SVG markup and CSS classes.
 pub fn icon(inner: &'static str, class: impl Into<String>) -> impl IntoView {
