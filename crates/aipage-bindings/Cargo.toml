@@ -18,7 +18,6 @@ serde-wasm-bindgen = { workspace = true }
 [dependencies.web-sys]
 workspace = true
 features = [
-    "console",
     "Window",
     "Document",
     "EventTarget",

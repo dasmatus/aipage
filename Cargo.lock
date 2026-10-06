@@ -24,7 +24,6 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "futures",
  "js-sys",
  "serde",
  "serde-wasm-bindgen",
@@ -54,10 +53,7 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "gloo-events",
  "js-sys",
- "serde",
- "serde-wasm-bindgen",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -69,8 +65,6 @@ name = "aipage-core"
 version = "1.7.0"
 dependencies = [
  "aipage-bindings",
- "futures",
- "gloo-timers",
  "js-sys",
  "pulldown-cmark",
  "resvg",
@@ -78,8 +72,6 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -89,8 +81,6 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "futures",
- "gloo-events",
  "gloo-timers",
  "js-sys",
  "leptos",
@@ -633,16 +623,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gloo-events"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27c26fb45f7c385ba980f5fa87ac677e363949e065a083722697ef1b2cc91e41"
-dependencies = [
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "gloo-net"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -669,8 +649,6 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994"
 dependencies = [
- "futures-channel",
- "futures-core",
  "js-sys",
  "wasm-bindgen",
 ]
