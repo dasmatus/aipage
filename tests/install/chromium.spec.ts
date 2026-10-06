@@ -19,6 +19,13 @@ import { CHROMIUM_MV2_ARGS, readManifest, requireDist } from './helpers';
  *
  * Set `CHROMIUM_EXECUTABLE=/path/to/chrome` to use a specific binary instead
  * of Playwright's `chromium` channel.
+ *
+ * MV2 support: Chromium 153 (Playwright 1.63's bundled build) refuses MV2
+ * extensions outright — the `ExtensionManifestV2*` features, the
+ * `AllowLegacyMV2Extensions` feature and the `ExtensionManifestV2Availability`
+ * policy no longer exist in that binary, while MV3 extensions still load. The
+ * last verified build that honours `CHROMIUM_MV2_ARGS` is Chromium 141
+ * (Playwright 1.56, build 1194); CI pins that one via `CHROMIUM_EXECUTABLE`.
  */
 
 type BackgroundTarget = { targetId: string; url: string; type: string };

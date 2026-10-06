@@ -1,7 +1,7 @@
-//! `browser.storage.local` access. Mirrors `src/sidebar/storage.ts`.
+//! `browser.storage.local` access.
 //!
-//! Storage key strings are kept identical to the TypeScript build so an
-//! existing user's saved settings survive the migration to the Rust extension.
+//! The key strings are a persisted contract: existing installs keep their
+//! settings only as long as they never change.
 
 use aipage_bindings::storage;
 use js_sys::{Array, Object, Reflect};
@@ -10,10 +10,11 @@ use wasm_bindgen::JsValue;
 use crate::remote_ui::{KEY_REMOTE_UI_ENABLED, KEY_REMOTE_UI_URL};
 use crate::types::ProviderType;
 
-// --- key constants (must match the old STORAGE_KEYS) ---
 const KEY_PROVIDER: &str = "ai_provider";
 const KEY_PROVIDER_BACKEND: &str = "providerBackend";
 const KEY_THEME: &str = "ai_sidebar_theme";
+const KEY_GLOBAL_THEME: &str = "ai_sidebar_global";
+const KEY_AUTO_UPDATE: &str = "autoUpdate";
 const KEY_LANGUAGE: &str = "language";
 const KEY_IMAGE_GEN_ENABLED: &str = "image_gen_enabled";
 const KEY_IMAGE_GEN_PROVIDER: &str = "image_gen_provider";
@@ -74,26 +75,22 @@ async fn set_string(key: &str, value: &str) {
     set_value(key, JsValue::from_str(value)).await;
 }
 
+async fn set_bool(key: &str, value: bool) {
+    set_value(key, JsValue::from_bool(value)).await;
+}
+
 // --- provider preference ---
 
 pub async fn get_provider_preference() -> ProviderType {
-    match get_string(KEY_PROVIDER).await.as_deref() {
-        Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::OllamaCloud,
-    }
+    ProviderType::from_str_or_default(&get_string(KEY_PROVIDER).await.unwrap_or_default())
 }
 
 pub async fn save_provider_preference(p: ProviderType) {
     set_string(KEY_PROVIDER, p.as_str()).await;
 }
 
-pub async fn get_provider_backend_preference() -> ProviderType {
-    match get_string(KEY_PROVIDER_BACKEND).await.as_deref() {
-        Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::OllamaCloud,
-    }
-}
-
+/// Legacy mirror of the provider preference, still written for installs
+/// that read it.
 pub async fn save_provider_backend_preference(p: ProviderType) {
     set_string(KEY_PROVIDER_BACKEND, p.as_str()).await;
 }
@@ -141,7 +138,7 @@ pub async fn save_theme_preference(theme: &str) {
     set_string(KEY_THEME, theme).await;
 }
 
-// --- language (from i18n.ts) ---
+// --- language ---
 
 pub async fn get_language() -> String {
     get_string(KEY_LANGUAGE).await.unwrap_or_else(|| "sk".to_string())
@@ -158,7 +155,7 @@ pub async fn get_image_gen_enabled() -> bool {
 }
 
 pub async fn save_image_gen_enabled(enabled: bool) {
-    set_value(KEY_IMAGE_GEN_ENABLED, JsValue::from_bool(enabled)).await;
+    set_bool(KEY_IMAGE_GEN_ENABLED, enabled).await;
 }
 
 /// `"ollama-svg"` or `"sdwebui"`, defaulting to `ollama-svg`. A stored legacy
@@ -207,7 +204,27 @@ pub async fn get_auto_answer_enabled() -> bool {
 }
 
 pub async fn save_auto_answer_enabled(enabled: bool) {
-    set_value(KEY_AUTO_ANSWER_ENABLED, JsValue::from_bool(enabled)).await;
+    set_bool(KEY_AUTO_ANSWER_ENABLED, enabled).await;
+}
+
+// --- appearance / updates ---
+
+/// Whether the sidebar theme is also applied to the EduPage page.
+pub async fn get_global_theme_enabled() -> bool {
+    get_bool(KEY_GLOBAL_THEME).await
+}
+
+pub async fn save_global_theme_enabled(enabled: bool) {
+    set_bool(KEY_GLOBAL_THEME, enabled).await;
+}
+
+/// Whether the background update check is enabled.
+pub async fn get_auto_update_enabled() -> bool {
+    get_bool(KEY_AUTO_UPDATE).await
+}
+
+pub async fn save_auto_update_enabled(enabled: bool) {
+    set_bool(KEY_AUTO_UPDATE, enabled).await;
 }
 
 // --- hosted (remote) UI ---
@@ -218,7 +235,7 @@ pub async fn get_remote_ui_enabled() -> bool {
 }
 
 pub async fn save_remote_ui_enabled(enabled: bool) {
-    set_value(KEY_REMOTE_UI_ENABLED, JsValue::from_bool(enabled)).await;
+    set_bool(KEY_REMOTE_UI_ENABLED, enabled).await;
 }
 
 /// Raw stored URL override (may be empty); see `remote_ui::effective_remote_ui_url`.

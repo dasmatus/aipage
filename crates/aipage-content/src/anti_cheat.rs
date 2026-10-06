@@ -1,5 +1,4 @@
-//! Injects `anti_cheat.js` into the page context during exams. Mirrors
-//! `content-scripts/anti-cheat-injector.ts`.
+//! Injects `anti_cheat.js` into the page context during exams.
 
 use std::cell::Cell;
 
@@ -22,9 +21,8 @@ pub fn inject_anti_anti_cheat() {
     let script: HtmlScriptElement = doc.create_element("script").unwrap().unchecked_into();
     script.set_src(&runtime::get_url("anti_cheat.js"));
 
-    // Remove the injected <script> from the DOM once it has executed, mirroring
-    // the TS `script.onload = () => script.remove()` (keeps the injection
-    // trace-free).
+    // Remove the injected <script> from the DOM once it has executed so the
+    // injection leaves no trace.
     let s = script.clone();
     let on_load = Closure::once_into_js(move || s.remove());
     script.set_onload(Some(on_load.unchecked_ref()));

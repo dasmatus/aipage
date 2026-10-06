@@ -1,5 +1,4 @@
-//! Settings view. Mirrors `components/Settings/SettingsView.tsx`. Uses native
-//! `<select>` elements in place of the shadcn Select (same behavior + storage).
+//! Settings view.
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -11,14 +10,9 @@ use aipage_core::{remote_ui, storage};
 
 use crate::icons::{self, icon};
 use crate::state::AppState;
+use crate::util::set_body_theme;
 
-fn set_body_theme(theme: &str) {
-    if let Some(body) = web_sys::window().and_then(|w| w.document()).and_then(|d| d.body()) {
-        let _ = body.set_attribute("data-theme", theme);
-    }
-}
-
-/// Transform a model id into a display label (mirrors the TS slicing).
+/// Display label of a model id: the part after the first `:` or `/`.
 fn model_label(id: &str) -> String {
     if id.contains(':') {
         id.split_once(':').map(|x| x.1).unwrap_or(id).to_string()
@@ -105,8 +99,8 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             let key = storage::get_api_key(provider).await.unwrap_or_default();
             api_key.set(key.clone());
             theme.set(storage::get_theme_preference().await);
-            global_theme.set(read_bool("ai_sidebar_global").await);
-            auto_update.set(read_bool("autoUpdate").await);
+            global_theme.set(storage::get_global_theme_enabled().await);
+            auto_update.set(storage::get_auto_update_enabled().await);
             let local = storage::get_local_settings(provider).await;
             model_name.set(local.model.clone());
             auto_answer.set(storage::get_auto_answer_enabled().await);
@@ -274,8 +268,8 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                                 <option value="mono">{move || app.tr().theme_mono}</option>
                             </select>
                         </div>
-                        <Toggle label=Signal::derive(move || app.tr().apply_theme_global) checked=global_theme on_toggle=Callback::new(move |v: bool| { global_theme.set(v); spawn_local(async move { write_bool("ai_sidebar_global", v).await }); })/>
-                        <Toggle label=Signal::derive(move || app.tr().auto_update) checked=auto_update on_toggle=Callback::new(move |v: bool| { auto_update.set(v); spawn_local(async move { write_bool("autoUpdate", v).await }); })/>
+                        <Toggle label=Signal::derive(move || app.tr().apply_theme_global) checked=global_theme on_toggle=Callback::new(move |v: bool| { global_theme.set(v); spawn_local(async move { storage::save_global_theme_enabled(v).await }); })/>
+                        <Toggle label=Signal::derive(move || app.tr().auto_update) checked=auto_update on_toggle=Callback::new(move |v: bool| { auto_update.set(v); spawn_local(async move { storage::save_auto_update_enabled(v).await }); })/>
                         <div class="space-y-2">
                             <div class="flex items-center gap-2 mb-1">
                                 {icon(icons::LANGUAGES, "w-4 h-4 text-muted-foreground")}
@@ -431,20 +425,4 @@ fn Toggle(#[prop(into)] label: Signal<String>, checked: RwSignal<bool>, #[prop(i
             </button>
         </div>
     }
-}
-
-async fn read_bool(key: &str) -> bool {
-    use wasm_bindgen::JsValue;
-    let arr = js_sys::Array::of1(&JsValue::from_str(key));
-    match aipage_bindings::storage::local_get(arr.as_ref()).await {
-        Ok(v) => js_sys::Reflect::get(&v, &JsValue::from_str(key)).map(|x| x.is_truthy()).unwrap_or(false),
-        Err(_) => false,
-    }
-}
-
-async fn write_bool(key: &str, value: bool) {
-    use wasm_bindgen::JsValue;
-    let obj = js_sys::Object::new();
-    let _ = js_sys::Reflect::set(&obj, &JsValue::from_str(key), &JsValue::from_bool(value));
-    let _ = aipage_bindings::storage::local_set(obj.as_ref()).await;
 }

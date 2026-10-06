@@ -1,4 +1,4 @@
-//! AIPage content script. Mirrors `src/content.ts`.
+//! AIPage content script.
 //!
 //! Injects the AI button into the EduPage navbar / exam header, manages the
 //! sidebar iframe via [`SidebarController`], applies global theming, handles
@@ -18,9 +18,10 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement, MouseEvent, MutationObserver, MutationObserverInit};
 
-use aipage_bindings::{runtime, storage};
+use aipage_bindings::{js_object as obj, runtime, storage};
 use aipage_core::remote_ui;
 use sidebar_controller::SidebarController;
+use utils::document;
 
 type Controller = Rc<std::cell::RefCell<SidebarController>>;
 
@@ -30,10 +31,6 @@ const AI_BUTTON_SVG: &str = r#"
             </svg>
             <p style="margin: 0;">AI</p>
         "#;
-
-fn document() -> web_sys::Document {
-    web_sys::window().unwrap().document().unwrap()
-}
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -300,15 +297,6 @@ fn register_message_handler(dispatch: bridge::LocalDispatch) {
         let dispatch = dispatch.clone();
         async move { dispatch(message) }
     });
-}
-
-/// Build a JS object from `(key, JsValue)` pairs.
-fn obj(pairs: &[(&str, JsValue)]) -> JsValue {
-    let o = Object::new();
-    for (k, v) in pairs {
-        let _ = Reflect::set(&o, &JsValue::from_str(k), v);
-    }
-    o.into()
 }
 
 fn get_exam_question() -> JsValue {

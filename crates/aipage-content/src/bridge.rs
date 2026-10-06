@@ -18,8 +18,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlIFrameElement, MessageChannel, MessageEvent, MessagePort};
 
-use aipage_bindings::bridge::{from_js, parse_frame, parse_handshake, to_js, Frame, Handshake, HandshakeKind, Method, EVENT_STORAGE_CHANGED};
-use aipage_bindings::{runtime, storage};
+use aipage_bindings::bridge::{parse_frame, parse_handshake, Frame, Handshake, HandshakeKind, Method, EVENT_STORAGE_CHANGED};
+use aipage_bindings::{from_js, runtime, storage, to_js};
 use aipage_core::remote_ui;
 
 /// Synchronous handler for messages the sidebar would otherwise send to this

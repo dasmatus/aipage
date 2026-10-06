@@ -1,13 +1,20 @@
-//! Small UI utilities: class joining and a safe calculator evaluator.
+//! Small UI utilities: class joining, theme attribute, a safe calculator.
 
-/// Join non-empty class fragments with spaces (the `cn` helper's job).
+/// Join non-empty class fragments with spaces.
 pub fn classes(parts: &[&str]) -> String {
     parts.iter().filter(|p| !p.is_empty()).copied().collect::<Vec<_>>().join(" ")
 }
 
+/// Set `<body data-theme>`, which the SCSS theme blocks key on.
+pub fn set_body_theme(theme: &str) {
+    if let Some(body) = web_sys::window().and_then(|w| w.document()).and_then(|d| d.body()) {
+        let _ = body.set_attribute("data-theme", theme);
+    }
+}
+
 /// Evaluate an arithmetic expression safely (digits, `+ - * / ^ %`, parens,
-/// decimals, unary minus). Replaces the JS `Function(...)` eval in the
-/// calculator widget. Returns a JS-`String(value)`-like rendering.
+/// decimals, unary minus) for the calculator widget. Integral results render
+/// without a fractional part.
 pub fn evaluate(expr: &str) -> Result<String, ()> {
     // Match the original guard: only allow a small character set.
     if expr.trim().is_empty()

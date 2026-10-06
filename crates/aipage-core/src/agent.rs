@@ -1,11 +1,10 @@
 //! Client-side tool-calling agent loops.
 //!
-//! Replaces the old Anthropic Managed-Agents loop. The backends are stateless,
-//! so the whole loop runs in the sidebar: POST the messages + tools, execute
-//! the tool calls the model returns (page scrape / exam read / exam fill /
-//! web search), feed the results back, and re-POST until the model answers
-//! with plain text. All network calls go through the one-shot background CORS
-//! proxy — no SSE, no polling.
+//! The backends are stateless, so the whole loop runs in the sidebar: POST
+//! the messages + tools, execute the tool calls the model returns (page
+//! scrape / exam read / exam fill / web search), feed the results back, and
+//! re-POST until the model answers with plain text. All network calls go
+//! through the one-shot background CORS proxy — no SSE, no polling.
 //!
 //! Two wire formats share one set of tool names, descriptions, schemas and
 //! executors:
@@ -22,7 +21,8 @@
 //! of the two.
 
 use serde_json::{json, Value};
-use wasm_bindgen::JsValue;
+
+use aipage_bindings::{from_js, runtime, tabs, to_js};
 
 use crate::providers::anthropic;
 use crate::providers::openai_compat::OpenAiCompat;
@@ -31,7 +31,6 @@ use crate::proxy::post_json;
 use crate::types::ProviderType;
 
 /// Cap on tool-call rounds before we give up and return whatever we have.
-/// CHOICE: raise for multi-step scan→search→answer flows, lower to bound cost.
 const MAX_ITERS: usize = 12;
 
 const AGENT_SYSTEM_PROMPT: &str = "You are AIPage, an agentic study assistant embedded in a sidebar on the EduPage school platform. You help the student understand and answer what is on their screen. Reply in Slovak unless the student writes in another language.\n\nTools available to you:\n- get_page_content: read the visible text of the EduPage page the student is viewing. Call it whenever your answer depends on what is on their screen.\n- get_exam_question: read the current exam question and its answer options.\n- fill_exam_answer: type an answer into the exam field. Only call this when the student explicitly asks you to fill or submit an answer.\n- web_search: search the web for current or factual information.\n\nDecide which tools to use on your own and chain them as needed, then give a clear, step-by-step answer. Don't ask permission for read-only actions (reading the page, searching). Ask before filling an answer unless the student already told you to.";
@@ -97,12 +96,16 @@ async fn execute_tool(name: &str, input: &Value) -> (String, bool) {
     }
 }
 
+const NO_ACTIVE_TAB: &str = "No active EduPage tab is open.";
+
+fn is_ok(r: &Value) -> bool {
+    r.get("ok").and_then(Value::as_bool).unwrap_or(false)
+}
+
 async fn execute_page_content() -> (String, bool) {
-    let tab_id = match active_tab_id().await {
-        Some(id) => id,
-        None => return ("No active EduPage tab is open.".into(), true),
+    let Some(r) = tabs::send_json_to_active(&json!({ "action": "get_page_content" })).await else {
+        return (NO_ACTIVE_TAB.into(), true);
     };
-    let r = send_to_tab(tab_id, json!({ "action": "get_page_content" })).await;
     match r.get("content").and_then(Value::as_str).filter(|s| !s.is_empty()) {
         Some(c) => (c.to_string(), false),
         None => ("Could not read the page content.".into(), true),
@@ -110,12 +113,10 @@ async fn execute_page_content() -> (String, bool) {
 }
 
 async fn execute_exam_question() -> (String, bool) {
-    let tab_id = match active_tab_id().await {
-        Some(id) => id,
-        None => return ("No active EduPage tab is open.".into(), true),
+    let Some(r) = tabs::send_json_to_active(&json!({ "action": "get_exam_question" })).await else {
+        return (NO_ACTIVE_TAB.into(), true);
     };
-    let r = send_to_tab(tab_id, json!({ "action": "get_exam_question" })).await;
-    if r.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+    if is_ok(&r) {
         (r.to_string(), false)
     } else {
         ("No exam question found on this page.".into(), true)
@@ -123,18 +124,13 @@ async fn execute_exam_question() -> (String, bool) {
 }
 
 async fn execute_fill_answer(input: &Value) -> (String, bool) {
-    let tab_id = match active_tab_id().await {
-        Some(id) => id,
-        None => return ("No active EduPage tab is open.".into(), true),
-    };
     let value = input.get("value").and_then(Value::as_str).unwrap_or("");
     let input_type = input.get("inputType").and_then(Value::as_str);
-    let r = send_to_tab(
-        tab_id,
-        json!({ "action": "fill_answer", "payload": { "inputType": input_type, "value": value } }),
-    )
-    .await;
-    if r.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+    let msg = json!({ "action": "fill_answer", "payload": { "inputType": input_type, "value": value } });
+    let Some(r) = tabs::send_json_to_active(&msg).await else {
+        return (NO_ACTIVE_TAB.into(), true);
+    };
+    if is_ok(&r) {
         (format!("Filled answer: {value}"), false)
     } else {
         let err = r.get("error").and_then(Value::as_str).unwrap_or("unknown error");
@@ -142,21 +138,17 @@ async fn execute_fill_answer(input: &Value) -> (String, bool) {
     }
 }
 
-/// Run a DuckDuckGo search through the background service worker and format
-/// the results for the model. Mirrors the local-provider search path in
-/// `state.rs` but returns tool-result text instead of a chat bubble.
+/// DuckDuckGo instant-answer results (`{title, snippet, url}` objects) from
+/// the background searcher; empty on any failure.
+pub async fn duckduckgo_results(query: &str) -> Vec<Value> {
+    let msg = to_js(&json!({ "action": "search_web", "payload": { "query": query } }));
+    let resp = runtime::send_message(&msg).await.map(|v| from_js(&v)).unwrap_or(Value::Null);
+    resp.get("results").and_then(Value::as_array).cloned().unwrap_or_default()
+}
+
+/// Run a DuckDuckGo search and format the results as tool-result text.
 async fn run_duckduckgo_search(query: &str) -> (String, bool) {
-    use aipage_bindings::runtime;
-    let resp = match runtime::send_message(&to_js(&json!({
-        "action": "search_web",
-        "payload": { "query": query }
-    })))
-    .await
-    {
-        Ok(v) => from_js(v),
-        Err(_) => Value::Null,
-    };
-    let results = resp.get("results").and_then(Value::as_array).cloned().unwrap_or_default();
+    let results = duckduckgo_results(query).await;
     if results.is_empty() {
         return (format!("No search results found for \"{query}\"."), false);
     }
@@ -177,29 +169,6 @@ async fn run_duckduckgo_search(query: &str) -> (String, bool) {
     (formatted, false)
 }
 
-async fn active_tab_id() -> Option<i32> {
-    let q = to_js(&json!({ "active": true, "lastFocusedWindow": true }));
-    let tabs = aipage_bindings::tabs::query(&q).await.ok()?;
-    let first = js_sys::Array::from(&tabs).get(0);
-    js_sys::Reflect::get(&first, &"id".into()).ok().and_then(|v| v.as_f64()).map(|n| n as i32)
-}
-
-async fn send_to_tab(tab_id: i32, msg: Value) -> Value {
-    match aipage_bindings::tabs::send_message(tab_id, &to_js(&msg)).await {
-        Ok(v) => from_js(v),
-        Err(_) => Value::Null,
-    }
-}
-
-fn to_js(v: &Value) -> JsValue {
-    use serde::Serialize;
-    v.serialize(&serde_wasm_bindgen::Serializer::json_compatible()).unwrap_or(JsValue::NULL)
-}
-
-fn from_js(v: JsValue) -> Value {
-    serde_wasm_bindgen::from_value(v).unwrap_or(Value::Null)
-}
-
 /// Decode a tool call's `arguments`. OpenAI/Ollama send this as a JSON *string*;
 /// be defensive and accept a pre-parsed object too.
 fn decode_arguments(raw: &Value) -> Value {
@@ -215,8 +184,8 @@ fn decode_arguments(raw: &Value) -> Value {
 /// Run a tool-calling round against an OpenAI-compatible backend.
 ///
 /// Executes tool calls until the model returns a plain answer (no `tool_calls`)
-/// or [`MAX_ITERS`] is reached. Accumulated assistant text is streamed to
-/// `on_text` after each round (joined with `\n\n`, matching the old loop).
+/// or [`MAX_ITERS`] is reached. Assistant text accumulates across rounds
+/// (joined with `\n\n`) and is streamed to `on_text` after each one.
 async fn run_tool_loop<F>(
     cfg: &OpenAiCompat,
     api_key: &str,
@@ -238,9 +207,6 @@ where
         let data = post_json(&url, &headers, &body).await?;
         let msg = data.pointer("/choices/0/message").cloned().unwrap_or(Value::Null);
 
-        // CHOICE: accumulate across rounds with a blank-line separator (as the
-        // old Anthropic loop did). Replace with `answer = content` to show only
-        // the latest round.
         if let Some(content) = msg.get("content").and_then(Value::as_str).filter(|s| !s.is_empty()) {
             if !answer.is_empty() {
                 answer.push_str("\n\n");
@@ -269,9 +235,7 @@ where
                 .cloned()
                 .unwrap_or(Value::Null);
             let input = decode_arguments(&arguments);
-            // CHOICE: feed tool errors back to the model as the result text so it
-            // can recover. Abort instead (return Err) to be stricter about the
-            // fill_exam_answer write tool.
+            // Tool errors go back to the model as the result text so it can recover.
             let (content, _is_error) = execute_tool(name, &input).await;
             messages.push(json!({ "role": "tool", "tool_call_id": id, "content": content }));
         }
@@ -326,8 +290,6 @@ where
                 messages.push(anthropic::assistant_turn(&resp));
                 let mut results = Vec::with_capacity(tool_uses.len());
                 for tu in &tool_uses {
-                    // CHOICE: feed tool errors back (flagged `is_error`) so the
-                    // model can recover, as the OpenAI loop does.
                     let (content, is_error) = execute_tool(&tu.name, &tu.input).await;
                     results.push(anthropic::tool_result_block(&tu.id, &content, is_error));
                 }
@@ -342,7 +304,7 @@ where
 }
 
 /// Run one agentic chat turn for a tool-capable provider, streaming text via
-/// `on_text`. Replaces the Anthropic Managed-Agents `run_agent_turn`.
+/// `on_text`.
 pub async fn run_agent_turn<F>(
     provider: ProviderType,
     api_key: &str,

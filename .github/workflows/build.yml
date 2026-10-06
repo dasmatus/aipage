@@ -94,7 +94,16 @@ jobs:
           nix develop --accept-flake-config -c bash -c '
             set -euo pipefail
             bun install --frozen-lockfile
-            bunx playwright install --with-deps chromium
+            # Chromium 153+ (Playwright >= 1.57) refuses to load MV2
+            # extensions entirely, so the real-install test runs on the last
+            # Chromium that still honours the MV2 flags: 141 (Playwright
+            # 1.56, browser build 1194). The repo'\''s Playwright drives it via
+            # CHROMIUM_EXECUTABLE.
+            export PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/pw-mv2"
+            bunx playwright@1.56.1 install --with-deps chromium
+            CHROMIUM_EXECUTABLE="$(ls -d "$PLAYWRIGHT_BROWSERS_PATH"/chromium-1194/chrome-linux*/chrome | head -n 1)"
+            export CHROMIUM_EXECUTABLE
+            "$CHROMIUM_EXECUTABLE" --version
             env -u LD_PRELOAD bun run test:install
           '
 

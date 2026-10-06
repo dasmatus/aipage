@@ -47,12 +47,14 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use js_sys::{Function, Object, Promise, Reflect};
+use js_sys::{Function, Object, Promise};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
+
+use super::{from_js, to_js};
 
 /// Value of the `aipage` discriminator on handshake messages.
 pub const PROTOCOL_TAG: &str = "bridge";
@@ -138,23 +140,6 @@ impl Frame {
     pub fn err(id: u64, error: impl Into<String>) -> Self {
         Frame::Res { id, ok: false, result: Value::Null, error: Some(error.into()) }
     }
-}
-
-// --- JS <-> JSON conversion (shared by both bridge ends) ---
-
-/// Serialize a serde value to a plain JS object/array (not `Map`).
-pub fn to_js<T: Serialize>(v: &T) -> JsValue {
-    v.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
-        .unwrap_or(JsValue::NULL)
-}
-
-/// Convert an arbitrary JS value to JSON. `undefined`, functions and anything
-/// that cannot be represented become `null`.
-pub fn from_js(v: &JsValue) -> Value {
-    if v.is_undefined() || v.is_null() {
-        return Value::Null;
-    }
-    serde_wasm_bindgen::from_value(v.clone()).unwrap_or(Value::Null)
 }
 
 /// Parse a handshake envelope out of a `message` event's `data`, if it is one.
@@ -355,7 +340,7 @@ pub async fn wait_connected() -> bool {
 }
 
 /// The terminal failure reason, if the bridge gave up.
-pub fn failure() -> Option<String> {
+fn failure() -> Option<String> {
     CLIENT.with(|c| c.borrow().failed.clone())
 }
 
@@ -399,15 +384,6 @@ pub async fn call(method: Method, args: &[&JsValue]) -> super::JsResult {
 pub fn on_storage_changed(handler: ChangeHandler) {
     CLIENT.with(|c| c.borrow_mut().change_handlers.push(handler));
     ensure_started();
-}
-
-/// Build a JS object from `(key, value)` pairs (small helper for callers).
-pub fn js_object(pairs: &[(&str, JsValue)]) -> JsValue {
-    let o = Object::new();
-    for (k, v) in pairs {
-        let _ = Reflect::set(&o, &JsValue::from_str(k), v);
-    }
-    o.into()
 }
 
 #[cfg(test)]

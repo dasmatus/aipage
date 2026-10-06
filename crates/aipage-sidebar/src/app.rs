@@ -1,5 +1,5 @@
-//! Root sidebar component. Mirrors `App.tsx`: header, view switching and the
-//! initial storage-driven setup.
+//! Root sidebar component: header, view switching and the initial
+//! storage-driven setup.
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -9,13 +9,7 @@ use aipage_core::storage;
 use crate::components::{InputArea, MessageList, SettingsView, WidgetsView};
 use crate::icons::{self, icon};
 use crate::state::{auto_answer, AppState, ChatState, View};
-use crate::util::classes;
-
-fn set_body_theme(theme: &str) {
-    if let Some(body) = web_sys::window().and_then(|w| w.document()).and_then(|d| d.body()) {
-        let _ = body.set_attribute("data-theme", theme);
-    }
-}
+use crate::util::{classes, set_body_theme};
 
 fn initials_from_hash() -> Option<String> {
     let hash = web_sys::window()?.location().hash().ok()?;

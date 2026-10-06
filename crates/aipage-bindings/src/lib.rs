@@ -1,9 +1,9 @@
 //! Hand-rolled bindings to the WebExtension API surface used by AIPage.
 //!
-//! Replaces `webextension-polyfill`. We bind to the **callback-based `chrome.*`
-//! namespace**, which Chrome, Firefox and Safari all expose, and wrap the
-//! callbacks into Rust futures. This gives one uniform, promise-like API across
-//! every target without shipping any JavaScript polyfill.
+//! We bind to the **callback-based `chrome.*` namespace**, which Chrome,
+//! Firefox and Safari all expose, and wrap the callbacks into Rust futures.
+//! This gives one uniform, promise-like API across every target without
+//! shipping any JavaScript polyfill.
 //!
 //! # Transports
 //!
@@ -20,11 +20,40 @@ pub mod bridge;
 use std::cell::Cell;
 
 use js_sys::{Function, Object, Promise, Reflect};
+use serde::Serialize;
+use serde_json::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 
 pub type JsResult = Result<JsValue, JsValue>;
+
+// --- JSON <-> JS interop ---
+
+/// Serialize a serde value to a plain JS object/array (not `Map`), which is
+/// what the extension message handlers expect.
+pub fn to_js<T: Serialize>(v: &T) -> JsValue {
+    v.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap_or(JsValue::NULL)
+}
+
+/// Convert an arbitrary JS value to JSON. `undefined`, functions and anything
+/// that cannot be represented become `null`.
+pub fn from_js(v: &JsValue) -> Value {
+    if v.is_undefined() || v.is_null() {
+        return Value::Null;
+    }
+    serde_wasm_bindgen::from_value(v.clone()).unwrap_or(Value::Null)
+}
+
+/// Build a JS object from `(key, value)` pairs.
+pub fn js_object(pairs: &[(&str, JsValue)]) -> JsValue {
+    let o = Object::new();
+    for (k, v) in pairs {
+        let _ = Reflect::set(&o, &JsValue::from_str(k), v);
+    }
+    o.into()
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -263,17 +292,30 @@ pub mod tabs {
         }
     }
 
-    /// Convenience: id of the first tab matching `{active:true,currentWindow:true}`.
+    /// Id of the active tab in the last focused window, if any.
     pub async fn active_tab_id() -> Option<i32> {
-        let q = Object::new();
-        let _ = Reflect::set(&q, &"active".into(), &JsValue::TRUE);
-        let _ = Reflect::set(&q, &"currentWindow".into(), &JsValue::TRUE);
+        let q = to_js(&serde_json::json!({ "active": true, "lastFocusedWindow": true }));
         let tabs = query(&q).await.ok()?;
         let first = js_sys::Array::from(&tabs).get(0);
         Reflect::get(&first, &"id".into())
             .ok()
             .and_then(|v| v.as_f64())
             .map(|n| n as i32)
+    }
+
+    /// [`send_message`] with a JSON payload; the reply as JSON, `Null` when
+    /// the tab did not answer (no listener, tab gone).
+    pub async fn send_json(tab_id: i32, msg: &Value) -> Value {
+        match send_message(tab_id, &to_js(msg)).await {
+            Ok(v) => from_js(&v),
+            Err(_) => Value::Null,
+        }
+    }
+
+    /// [`send_json`] to the active tab; `None` when no tab is open.
+    pub async fn send_json_to_active(msg: &Value) -> Option<Value> {
+        let tab_id = active_tab_id().await?;
+        Some(send_json(tab_id, msg).await)
     }
 }
 

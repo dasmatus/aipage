@@ -1,5 +1,4 @@
-//! Manages the sidebar iframe and its drag-to-resize handle. Mirrors
-//! `content-scripts/sidebar-controller.ts`.
+//! Manages the sidebar iframe and its drag-to-resize handle.
 //!
 //! The iframe loads either the **hosted** sidebar (remote UI, default) or the
 //! **bundled** one. With the hosted UI the controller arms a fallback: if the
@@ -19,7 +18,7 @@ use aipage_bindings::{runtime, storage};
 use aipage_core::remote_ui;
 
 use crate::bridge::{self, LocalDispatch};
-use crate::utils;
+use crate::utils::{self, document};
 
 const MIN_WIDTH: f64 = 250.0;
 const MAX_WIDTH: f64 = 450.0;
@@ -35,10 +34,6 @@ pub struct SidebarController {
     remote_ui: Option<String>,
     /// Handles `tabs.sendMessage`-style requests from the hosted sidebar.
     dispatch: Option<LocalDispatch>,
-}
-
-fn document() -> web_sys::Document {
-    web_sys::window().unwrap().document().unwrap()
 }
 
 fn set_styles(el: &HtmlElement, props: &[(&str, &str)]) {
@@ -371,10 +366,9 @@ fn arm_remote_with_fallback(iframe: &HtmlIFrameElement, base: &str, dispatch: Lo
 }
 
 fn save_width(width: f64) {
-    let obj = js_sys::Object::new();
-    let _ = js_sys::Reflect::set(&obj, &"sidebarWidth".into(), &JsValue::from_f64(width));
+    let obj = aipage_bindings::js_object(&[("sidebarWidth", JsValue::from_f64(width))]);
     wasm_bindgen_futures::spawn_local(async move {
-        let _ = storage::local_set(obj.as_ref()).await;
+        let _ = storage::local_set(&obj).await;
     });
 }
 
