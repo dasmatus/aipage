@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **ci:** run web-ext packaging inside the nix devShell ([d7262ac](https://github.com/dasmatus/aipage/commit/d7262accc3fd6168b758d649b33f458af187ecfb))
 * **ci:** copy the archive web-ext actually produces ([1115a27](https://github.com/dasmatus/aipage/commit/1115a275e120af0e2759f38c1879cbf8607917cc))
 * **ci:** download Brave's package index before parsing it ([bb5a587](https://github.com/dasmatus/aipage/commit/bb5a5873e4c4332829b3bc8df320b637fe8aecb0))
+* **firefox:** declare data-collection consent and drop 'unsafe-eval' from the CSP ([0c428e9](https://github.com/dasmatus/aipage/commit/0c428e9fc444afa70d4e81068ea7b99892cd5218))
 
 ### 📦 Dependencies
 
@@ -108,11 +109,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **install-tests:** also run the real-install test on the latest stable Brave ([4d13bfa](https://github.com/dasmatus/aipage/commit/4d13bfaeda9b5852379d6d6079aa376a34e1cc7b))
 * regenerate the changelog on main and render release notes with git-cliff ([111b2a5](https://github.com/dasmatus/aipage/commit/111b2a5239342296de1b3be5c6aebb02e4501d18))
 * **docs:** build and deploy the mdBook on Vercel ([fb79b63](https://github.com/dasmatus/aipage/commit/fb79b63e7d37f41e208f4e86737802811c06988d))
+* sign the Firefox xpi via AMO and build the Safari app wrapper on macOS ([d73c9fe](https://github.com/dasmatus/aipage/commit/d73c9fe63727d63c21ef159232b36c9caf7fd1a3))
 
 ### ✅ Tests
 
 * **install:** make the inline-script check robust to nested comments and spaced end tags ([a25d4f0](https://github.com/dasmatus/aipage/commit/a25d4f08848878c27ad3b3a1de20d8603de17316))
 * **install:** match script end tags with attributes or whitespace ([8a67e70](https://github.com/dasmatus/aipage/commit/8a67e70a09eed4915abc50004e928f61d047e421))
+* **install:** drive the temporarily installed add-on in headless Firefox ([a615a93](https://github.com/dasmatus/aipage/commit/a615a9313f1b5bb1b3eb19ac5068f8083f56f62b))
+* **install:** check what the Safari app wrapper needs from dist-safari ([e9651d8](https://github.com/dasmatus/aipage/commit/e9651d8a56b370ca16992a286ba4bd4f060f7646))
 
 ### 🏗️ Build System
 
@@ -132,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * MV3 feasibility study skeleton ([3e1d240](https://github.com/dasmatus/aipage/commit/3e1d24063ebcf93a9ded3fef28c4a07a5665c46d))
 * MV3 feasibility study ([7b6140a](https://github.com/dasmatus/aipage/commit/7b6140ab1701a8af419f9e415bdef8b1d9c0db5f))
 * describe the generated changelog, the release flow and the docs site ([073093a](https://github.com/dasmatus/aipage/commit/073093a3a987680086db5d5c155c0d99e1908455))
+* **user-guide:** installing the signed Firefox xpi and the Safari app wrapper ([921d78c](https://github.com/dasmatus/aipage/commit/921d78ca63d1e900f3b3ce7566e0ff92fc421b07))
 
 ### 💎 Styles
 
