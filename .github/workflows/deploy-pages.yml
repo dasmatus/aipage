@@ -1,0 +1,73 @@
+name: Deploy documentation to GitHub Pages
+
+# The repository's Pages site is served from https://dasmatus.github.io/aipage/
+# and Pages is configured with build_type "workflow", so a GitHub Actions
+# workflow has to publish the artifact. Nothing else did: the mdBook build in
+# deploy-docs.yml deploys to Vercel under a root base path, which is why the
+# Pages site had been returning 404 with no build or deployment ever recorded.
+#
+# mdBook emits relative asset links, but its generated 404.html needs the
+# absolute site URL to resolve them. MDBOOK_OUTPUT__HTML__SITE_URL overrides
+# book.toml's site-url = "/" (which stays correct for the Vercel root) for this
+# build only, so the project's /aipage/ base path is used.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "book/**"
+      - "book.toml"
+      - "docs/mdbook-theme.css"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build the book & deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Build book/book (in nix devShell)
+        env:
+          MDBOOK_OUTPUT__HTML__SITE_URL: /aipage/
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            mdbook --version
+            bun run docs:build
+          '
+
+      - name: Verify book/book
+        run: |
+          set -euo pipefail
+          ls -la book/book
+          test -f book/book/index.html
+          test -f book/book/changelog.html
+          test -f book/book/contributing.html
+          grep -q '<base href="/aipage/">' book/book/404.html
+          jq -e . book/book/vercel.json > /dev/null
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: book/book
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
