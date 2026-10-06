@@ -8,9 +8,8 @@
 
 # Development
 
-- [Contributing Guide](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/contributing.md)
+- [Contributing Guide](contributing.md)
 
 # Reference
 
-- [Changelog](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/changelog.md)
-- [API Reference](api-reference.md)
+- [Changelog](changelog.md)

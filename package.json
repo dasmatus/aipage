@@ -5,7 +5,7 @@
     "description": "AI Sidebar for EduPage (Rust/WASM extension)",
     "repository": {
         "type": "git",
-        "url": "https://codeberg.org/dasmatus/aipage.git"
+        "url": "https://github.com/dasmatus/aipage.git"
     },
     "scripts": {
         "build": "cargo run -p xtask -- build --target chrome",
@@ -27,7 +27,7 @@
         "release": "standard-version",
         "release:minor": "standard-version --release-as minor",
         "release:major": "standard-version --release-as major",
-        "docs:build": "./scripts/build-docs.sh",
+        "docs:build": "mdbook build",
         "docs:serve": "mdbook serve --open"
     },
     "devDependencies": {

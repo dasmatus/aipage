@@ -7,7 +7,7 @@ End-to-end tests that drive the built Leptos/WASM sidebar in a real browser.
 ```bash
 # 1. Build the extension (produces dist-chrome/)
 cargo run -p xtask -- build --target chrome
-# or: bun run build:rust
+# or: bun run build
 
 # 2. Run the tests (serves dist-chrome over HTTP automatically)
 bun run test:e2e
