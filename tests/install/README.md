@@ -45,7 +45,12 @@ plus the flags that still allow a Manifest V2 extension to load:
 Verified empirically on Chromium 141: with neither flag the extension is not
 installed at all (missing from `chrome://extensions-internals`); either flag
 alone is sufficient, and Chromium ignores unknown feature names, so both are
-passed for robustness. Then:
+passed for robustness. Chromium 153 (the "Chrome for Testing" build bundled
+with Playwright 1.63) refuses to load MV2 extensions entirely, even unpacked
+with `--load-extension`: those features, `AllowLegacyMV2Extensions` and the
+`ExtensionManifestV2Availability` policy no longer exist in that binary (MV3
+extensions load fine), so CI pins this spec to Chrome 141 and the Chrome
+build only installs on browsers that still allow MV2. Then:
 
 1. finds the extension's `_generated_background_page.html` target through CDP
    `Target.getTargets` (Playwright ≥ 1.5x no longer attaches to MV2

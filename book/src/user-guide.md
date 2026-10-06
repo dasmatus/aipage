@@ -7,7 +7,7 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 - AI chat assistant integrated directly into EduPage
 - **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
 - Clean, responsive design that matches EduPage's aesthetic
-- Real-time conversations with Claude via the official Anthropic API, plus local LM Studio and Ollama
+- Chat with Ollama Cloud, OpenRouter, ChatGPT / OpenAI or Claude (Anthropic), or with a local LM Studio / Ollama
 - Secure local storage of API credentials
 - Responsive sidebar that doesn't obscure important UI elements
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
@@ -26,27 +26,25 @@ To install the extension, download the latest build directly from our GitHub Rel
 
 ### Chrome
 
-1.  Download `aipage-chrome.zip` (from the `package:chrome` job artifact).
+1.  Download `aipage-chrome.zip` from the release.
 2.  Unzip the file to a folder on your computer.
 3.  Open Chrome and navigate to `chrome://extensions/`.
 4.  Enable **"Developer mode"** (toggle in the top-right corner).
 5.  Click **"Load unpacked"**.
 6.  Select the unzipped folder.
 
-> **Note on Manifest V2**: Chrome has phased out Manifest V2 extensions. If you encounter issues loading the extension, please refer to this guide on [how to enable Manifest V2 in Chrome](https://gist.github.com/velzie/053ffedeaecea1a801a2769ab86ab376).
->
-> If you are unable to enable Manifest V2 in Chrome, we recommend using **[Brave Browser](https://brave.com/)**, which retains support for Manifest V2 extensions.
+> **Note on Manifest V2**: the extension is a Manifest V2 extension. Current Chrome/Chromium (153 and later) no longer loads MV2 extensions at all, not even unpacked: the `ExtensionManifestV2Disabled`/`ExtensionManifestV2Unsupported` features, `AllowLegacyMV2Extensions` and the `ExtensionManifestV2Availability` enterprise policy no longer exist in those builds. The Chrome build is only installable on Chromium builds up to the 141 era (started with `--disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported`) or on browsers that still allow MV2, such as **[Brave](https://brave.com/)**. An MV3 manifest for Chrome is the pending fix.
 
 ### Firefox
 
-1.  Download the `.xpi` file from the `package:firefox` job artifact.
+1.  Download `aipage-firefox.xpi` from the release.
 2.  Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
 3.  Click **"Load Temporary Add-on"**.
 4.  Select the downloaded `.xpi` file.
 
 ### Safari (macOS only)
 
-1.  Download `aipage-safari.zip` from the `package:safari` job artifact.
+1.  Download `aipage-safari.zip` from the release.
 2.  Unzip the file to get the application.
 3.  Run the application locally.
 4.  Open Safari Preferences → Extensions.
@@ -65,13 +63,13 @@ Every night (and on demand) the head of `main` is built for all three browsers a
 
 ### Installing a nightly
 
-**Chrome / Chromium / Brave** — unzip `aipage-chrome.zip`, open `chrome://extensions/`, enable **Developer mode** and **Load unpacked** the folder. Current Chromium builds refuse to load Manifest V2 extensions, even unpacked ones; start the browser with
+**Chrome / Chromium / Brave** — unzip `aipage-chrome.zip`, open `chrome://extensions/`, enable **Developer mode** and **Load unpacked** the folder. Chromium 153 and later refuse to load Manifest V2 extensions entirely (the MV2 feature flags and policy are gone from those builds). On a Chromium build up to the 141 era start the browser with
 
 ```
 --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported
 ```
 
-(or enable the `AllowLegacyMV2Extensions` feature, exposed as *Allow legacy extension manifest versions* in `chrome://flags` on builds that still have it). This is exactly what the install tests do in CI; Brave keeps MV2 support without any flag.
+(or enable the `AllowLegacyMV2Extensions` feature, exposed as *Allow legacy extension manifest versions* in `chrome://flags` on builds that still have it). This is exactly what the install tests do in CI, pinned to Chrome 141; Brave keeps MV2 support without any flag.
 
 **Firefox** — open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and pick `aipage-firefox.xpi` (or the `manifest.json` of the unzipped file). Temporary add-ons are removed when Firefox exits; a nightly is not signed by AMO, so it cannot be installed permanently on release builds of Firefox.
 
@@ -86,8 +84,6 @@ The extension supports multiple AI providers. Choose your preferred provider and
 - **Ollama Cloud** — chat, agentic tools, native web search, and SVG image generation
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
-- **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
-- **Claude (Anthropic)** — chat, native web search, and SVG image generation
 - **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
 - **LM Studio** (Local)
 - **Ollama** (Local)
@@ -123,17 +119,6 @@ OpenRouter exposes hundreds of models (OpenAI, Anthropic, Google, Meta, Mistral,
 4. Click the refresh button next to **Model** to list the available models and pick one, e.g. `openai/gpt-4.1-mini` (the default). Models that support function calling also power the agentic chat, native web search and SVG image generation.
 
 > The key is stored locally in your browser and is only ever sent to `openrouter.ai` (through the extension's background proxy). Requests carry the optional `HTTP-Referer`/`X-Title` attribution headers so OpenRouter can show AIPage on its app rankings.
-
-#### ChatGPT / OpenAI
-
-The public OpenAI platform API (the models behind ChatGPT), billed per request to your OpenAI account. This uses an ordinary API key only — there is no "sign in with ChatGPT" flow.
-
-1. Go to **[platform.openai.com](https://platform.openai.com)** and sign in (or create an account and add billing).
-2. Open **[API keys](https://platform.openai.com/api-keys)**, click **Create new secret key** and copy it — the key starts with `sk-`.
-3. In the AIPage settings pick **ChatGPT / OpenAI** as the engine, leave the **Base URL** at `https://api.openai.com` (entering `https://api.openai.com/v1` works too) and paste the key.
-4. Click the refresh button next to **Model** to list your available chat models and pick one, e.g. `gpt-4.1-mini` (the default). The list is filtered to chat-capable families (`gpt-*`, `o*`, `chatgpt-*`); embedding, audio, realtime, image and moderation models are hidden. Function-calling models power the agentic chat, native web search and SVG image generation.
-
-> The key is stored locally in your browser and is only ever sent to `api.openai.com` (through the extension's background proxy).
 
 #### ChatGPT / OpenAI
 
@@ -265,73 +250,42 @@ build (or set the custom URL in settings in the meantime).
 
 ## Development
 
-### Project Structure
+The extension is a Rust workspace compiled to WebAssembly (`wasm32-unknown-unknown`, `wasm-bindgen`, Leptos). See the [contributing guide](contributing.md) for the toolchain and layout.
 
 ```
-extension/
-├── src/
-│   ├── manifest.json           # Chrome manifest
-│   ├── manifest.firefox.json   # Firefox manifest
-│   ├── manifest.safari.json    # Safari manifest
-│   ├── background.ts            # Background service worker
-│   ├── content.ts               # Content script (injects sidebar)
-│   ├── polyfills/
-│   │   └── browser-polyfill.ts  # Cross-browser compatibility
-│   └── sidebar/
-│       ├── sidebar.html         # Sidebar UI
-│       ├── sidebar.scss         # Sidebar styles
-│       └── index.tsx            # Sidebar logic (React)
-├── scripts/
-│   └── setup-safari.sh          # Safari Xcode project generator
-├── tests/
-│   ├── sidebar.spec.ts          # Sidebar UI tests
-│   ├── navbar.spec.ts           # Integration tests
-│   ├── test-player.spec.ts      # Anti-cheat tests
-│   └── context.spec.ts          # Context menu tests
-├── dist-chrome/                 # Chrome build output
-├── dist-firefox/                # Firefox build output
-├── dist-safari/                 # Safari build output
-└── build.ts                     # Multi-browser build script
+crates/aipage-bindings/   # bindings to the chrome.* API, hosted-UI bridge transport
+crates/aipage-core/       # shared logic: types, storage, i18n, providers, agent loop, imagegen
+crates/aipage-sidebar/    # Leptos sidebar UI
+crates/aipage-background/ # CORS proxy, web search, toolbar toggle, update check
+crates/aipage-content/    # navbar button, sidebar iframe, theming, exam tools, anti-cheat
+xtask/                    # build orchestrator
+assets/                   # manifests, sidebar.html, JS loaders, anti_cheat.js, stylesheets
+scripts/setup-safari.sh   # Safari Xcode project generator (macOS)
+tests/install, tests/e2e  # Playwright test suites
 ```
 
 ### Building
 
 ```bash
-# Build for a specific browser
-bun run build:chrome
-bun run build:firefox
-bun run build:safari
-
-# Build for all browsers
-bun run build:all
+cargo run -p xtask -- build --target chrome   # or firefox / safari → dist-<target>/
+cargo run -p xtask -- build-all               # all three browsers
+cargo run -p xtask -- build --target web      # hosted sidebar → dist-web/
 ```
 
 ### Running Tests
 
 ```bash
-# Run all tests (builds Chrome first)
-bun test
-
-# Run specific test file
-bunx playwright test tests/sidebar.spec.ts
-
-# View test report
-bunx playwright show-report
+cargo test --workspace        # native unit tests
+bun run test:install          # install tests against the built dists (tests/install/README.md)
+bun run test:e2e              # Playwright UI tests (tests/e2e/README.md)
 ```
 
 ### Packaging for Distribution
 
 ```bash
-# Package Chrome extension (.zip)
-bun run package:chrome
-
-# Package Firefox extension (.xpi)
-bun run package:firefox
-
-# Outputs:
-# - edupage-ai-sidebar-chrome.zip (for Chrome Web Store)
-# - packages/*.xpi (for Firefox Add-ons)
-# - Safari requires App Store submission via Xcode
+bun run package:chrome        # aipage-chrome.zip
+bun run package:firefox       # packages/*.zip (web-ext; the Firefox xpi)
+bun run package:safari        # aipage-safari.zip, wrapped with Xcode via scripts/setup-safari.sh
 ```
 
 ### CI/CD Pipeline
@@ -348,9 +302,8 @@ This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/
 
 ### "Invalid API Key" Error
 
-- Verify your API key is correct
-- Ensure you copied the entire key (it starts with `sk-ant-`)
-- Check that your API key hasn't been deactivated or revoked in the [Anthropic Console](https://console.anthropic.com/settings/keys)
+- Verify your API key is correct and complete (Claude keys start with `sk-ant-`, OpenAI keys with `sk-`, OpenRouter keys with `sk-or-v1-`)
+- Check that the key has not been deactivated or revoked in your provider's console
 
 ### Sidebar Not Appearing
 
@@ -387,14 +340,13 @@ dual licensed as above, without any additional terms or conditions.
 
 ## Contribution
 
-See [the contribution guide](https://codeberg.org/dasmatus/aipage/src/branch/main/book/src/contributing.md).
+See [the contribution guide](contributing.md).
 
 ## Credits
 
 Built with:
 
-- [Anthropic API](https://www.anthropic.com/api)
-- [@imagemagick/magick-wasm](https://github.com/dlemstra/magick-wasm) for SVG → image conversion
-- [shadcn/ui](https://ui.shadcn.com)
+- [Rust](https://www.rust-lang.org/), [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/) and [Leptos](https://leptos.dev/)
+- [resvg](https://github.com/linebender/resvg) for SVG → PNG rasterization
+- [Tailwind CSS](https://tailwindcss.com/)
 - [Playwright](https://playwright.dev/) for testing
-- TypeScript & esbuild

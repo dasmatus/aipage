@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **providers:** extract the OpenAI-compatible chat-completions + `/v1/models` client into `providers/openai_compat.rs` (`OpenAiCompat` config: base URL, default model, label, extra headers); Ollama Cloud, OpenRouter and LM Studio are thin wrappers over it, and the agent loop / image generator take any tool-capable provider. The base-URL normaliser now also strips a trailing `/`. An "Adding a provider" checklist lives at the top of `providers/mod.rs`.
 * **imagegen:** on providers other than Ollama Cloud the stored Ollama-Cloud-only SVG model default is swapped for the provider's configured chat model instead of being sent verbatim.
+* **providers:** the Ollama Cloud and OpenRouter wrapper modules are gone; the dispatchers call `OpenAiCompat::for_provider` directly and only keep arms for providers that differ, `web_search` dispatches on `supports_native_tools`, and the Claude module reuses the shared base-URL / model / model-list helpers.
+* **bindings:** `to_js`/`from_js`/`js_object` and `tabs::{active_tab_id, send_json, send_json_to_active}` live once in `aipage-bindings` instead of being copied into the agent loop, the sidebar state and the content/background crates; `document()`, `set_body_theme`, base64 and the DuckDuckGo result fetch are shared the same way.
+* Removed dead code: `aipage_core::version`, `PageContentResponse`, `IMAGE_PLACEHOLDER`, `get_provider_backend_preference`, the update manager's never-read pending version and unreachable "manual check" branch, 38 translation keys no view reads (from all five locales and the `Translation` struct), SCSS rules and Tailwind tokens with no matching markup, and the remaining TypeScript-era doc comments.
+
+### 🔧 Chores
+
+* Drop the TypeScript-era docs tooling (TypeDoc config and theme, the pre-mdBook static docs page, the API-reference chapter, `scripts/build-docs.sh`) and `GEMINI.md`; `docs:build` is a plain `mdbook build`. `package.json`, `book.toml` and the book summary now point at the GitHub repository.
+* Trim unused crate dependencies (`futures`, `gloo-events`, and `wasm-bindgen-futures`/`gloo-timers`/`web-sys` in aipage-core, `serde`/`serde-wasm-bindgen` in aipage-content) and the web-sys feature lists.
+* Refresh `CLAUDE.md`, the contributing guide and the README development section for the Rust workspace, the `web` target, the install tests and the hosted UI; document that Chromium 153+ no longer loads MV2 extensions.
 
 ### 👷 CI/CD
 
