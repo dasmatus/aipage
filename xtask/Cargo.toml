@@ -10,3 +10,8 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+# `preserve_order` keeps the manifest's key order intact when xtask rewrites
+# `version` / `version_name` for stamped (nightly) builds.
+serde_json = { workspace = true, features = ["preserve_order"] }
+# sha256 of every published web asset, written to `dist-web/aipage-web.json`.
+sha2 = { workspace = true }

@@ -1,4 +1,4 @@
-//! Core data model. Mirrors `src/sidebar/types.ts` and `providers/types.ts`.
+//! Core data model.
 
 use serde::{Deserialize, Serialize};
 
@@ -51,21 +51,15 @@ impl Message {
     }
 }
 
-/// Response shape returned by the content script's `get_page_content`.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct PageContentResponse {
-    pub content: Option<String>,
-    #[serde(default, rename = "isSelection")]
-    pub is_selection: Option<bool>,
-    #[serde(default)]
-    pub images: Option<Vec<String>>,
-    #[serde(default)]
-    pub error: Option<String>,
-}
-
-/// Which AI backend a request targets: `'ollama-cloud' | 'lmstudio' | 'ollama'`.
-/// `OllamaCloud` is the hosted Ollama service (OpenAI-compatible); the two
-/// local variants talk to a self-hosted Ollama / LM Studio on the loopback.
+/// Which AI backend a request targets:
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'anthropic' | 'lmstudio' | 'ollama'`.
+/// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
+/// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
+/// three are OpenAI-compatible and need an API key. `Anthropic` is Claude
+/// over the Anthropic Messages API (API key required); the two local variants
+/// talk to a self-hosted Ollama / LM Studio on the loopback.
+///
+/// See the "Adding a provider" checklist in [`crate::providers`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -73,14 +67,32 @@ pub enum ProviderType {
     #[default]
     #[serde(rename = "ollama-cloud")]
     OllamaCloud,
+    #[serde(rename = "openrouter")]
+    OpenRouter,
+    #[serde(rename = "openai")]
+    OpenAi,
+    Anthropic,
     Lmstudio,
     Ollama,
 }
 
 impl ProviderType {
+    /// Every provider, in settings-menu order.
+    pub const ALL: [ProviderType; 6] = [
+        ProviderType::OllamaCloud,
+        ProviderType::OpenRouter,
+        ProviderType::OpenAi,
+        ProviderType::Anthropic,
+        ProviderType::Ollama,
+        ProviderType::Lmstudio,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
             ProviderType::OllamaCloud => "ollama-cloud",
+            ProviderType::OpenRouter => "openrouter",
+            ProviderType::OpenAi => "openai",
+            ProviderType::Anthropic => "anthropic",
             ProviderType::Lmstudio => "lmstudio",
             ProviderType::Ollama => "ollama",
         }
@@ -89,17 +101,24 @@ impl ProviderType {
     pub fn display_name(self) -> &'static str {
         match self {
             ProviderType::OllamaCloud => "Ollama Cloud",
+            ProviderType::OpenRouter => "OpenRouter",
+            ProviderType::OpenAi => "ChatGPT / OpenAI",
+            ProviderType::Anthropic => "Claude (Anthropic)",
             ProviderType::Lmstudio => "LM Studio",
             ProviderType::Ollama => "Ollama",
         }
     }
 
-    /// Parse a stored string, defaulting to Ollama Cloud for unknown values
-    /// (matches `getProviderPreference`). The legacy `"anthropic"` value maps
-    /// to the new default so pre-migration installs land on the cloud backend.
+    /// Parse a stored string, defaulting to Ollama Cloud for unknown values.
+    /// `"anthropic"` is the stored value of the Claude provider, so installs
+    /// that saved it before the Ollama Cloud migration come back on Claude
+    /// with their old key.
     pub fn from_str_or_default(s: &str) -> Self {
         match s {
-            "ollama-cloud" | "anthropic" => ProviderType::OllamaCloud,
+            "ollama-cloud" => ProviderType::OllamaCloud,
+            "openrouter" => ProviderType::OpenRouter,
+            "openai" => ProviderType::OpenAi,
+            "anthropic" => ProviderType::Anthropic,
             "lmstudio" => ProviderType::Lmstudio,
             "ollama" => ProviderType::Ollama,
             _ => ProviderType::OllamaCloud,
@@ -110,8 +129,22 @@ impl ProviderType {
     pub fn is_local(self) -> bool {
         matches!(self, ProviderType::Lmstudio | ProviderType::Ollama)
     }
-}
 
+    /// Whether this backend requires an API key (every cloud backend).
+    pub fn requires_api_key(self) -> bool {
+        !self.is_local()
+    }
+
+    /// Whether this backend accepts tool definitions (OpenAI-style function
+    /// tools, or Anthropic's `input_schema` tools for Claude), enabling the
+    /// agentic chat loop and native web search in [`crate::agent`].
+    pub fn supports_native_tools(self) -> bool {
+        matches!(
+            self,
+            ProviderType::OllamaCloud | ProviderType::OpenRouter | ProviderType::OpenAi | ProviderType::Anthropic
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -119,12 +152,13 @@ mod tests {
 
     #[test]
     fn provider_roundtrips_through_json() {
-        for p in [ProviderType::OllamaCloud, ProviderType::Lmstudio, ProviderType::Ollama] {
+        for p in ProviderType::ALL {
             let json = serde_json::to_string(&p).unwrap();
             let back: ProviderType = serde_json::from_str(&json).unwrap();
             assert_eq!(p, back);
             // serialized form must match the stored string contract
             assert_eq!(json, format!("\"{}\"", p.as_str()));
+            assert_eq!(ProviderType::from_str_or_default(p.as_str()), p);
         }
     }
 
@@ -134,12 +168,37 @@ mod tests {
     }
 
     #[test]
+    fn openrouter_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenRouter).unwrap(), "\"openrouter\"");
+        assert_eq!(ProviderType::OpenRouter.display_name(), "OpenRouter");
+    }
+
+    #[test]
+    fn openai_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenAi).unwrap(), "\"openai\"");
+        assert_eq!(serde_json::from_str::<ProviderType>("\"openai\"").unwrap(), ProviderType::OpenAi);
+        assert_eq!(ProviderType::OpenAi.as_str(), "openai");
+        assert_eq!(ProviderType::OpenAi.display_name(), "ChatGPT / OpenAI");
+    }
+
+    #[test]
+    fn anthropic_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::Anthropic).unwrap(), "\"anthropic\"");
+        assert_eq!(ProviderType::Anthropic.display_name(), "Claude (Anthropic)");
+        assert!(!ProviderType::Anthropic.is_local());
+        assert!(ProviderType::Anthropic.requires_api_key());
+        assert!(ProviderType::Anthropic.supports_native_tools());
+    }
+
+    #[test]
     fn provider_from_str_defaults_to_ollama_cloud() {
         assert_eq!(ProviderType::from_str_or_default("ollama-cloud"), ProviderType::OllamaCloud);
+        assert_eq!(ProviderType::from_str_or_default("openrouter"), ProviderType::OpenRouter);
+        assert_eq!(ProviderType::from_str_or_default("openai"), ProviderType::OpenAi);
         assert_eq!(ProviderType::from_str_or_default("ollama"), ProviderType::Ollama);
         assert_eq!(ProviderType::from_str_or_default("lmstudio"), ProviderType::Lmstudio);
-        // legacy "anthropic" stored value migrates to the new default
-        assert_eq!(ProviderType::from_str_or_default("anthropic"), ProviderType::OllamaCloud);
+        // "anthropic" is the Claude provider's stored value (old installs come back on Claude)
+        assert_eq!(ProviderType::from_str_or_default("anthropic"), ProviderType::Anthropic);
         assert_eq!(ProviderType::from_str_or_default("bogus"), ProviderType::OllamaCloud);
     }
 
@@ -151,8 +210,19 @@ mod tests {
     #[test]
     fn is_local_flag() {
         assert!(!ProviderType::OllamaCloud.is_local());
+        assert!(!ProviderType::OpenRouter.is_local());
+        assert!(!ProviderType::OpenAi.is_local());
+        assert!(!ProviderType::Anthropic.is_local());
         assert!(ProviderType::Lmstudio.is_local());
         assert!(ProviderType::Ollama.is_local());
+    }
+
+    #[test]
+    fn cloud_providers_need_a_key_and_support_tools() {
+        for p in ProviderType::ALL {
+            assert_eq!(p.requires_api_key(), !p.is_local(), "{p:?}");
+            assert_eq!(p.supports_native_tools(), !p.is_local(), "{p:?}");
+        }
     }
 
     #[test]

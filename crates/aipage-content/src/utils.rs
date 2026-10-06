@@ -1,11 +1,13 @@
-//! Small DOM helpers. Mirrors `content-scripts/utils.ts`.
+//! Small DOM helpers.
 
+use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
 
 const NAVBAR_ID: &str = "edubar";
 const TEST_PLAYER_HEADER: &str = ".etest-player-header";
 
-fn document() -> web_sys::Document {
+/// The page document (content scripts always run with a window).
+pub fn document() -> web_sys::Document {
     web_sys::window().unwrap().document().unwrap()
 }
 
@@ -29,8 +31,6 @@ pub fn navbar_height() -> i32 {
     }
     43
 }
-
-use wasm_bindgen::JsCast;
 
 /// Initials read from the profile box, or empty string if absent.
 pub fn user_initials() -> String {

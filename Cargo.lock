@@ -24,7 +24,6 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "futures",
  "js-sys",
  "serde",
  "serde-wasm-bindgen",
@@ -41,6 +40,7 @@ dependencies = [
  "js-sys",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -53,10 +53,7 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "gloo-events",
  "js-sys",
- "serde",
- "serde-wasm-bindgen",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -68,17 +65,14 @@ name = "aipage-core"
 version = "1.7.0"
 dependencies = [
  "aipage-bindings",
- "futures",
- "gloo-timers",
  "js-sys",
  "pulldown-cmark",
  "resvg",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "sha2",
  "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -88,8 +82,6 @@ dependencies = [
  "aipage-bindings",
  "aipage-core",
  "console_error_panic_hook",
- "futures",
- "gloo-events",
  "gloo-timers",
  "js-sys",
  "leptos",
@@ -626,16 +618,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gloo-events"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c6a94fa8cd88bea0babf8a27fe9abbcdece831fd1c3c84dd5c231fab4685ec7"
-dependencies = [
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "gloo-net"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -662,8 +644,6 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "482ce8a491a501da4cd806bd190275363d674f2845005c6ddbd5d3e1dd54495d"
 dependencies = [
- "futures-channel",
- "futures-core",
  "js-sys",
  "wasm-bindgen",
 ]
@@ -1554,6 +1534,7 @@ version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "serde",
@@ -2180,6 +2161,10 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 [[package]]
 name = "xtask"
 version = "1.7.0"
+dependencies = [
+ "serde_json",
+ "sha2",
+]
 
 [[package]]
 name = "xxhash-rust"

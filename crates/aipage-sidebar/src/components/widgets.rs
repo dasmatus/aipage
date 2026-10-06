@@ -1,5 +1,4 @@
-//! Study widgets: Timer, Notes, Calculator. Mirrors
-//! `components/Widgets/WidgetsView.tsx`.
+//! Study widgets: Timer, Notes, Calculator.
 
 use gloo_timers::callback::{Interval, Timeout};
 use leptos::prelude::*;

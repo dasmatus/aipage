@@ -4,13 +4,16 @@ node_modules/
 # Build
 dist/
 dist-chrome/
+dist-chrome-mv3/
 dist-firefox/
 dist-safari/
+dist-web/
 packages/
 *.zip
 *.xpi
 safari/
 public/
+book/book/
 
 # Bun
 bun.lockb
@@ -42,3 +45,6 @@ playwright-report/
 
 # Vercel
 .vercel
+
+# web-ext
+web-ext-artifacts/

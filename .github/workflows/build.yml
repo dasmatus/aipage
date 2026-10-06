@@ -1,0 +1,323 @@
+name: Build
+
+# Reusable build: compiles all three targets inside the flake's devShell,
+# packages the canonical artifacts (aipage-chrome.zip, aipage-firefox.xpi,
+# aipage-safari.zip), optionally runs the extension install tests against the
+# built dists, and uploads the packages as one workflow artifact.
+#
+# Firefox: with `sign-firefox: true` and the AMO credentials present
+# (secrets WEB_EXT_API_KEY / WEB_EXT_API_SECRET), the xpi is signed through
+# addons.mozilla.org's unlisted (self-distribution) channel so it installs
+# permanently in release Firefox; otherwise the unsigned package is shipped
+# as `aipage-firefox-unsigned.xpi` (temporary-install only).
+#
+# Safari: `aipage-safari.zip` is only the web-extension folder. A second,
+# macOS job wraps the very same `dist-safari` (passed as an artifact) in the
+# native app Safari requires (`xcrun safari-web-extension-packager` /
+# `-converter` + `xcodebuild`, unsigned) and uploads `aipage-safari-macos.zip`
+# as a separate artifact (`<artifact-name>-safari-macos`).
+#
+# Called by ci.yml (push/PR), release.yml (tags) and nightly.yml.
+
+on:
+  workflow_call:
+    secrets:
+      WEB_EXT_API_KEY:
+        description: AMO API key (JWT issuer) used to sign the Firefox xpi; signing is skipped when absent.
+        required: false
+      WEB_EXT_API_SECRET:
+        description: AMO API secret (JWT secret) that goes with WEB_EXT_API_KEY.
+        required: false
+    inputs:
+      sign-firefox:
+        description: >-
+          Sign the Firefox xpi through AMO (unlisted channel) when the
+          WEB_EXT_API_* secrets are available. AMO keeps one file per
+          version, so only enable this for builds whose manifest version is
+          unique (nightly stamps, release tags), not for every CI run.
+        type: boolean
+        required: false
+        default: false
+      version:
+        description: >-
+          Manifest `version` to stamp into every dist (1–4 dot-separated
+          integers, e.g. 1.7.0.20261006). Empty keeps the committed version.
+        type: string
+        required: false
+        default: ""
+      version-name:
+        description: >-
+          Free-form display version written as Chrome's `version_name`
+          (ignored by Firefox/Safari). Requires `version`.
+        type: string
+        required: false
+        default: ""
+      install-tests:
+        description: Run the extension install tests (tests/install) against the built dists.
+        type: boolean
+        required: false
+        default: true
+      artifact-name:
+        description: Name of the uploaded workflow artifact holding the packages.
+        type: string
+        required: false
+        default: aipage-build
+    outputs:
+      artifact-name:
+        description: Name of the uploaded workflow artifact (chrome zip, firefox xpi, safari zip).
+        value: ${{ inputs.artifact-name }}
+      safari-artifact-name:
+        description: Name of the workflow artifact holding aipage-safari-macos.zip (built on macOS).
+        value: ${{ inputs.artifact-name }}-safari-macos
+      firefox-signed:
+        description: "'true' when aipage-firefox.xpi was signed by AMO, 'false' when the unsigned xpi was kept."
+        value: ${{ jobs.build.outputs.firefox-signed }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & package
+    runs-on: ubuntu-latest
+    outputs:
+      firefox-signed: ${{ steps.sign-firefox.outputs.signed }}
+    env:
+      STAMP_VERSION: ${{ inputs.version }}
+      STAMP_VERSION_NAME: ${{ inputs.version-name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Build chrome / firefox / safari (in nix devShell)
+        run: |
+          # The single-quoted script is expanded by the inner bash (inside the
+          # devShell), where STAMP_* come from the job env.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            args=()
+            if [ -n "${STAMP_VERSION}" ]; then
+              args+=(--version-stamp "${STAMP_VERSION}")
+              if [ -n "${STAMP_VERSION_NAME}" ]; then
+                args+=(--version-name "${STAMP_VERSION_NAME}")
+              fi
+            fi
+            cargo run -p xtask -- build-all "${args[@]}"
+          '
+
+      - name: Build the hosted sidebar bundle (web) and its hash manifest
+        run: |
+          # Same version stamp as the browser builds; xtask writes
+          # dist-web/aipage-web.json (sha256 + size of every published file,
+          # git sha from GITHUB_SHA). The extension's self-updating sidebar
+          # downloads the listed files from the release and verifies them
+          # against this manifest.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            args=()
+            if [ -n "${STAMP_VERSION}" ]; then
+              args+=(--version-stamp "${STAMP_VERSION}")
+            fi
+            cargo run -p xtask -- build --target web "${args[@]}"
+          '
+
+      - name: Package artifacts (canonical names)
+        run: |
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          # Hosted sidebar bundle: the whole dist-web/ as one zip, the hash
+          # manifest, and every listed file on its own (uploaded as individual
+          # release assets so the extension never has to unpack a zip).
+          ( cd dist-web && zip -r "$PWD/../aipage-web.zip" . )
+          cp dist-web/aipage-web.json aipage-web.json
+          rm -rf web-assets && mkdir -p web-assets
+          jq -r '.files | keys[]' aipage-web.json | while read -r f; do cp "dist-web/$f" web-assets/; done
+          ls -la aipage-web.zip aipage-web.json web-assets/
+          rm -rf packages && mkdir -p packages
+          # bun ships in the flake's devShell, not on the bare runner; this
+          # step must enter it for bunx to resolve. web-ext 10 writes a .zip,
+          # which is what an .xpi is.
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            bunx web-ext build -s dist-firefox -a packages --overwrite-dest
+          '
+          cp packages/*.zip aipage-firefox.xpi
+          ls -la aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip
+
+      - name: Install tests (unpacked Chromium MV2, Firefox lint/temporary install, Safari structure)
+        if: ${{ inputs.install-tests }}
+        run: |
+          # The script runs inside the devShell; $RUNNER_TEMP expands there.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            # Chromium 153+ (Playwright >= 1.57) refuses to load MV2
+            # extensions entirely, so the real-install test runs on the last
+            # Chromium that still honours the MV2 flags: 141 (Playwright
+            # 1.56, browser build 1194). The in-repo Playwright drives it via
+            # CHROMIUM_EXECUTABLE.
+            export PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/pw-mv2"
+            bunx playwright@1.56.1 install --with-deps chromium
+            CHROMIUM_EXECUTABLE="$(ls -d "$PLAYWRIGHT_BROWSERS_PATH"/chromium-1194/chrome-linux*/chrome | head -n 1)"
+            export CHROMIUM_EXECUTABLE
+            "$CHROMIUM_EXECUTABLE" --version
+            # The Firefox runtime test (temporary install + RDP-driven boot
+            # of the background and sidebar) needs a Firefox binary; the
+            # runner image ships one on PATH, and the spec skips with a
+            # visible reason if it ever goes missing.
+            if command -v firefox >/dev/null 2>&1; then
+              firefox --version
+            else
+              echo "::warning::no firefox on PATH; the Firefox runtime install test will be skipped (lint still runs)"
+            fi
+            env -u LD_PRELOAD bun run test:install
+            # Brave (current Chromium base) still loads MV2 extensions and is
+            # the browser the Chrome build actually targets today: run the
+            # real-install spec on the latest stable Brave from its apt repo.
+            brave_repo="https://brave-browser-apt-release.s3.brave.com"
+            # Download the index first: piping curl into an awk that exits on
+            # the first match closes the pipe early, curl fails with exit 23
+            # and pipefail aborts the step.
+            curl -fsSL -o "$RUNNER_TEMP/brave-Packages" "$brave_repo/dists/stable/main/binary-amd64/Packages"
+            brave_deb="$(awk "/^Package: brave-browser\$/{p=1} p&&/^Filename:/{print \$2; exit}" "$RUNNER_TEMP/brave-Packages")"
+            echo "Brave package: $brave_deb"
+            curl -fsSL -o "$RUNNER_TEMP/brave.deb" "$brave_repo/$brave_deb"
+            dpkg-deb -x "$RUNNER_TEMP/brave.deb" "$RUNNER_TEMP/brave"
+            CHROMIUM_EXECUTABLE="$RUNNER_TEMP/brave/opt/brave.com/brave/brave"
+            "$CHROMIUM_EXECUTABLE" --version
+            env -u LD_PRELOAD bun run test:install:chromium
+          '
+
+      - name: Upload install-test report
+        if: ${{ failure() && inputs.install-tests }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-install-test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+      # Runs after the install tests so nothing that fails them is ever
+      # submitted to AMO. Without `sign-firefox` or without credentials
+      # (forks, pull requests) the unsigned package is renamed so nobody
+      # mistakes it for an installable release asset.
+      - name: Sign the Firefox xpi via AMO (unlisted channel)
+        id: sign-firefox
+        env:
+          SIGN_FIREFOX: ${{ inputs.sign-firefox }}
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ "$SIGN_FIREFOX" != "true" ]; then
+            echo "Firefox signing not requested for this build (sign-firefox=false); keeping the unsigned xpi as aipage-firefox-unsigned.xpi"
+            mv aipage-firefox.xpi aipage-firefox-unsigned.xpi
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$WEB_EXT_API_KEY" ] || [ -z "$WEB_EXT_API_SECRET" ]; then
+            echo "::notice title=Firefox xpi not signed::WEB_EXT_API_KEY / WEB_EXT_API_SECRET are not available to this run (fork, pull request or secrets not configured); shipping aipage-firefox-unsigned.xpi instead. See the user guide, section 'Firefox signing (AMO)'."
+            mv aipage-firefox.xpi aipage-firefox-unsigned.xpi
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # web-ext/bun live in the devShell; the credentials are inherited
+          # from the step env. On "version already exists" (same-day nightly
+          # re-run, re-run release) the script downloads the file AMO already
+          # signed for that version instead of failing.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            scripts/sign-firefox.sh dist-firefox aipage-firefox.xpi
+          '
+          unzip -l aipage-firefox.xpi | grep -q 'META-INF/mozilla.rsa' || {
+            echo "::error::aipage-firefox.xpi carries no META-INF/mozilla.rsa signature"
+            exit 1
+          }
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+          ls -la aipage-firefox.xpi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            aipage-chrome.zip
+            aipage-firefox.xpi
+            aipage-firefox-unsigned.xpi
+            aipage-safari.zip
+            aipage-web.zip
+            aipage-web.json
+            web-assets/
+          if-no-files-found: error
+
+      # The exact bytes the macOS job wraps, so the Safari app ships the same
+      # wasm as every other package of this run.
+      - name: Upload dist-safari for the macOS wrapper job
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-dist-safari
+          path: dist-safari/
+          if-no-files-found: error
+
+  # Safari refuses bare web extensions: it loads them only from a native app
+  # bundle. Apple's generator and xcodebuild exist on macOS alone, so this job
+  # takes the ubuntu-built dist-safari and produces AIPage.app (unsigned;
+  # users enable "Allow unsigned extensions" in Safari's developer settings).
+  # Advisory until its first green run on a real runner: a failure here is
+  # reported (red job, missing asset) but does not block the other packages.
+  safari-app:
+    name: Safari app wrapper (macOS)
+    needs: build
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-dist-safari
+          path: dist-safari
+
+      - name: Xcode / generator versions
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcodebuild -version
+          for tool in safari-web-extension-packager safari-web-extension-converter; do
+            if path="$(xcrun --find "$tool" 2>/dev/null)"; then
+              echo "$tool: $path"
+            else
+              echo "$tool: not found"
+            fi
+          done
+
+      - name: Generate the Xcode project, build AIPage.app unsigned, zip it
+        run: |
+          set -euo pipefail
+          test -f dist-safari/manifest.json
+          jq -r '"manifest version " + .version' dist-safari/manifest.json
+          scripts/setup-safari.sh --dist dist-safari --out safari --package "$PWD/aipage-safari-macos.zip"
+          ls -la aipage-safari-macos.zip
+          unzip -l aipage-safari-macos.zip | grep -E 'AIPage.app/Contents/(MacOS/AIPage|PlugIns/.*\.appex/Contents/Resources/manifest\.json)$'
+
+      - name: Upload the Xcode build log on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-safari-xcode-logs
+          path: |
+            safari/build/Logs/
+            safari/**/*.xcodeproj/project.pbxproj
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-safari-macos
+          path: aipage-safari-macos.zip
+          if-no-files-found: error

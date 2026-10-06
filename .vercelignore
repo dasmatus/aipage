@@ -1,0 +1,5 @@
+# The hosted sidebar is deployed from the prebuilt `dist-web/` directory only
+# (`vercel deploy dist-web --prod`, see .github/workflows/deploy-web.yml).
+# Ignore everything so an accidental `vercel` from the repo root uploads
+# nothing instead of the whole source tree.
+*

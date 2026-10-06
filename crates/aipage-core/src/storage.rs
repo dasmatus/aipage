@@ -1,18 +1,21 @@
-//! `browser.storage.local` access. Mirrors `src/sidebar/storage.ts`.
+//! `browser.storage.local` access.
 //!
-//! Storage key strings are kept identical to the TypeScript build so an
-//! existing user's saved settings survive the migration to the Rust extension.
+//! The key strings are a persisted contract: existing installs keep their
+//! settings only as long as they never change.
 
 use aipage_bindings::storage;
 use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::JsValue;
 
+use crate::remote_ui::{KEY_REMOTE_UI_ENABLED, KEY_REMOTE_UI_URL};
 use crate::types::ProviderType;
+use crate::updates::{UpdateChannel, KEY_UI_BUNDLE_UPDATE_ENABLED, KEY_UPDATE_CHANNEL, KEY_UPDATE_NOTIFIED_SHA};
 
-// --- key constants (must match the old STORAGE_KEYS) ---
 const KEY_PROVIDER: &str = "ai_provider";
 const KEY_PROVIDER_BACKEND: &str = "providerBackend";
 const KEY_THEME: &str = "ai_sidebar_theme";
+const KEY_GLOBAL_THEME: &str = "ai_sidebar_global";
+const KEY_AUTO_UPDATE: &str = "autoUpdate";
 const KEY_LANGUAGE: &str = "language";
 const KEY_IMAGE_GEN_ENABLED: &str = "image_gen_enabled";
 const KEY_IMAGE_GEN_PROVIDER: &str = "image_gen_provider";
@@ -27,6 +30,9 @@ fn api_key_key(p: ProviderType) -> &'static str {
         ProviderType::Lmstudio => "lmstudio_api_key",
         ProviderType::Ollama => "ollama_api_key",
         ProviderType::OllamaCloud => "ollama_cloud_api_key",
+        ProviderType::OpenRouter => "openrouter_api_key",
+        ProviderType::OpenAi => "openai_api_key",
+        ProviderType::Anthropic => "anthropic_api_key",
     }
 }
 
@@ -36,6 +42,9 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
         ProviderType::Lmstudio => ("lmstudio_base_url", "lmstudio_model"),
         ProviderType::Ollama => ("ollama_base_url", "ollama_model"),
         ProviderType::OllamaCloud => ("ollama_cloud_base_url", "ollama_cloud_model"),
+        ProviderType::OpenRouter => ("openrouter_base_url", "openrouter_model"),
+        ProviderType::OpenAi => ("openai_base_url", "openai_model"),
+        ProviderType::Anthropic => ("anthropic_base_url", "anthropic_model"),
     }
 }
 
@@ -67,26 +76,22 @@ async fn set_string(key: &str, value: &str) {
     set_value(key, JsValue::from_str(value)).await;
 }
 
+async fn set_bool(key: &str, value: bool) {
+    set_value(key, JsValue::from_bool(value)).await;
+}
+
 // --- provider preference ---
 
 pub async fn get_provider_preference() -> ProviderType {
-    match get_string(KEY_PROVIDER).await.as_deref() {
-        Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::OllamaCloud,
-    }
+    ProviderType::from_str_or_default(&get_string(KEY_PROVIDER).await.unwrap_or_default())
 }
 
 pub async fn save_provider_preference(p: ProviderType) {
     set_string(KEY_PROVIDER, p.as_str()).await;
 }
 
-pub async fn get_provider_backend_preference() -> ProviderType {
-    match get_string(KEY_PROVIDER_BACKEND).await.as_deref() {
-        Some(s) => ProviderType::from_str_or_default(s),
-        None => ProviderType::OllamaCloud,
-    }
-}
-
+/// Legacy mirror of the provider preference, still written for installs
+/// that read it.
 pub async fn save_provider_backend_preference(p: ProviderType) {
     set_string(KEY_PROVIDER_BACKEND, p.as_str()).await;
 }
@@ -134,7 +139,7 @@ pub async fn save_theme_preference(theme: &str) {
     set_string(KEY_THEME, theme).await;
 }
 
-// --- language (from i18n.ts) ---
+// --- language ---
 
 pub async fn get_language() -> String {
     get_string(KEY_LANGUAGE).await.unwrap_or_else(|| "sk".to_string())
@@ -151,7 +156,7 @@ pub async fn get_image_gen_enabled() -> bool {
 }
 
 pub async fn save_image_gen_enabled(enabled: bool) {
-    set_value(KEY_IMAGE_GEN_ENABLED, JsValue::from_bool(enabled)).await;
+    set_bool(KEY_IMAGE_GEN_ENABLED, enabled).await;
 }
 
 /// `"ollama-svg"` or `"sdwebui"`, defaulting to `ollama-svg`. A stored legacy
@@ -200,7 +205,75 @@ pub async fn get_auto_answer_enabled() -> bool {
 }
 
 pub async fn save_auto_answer_enabled(enabled: bool) {
-    set_value(KEY_AUTO_ANSWER_ENABLED, JsValue::from_bool(enabled)).await;
+    set_bool(KEY_AUTO_ANSWER_ENABLED, enabled).await;
+}
+
+// --- appearance / updates ---
+
+/// Whether the sidebar theme is also applied to the EduPage page.
+pub async fn get_global_theme_enabled() -> bool {
+    get_bool(KEY_GLOBAL_THEME).await
+}
+
+pub async fn save_global_theme_enabled(enabled: bool) {
+    set_bool(KEY_GLOBAL_THEME, enabled).await;
+}
+
+/// Whether the background update check is enabled.
+pub async fn get_auto_update_enabled() -> bool {
+    get_bool(KEY_AUTO_UPDATE).await
+}
+
+pub async fn save_auto_update_enabled(enabled: bool) {
+    set_bool(KEY_AUTO_UPDATE, enabled).await;
+}
+
+/// Release channel the update manager follows (`stable` by default).
+pub async fn get_update_channel() -> UpdateChannel {
+    UpdateChannel::from_str_or_default(&get_string(KEY_UPDATE_CHANNEL).await.unwrap_or_default())
+}
+
+pub async fn save_update_channel(channel: UpdateChannel) {
+    set_string(KEY_UPDATE_CHANNEL, channel.as_str()).await;
+}
+
+/// Whether the sidebar UI bundle is downloaded from GitHub releases into
+/// IndexedDB. Defaults to `false`.
+pub async fn get_ui_bundle_update_enabled() -> bool {
+    get_bool(KEY_UI_BUNDLE_UPDATE_ENABLED).await
+}
+
+pub async fn save_ui_bundle_update_enabled(enabled: bool) {
+    set_bool(KEY_UI_BUNDLE_UPDATE_ENABLED, enabled).await;
+}
+
+/// Commit sha of the last extension update the user was notified about.
+pub async fn get_update_notified_sha() -> Option<String> {
+    get_string(KEY_UPDATE_NOTIFIED_SHA).await.filter(|s| !s.is_empty())
+}
+
+pub async fn save_update_notified_sha(sha: &str) {
+    set_string(KEY_UPDATE_NOTIFIED_SHA, sha).await;
+}
+
+// --- hosted (remote) UI ---
+
+/// Whether the auto-updating hosted UI is used. Defaults to `true`.
+pub async fn get_remote_ui_enabled() -> bool {
+    get_raw(KEY_REMOTE_UI_ENABLED).await.as_bool().unwrap_or(true)
+}
+
+pub async fn save_remote_ui_enabled(enabled: bool) {
+    set_bool(KEY_REMOTE_UI_ENABLED, enabled).await;
+}
+
+/// Raw stored URL override (may be empty); see `remote_ui::effective_remote_ui_url`.
+pub async fn get_remote_ui_url() -> String {
+    get_string(KEY_REMOTE_UI_URL).await.unwrap_or_default()
+}
+
+pub async fn save_remote_ui_url(url: &str) {
+    set_string(KEY_REMOTE_UI_URL, url.trim()).await;
 }
 
 pub async fn get_widget_notes() -> String {
@@ -209,4 +282,24 @@ pub async fn get_widget_notes() -> String {
 
 pub async fn save_widget_notes(notes: &str) {
     set_string(KEY_WIDGET_NOTES, notes).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn storage_keys_are_the_persisted_contract() {
+        assert_eq!(api_key_key(ProviderType::OllamaCloud), "ollama_cloud_api_key");
+        assert_eq!(api_key_key(ProviderType::OpenRouter), "openrouter_api_key");
+        assert_eq!(api_key_key(ProviderType::OpenAi), "openai_api_key");
+        // the keys the pre-Ollama Claude builds wrote; old installs must find their key again
+        assert_eq!(api_key_key(ProviderType::Anthropic), "anthropic_api_key");
+        assert_eq!(local_settings_keys(ProviderType::Anthropic), ("anthropic_base_url", "anthropic_model"));
+        assert_eq!(api_key_key(ProviderType::Lmstudio), "lmstudio_api_key");
+        assert_eq!(api_key_key(ProviderType::Ollama), "ollama_api_key");
+        assert_eq!(local_settings_keys(ProviderType::OpenRouter), ("openrouter_base_url", "openrouter_model"));
+        assert_eq!(local_settings_keys(ProviderType::OpenAi), ("openai_base_url", "openai_model"));
+        assert_eq!(local_settings_keys(ProviderType::OllamaCloud), ("ollama_cloud_base_url", "ollama_cloud_model"));
+    }
 }

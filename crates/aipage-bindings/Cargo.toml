@@ -12,8 +12,27 @@ wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 js-sys = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 
 [dependencies.web-sys]
 workspace = true
-features = ["console"]
+features = [
+    "Window",
+    "Document",
+    "EventTarget",
+    "MessageEvent",
+    "MessagePort",
+    # IndexedDB (downloaded sidebar bundle, see `idb.rs`)
+    "Event",
+    "DomException",
+    "DomStringList",
+    "IdbFactory",
+    "IdbOpenDbRequest",
+    "IdbRequest",
+    "IdbDatabase",
+    "IdbObjectStore",
+    "IdbObjectStoreParameters",
+    "IdbTransaction",
+    "IdbTransactionMode",
+]

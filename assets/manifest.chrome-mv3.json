@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "AIPage",
+  "version": "1.7.0",
+  "description": "AIPage for the rest of us with some neat features.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "downloads",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "*://*.edupage.org/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://codeberg.org/*",
+    "https://ollama.com/*",
+    "https://openrouter.ai/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.duckduckgo.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "background": {
+    "service_worker": "background_sw.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.edupage.org/*"
+      ],
+      "js": [
+        "content.js",
+        "content_loader.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidebar.html",
+        "sidebar.css",
+        "tailwind.css",
+        "sidebar.js",
+        "sidebar_loader.js",
+        "sidebar_bg.wasm",
+        "content_bg.wasm",
+        "anti_cheat.js"
+      ],
+      "matches": [
+        "*://*.edupage.org/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "Open AI Sidebar"
+  }
+}

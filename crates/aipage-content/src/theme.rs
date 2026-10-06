@@ -1,7 +1,9 @@
-//! Global EduPage theme overrides. Mirrors `content-scripts/theme-manager.ts`.
+//! Global EduPage theme overrides.
 
 use wasm_bindgen::JsCast;
 use web_sys::HtmlStyleElement;
+
+use crate::utils::document;
 
 struct ThemeColors {
     accent: &'static str,
@@ -25,10 +27,6 @@ fn colors_for(theme: &str) -> ThemeColors {
 }
 
 const STYLE_ID: &str = "edupage-ai-overrides";
-
-fn document() -> web_sys::Document {
-    web_sys::window().unwrap().document().unwrap()
-}
 
 /// Apply (or, when disabled, remove) the global EduPage colour overrides.
 pub fn apply_global_overrides(theme: &str, enabled: bool) {

@@ -9,16 +9,24 @@
     "*://*.edupage.org/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
-    "https://codeberg.org/*",
+    "https://api.github.com/*",
+    "https://github.com/*",
+    "https://objects.githubusercontent.com/*",
     "https://ollama.com/*",
+    "https://openrouter.ai/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
     "https://api.duckduckgo.com/*",
     "downloads",
     "alarms",
     "notifications"
   ],
-  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://ollama.com https://*.edupage.org https://codeberg.org https://api.duckduckgo.com",
+  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' blob:; object-src 'self'; connect-src 'self' https://ollama.com https://openrouter.ai https://api.openai.com https://api.anthropic.com https://*.edupage.org https://api.github.com https://github.com https://objects.githubusercontent.com https://api.duckduckgo.com",
   "background": {
-    "scripts": ["background.js", "background_loader.js"]
+    "scripts": [
+      "background.js",
+      "background_loader.js"
+    ]
   },
   "content_scripts": [
     {
@@ -48,7 +56,16 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "edupage-ai-sidebar@hesburger.dev",
-      "strict_min_version": "109.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ],
+        "optional": []
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   }
 }

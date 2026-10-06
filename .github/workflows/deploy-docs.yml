@@ -1,0 +1,75 @@
+name: Deploy documentation
+
+# Builds the mdBook (book.toml + book/src → book/book/) in the Nix devShell and
+# deploys that prebuilt directory to the Vercel project `aipage-docs` (team
+# `dasmatus-personal`, https://aipage-docs.vercel.app) as the production
+# deployment. No build runs on Vercel's side: the CLI uploads book/book as-is
+# and the headers come from book/vercel.json, which `bun run docs:build`
+# copies into the output.
+#
+# Required repository secret: VERCEL_TOKEN (the same account token
+# deploy-web.yml uses). The org/project ids below are not secrets.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "book/**"
+      - "book.toml"
+      - "docs/mdbook-theme.css"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/deploy-docs.yml"
+  # Also dispatched by changelog.yml after it commits a regenerated changelog.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_7Z3rZakz7VA0GFsobgGCSMBN
+  VERCEL_PROJECT_ID: prj_ykFsBQO6a0zZT1EmzkaQ4KXuH0U7
+
+jobs:
+  deploy:
+    name: Build the book & deploy to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Build book/book (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            mdbook --version
+            bun run docs:build
+          '
+
+      - name: Verify book/book
+        run: |
+          set -euo pipefail
+          ls -la book/book
+          test -f book/book/index.html
+          test -f book/book/changelog.html
+          test -f book/book/contributing.html
+          jq -e . book/book/vercel.json > /dev/null
+
+      - name: Deploy to Vercel (production, prebuilt static)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          # shellcheck disable=SC2016 # the quoted script is expanded by the inner bash
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            if [ -z "${VERCEL_TOKEN:-}" ]; then
+              echo "::error::VERCEL_TOKEN secret is not set" >&2
+              exit 1
+            fi
+            bunx vercel@latest deploy book/book --prod --yes --token="$VERCEL_TOKEN"
+          '

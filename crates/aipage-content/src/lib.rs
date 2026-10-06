@@ -1,10 +1,11 @@
-//! AIPage content script. Mirrors `src/content.ts`.
+//! AIPage content script.
 //!
 //! Injects the AI button into the EduPage navbar / exam header, manages the
 //! sidebar iframe via [`SidebarController`], applies global theming, handles
 //! exam tools, and injects the anti-cheat bypass.
 
 mod anti_cheat;
+mod bridge;
 mod sidebar_controller;
 mod theme;
 mod utils;
@@ -17,8 +18,10 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement, MouseEvent, MutationObserver, MutationObserverInit};
 
-use aipage_bindings::{runtime, storage};
+use aipage_bindings::{js_object as obj, runtime, storage};
+use aipage_core::remote_ui;
 use sidebar_controller::SidebarController;
+use utils::document;
 
 type Controller = Rc<std::cell::RefCell<SidebarController>>;
 
@@ -28,10 +31,6 @@ const AI_BUTTON_SVG: &str = r#"
             </svg>
             <p style="margin: 0;">AI</p>
         "#;
-
-fn document() -> web_sys::Document {
-    web_sys::window().unwrap().document().unwrap()
-}
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -56,7 +55,9 @@ pub fn start() {
     let controller: Controller = Rc::new(std::cell::RefCell::new(SidebarController::new()));
     let anti_cheat_done = Rc::new(Cell::new(false));
 
-    register_message_handler(controller.clone());
+    let dispatch = make_dispatcher(controller.clone());
+    controller.borrow_mut().set_dispatch(dispatch.clone());
+    register_message_handler(dispatch);
 
     // Run init when the DOM is ready.
     let ctrl = controller.clone();
@@ -164,15 +165,18 @@ fn init(controller: Controller, anti_cheat_done: Rc<Cell<bool>>) {
         aipage_bindings::console::log("[AIPage] Initializing...");
 
         // Load settings.
-        let keys = Array::of3(
+        let keys = Array::of5(
             &JsValue::from_str("sidebarWidth"),
             &JsValue::from_str("ai_sidebar_theme"),
             &JsValue::from_str("ai_sidebar_global"),
+            &JsValue::from_str(remote_ui::KEY_REMOTE_UI_ENABLED),
+            &JsValue::from_str(remote_ui::KEY_REMOTE_UI_URL),
         );
         let result = storage::local_get(keys.as_ref()).await.unwrap_or(JsValue::UNDEFINED);
         if let Some(w) = Reflect::get(&result, &"sidebarWidth".into()).ok().and_then(|v| v.as_f64()) {
             controller.borrow().set_width(w);
         }
+        controller.borrow_mut().set_remote_ui(remote_ui_from_storage(&result));
         let global_enabled = Reflect::get(&result, &"ai_sidebar_global".into())
             .map(|v| v.is_truthy())
             .unwrap_or(false);
@@ -208,8 +212,25 @@ fn init(controller: Controller, anti_cheat_done: Rc<Cell<bool>>) {
 
         theme::apply_global_overrides(&theme, global_enabled);
 
-        // React to theme changes from storage.
+        // React to theme / remote-UI changes from storage.
+        let ctrl = controller.clone();
         storage::on_changed(move |changes, _area| {
+            let remote_touched = Reflect::has(&changes, &remote_ui::KEY_REMOTE_UI_ENABLED.into()).unwrap_or(false)
+                || Reflect::has(&changes, &remote_ui::KEY_REMOTE_UI_URL.into()).unwrap_or(false);
+            if remote_touched {
+                let ctrl = ctrl.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    let keys = Array::of2(
+                        &JsValue::from_str(remote_ui::KEY_REMOTE_UI_ENABLED),
+                        &JsValue::from_str(remote_ui::KEY_REMOTE_UI_URL),
+                    );
+                    let res = storage::local_get(keys.as_ref()).await.unwrap_or(JsValue::UNDEFINED);
+                    let next = remote_ui_from_storage(&res);
+                    let mut c = ctrl.borrow_mut();
+                    c.set_remote_ui(next);
+                    c.reload();
+                });
+            }
             let touched = Reflect::has(&changes, &"ai_sidebar_theme".into()).unwrap_or(false)
                 || Reflect::has(&changes, &"ai_sidebar_global".into()).unwrap_or(false);
             if touched {
@@ -233,37 +254,49 @@ fn init(controller: Controller, anti_cheat_done: Rc<Cell<bool>>) {
     });
 }
 
-// --- message handlers ---
-
-fn register_message_handler(controller: Controller) {
-    runtime::on_message(move |message, _sender| {
-        let controller = controller.clone();
-        async move {
-            let action = Reflect::get(&message, &"action".into())
-                .ok()
-                .and_then(|v| v.as_string())
-                .unwrap_or_default();
-            match action.as_str() {
-                "toggle_sidebar" => {
-                    controller.borrow_mut().toggle();
-                    JsValue::NULL
-                }
-                "get_exam_question" => get_exam_question(),
-                "fill_answer" => fill_answer(&message),
-                "get_page_content" => get_page_content(),
-                _ => JsValue::NULL,
-            }
-        }
-    });
+/// Hosted-UI settings → `Some(base_url)` when enabled (default), else `None`.
+fn remote_ui_from_storage(result: &JsValue) -> Option<String> {
+    let enabled = Reflect::get(result, &remote_ui::KEY_REMOTE_UI_ENABLED.into())
+        .ok()
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    if !enabled {
+        return None;
+    }
+    let stored = Reflect::get(result, &remote_ui::KEY_REMOTE_UI_URL.into())
+        .ok()
+        .and_then(|v| v.as_string());
+    Some(remote_ui::effective_remote_ui_url(stored.as_deref()))
 }
 
-/// Build a JS object from `(key, JsValue)` pairs.
-fn obj(pairs: &[(&str, JsValue)]) -> JsValue {
-    let o = Object::new();
-    for (k, v) in pairs {
-        let _ = Reflect::set(&o, &JsValue::from_str(k), v);
-    }
-    o.into()
+// --- message handlers ---
+
+/// The actions this tab answers, whether they arrive via `runtime.onMessage`
+/// (background / bundled sidebar) or the hosted-UI bridge.
+fn make_dispatcher(controller: Controller) -> bridge::LocalDispatch {
+    Rc::new(move |message: JsValue| {
+        let action = Reflect::get(&message, &"action".into())
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        match action.as_str() {
+            "toggle_sidebar" => {
+                controller.borrow_mut().toggle();
+                JsValue::NULL
+            }
+            "get_exam_question" => get_exam_question(),
+            "fill_answer" => fill_answer(&message),
+            "get_page_content" => get_page_content(),
+            _ => JsValue::NULL,
+        }
+    })
+}
+
+fn register_message_handler(dispatch: bridge::LocalDispatch) {
+    runtime::on_message(move |message, _sender| {
+        let dispatch = dispatch.clone();
+        async move { dispatch(message) }
+    });
 }
 
 fn get_exam_question() -> JsValue {

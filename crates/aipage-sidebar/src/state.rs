@@ -1,17 +1,14 @@
-//! Reactive state + async actions for the sidebar. Mirrors `App.tsx` handlers
-//! and `hooks/useChat.ts`.
+//! Reactive state + async actions for the sidebar.
 
 use std::cell::Cell;
 
 use leptos::prelude::*;
-use serde::Serialize;
 use serde_json::{json, Value};
-use wasm_bindgen::JsValue;
 
+use aipage_bindings::tabs;
 use aipage_core::providers::SendOptions;
 use aipage_core::types::{ContextAction, Message, ProviderType, Role};
 use aipage_core::{agent, chat, i18n, imagegen, providers, storage};
-use aipage_bindings::{runtime, tabs};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum View {
@@ -71,14 +68,11 @@ impl ChatState {
         });
     }
 
-    pub fn update_last_image(&self, image: impl Into<String>, content: Option<String>) {
-        let image = image.into();
+    pub fn update_last_image(&self, image: String, content: String) {
         self.messages.update(|m| {
             if let Some(last) = m.last_mut() {
                 last.image_url = Some(image);
-                if let Some(c) = content {
-                    last.content = c;
-                }
+                last.content = content;
             }
         });
     }
@@ -126,31 +120,6 @@ impl AppState {
     }
 }
 
-// --- JS interop helpers ---
-
-fn to_js<T: Serialize>(v: &T) -> JsValue {
-    v.serialize(&serde_wasm_bindgen::Serializer::json_compatible()).unwrap_or(JsValue::NULL)
-}
-
-fn from_js(v: JsValue) -> Value {
-    serde_wasm_bindgen::from_value(v).unwrap_or(Value::Null)
-}
-
-async fn active_tab_id() -> Option<i32> {
-    let q = json!({ "active": true, "lastFocusedWindow": true });
-    let tabs = tabs::query(&to_js(&q)).await.ok()?;
-    let arr = js_sys::Array::from(&tabs);
-    let first = arr.get(0);
-    js_sys::Reflect::get(&first, &"id".into()).ok().and_then(|v| v.as_f64()).map(|n| n as i32)
-}
-
-async fn send_to_tab(tab_id: i32, msg: Value) -> Value {
-    match tabs::send_message(tab_id, &to_js(&msg)).await {
-        Ok(v) => from_js(v),
-        Err(_) => Value::Null,
-    }
-}
-
 fn alert(message: &str) {
     if let Some(w) = web_sys::window() {
         let _ = w.alert_with_message(message);
@@ -166,28 +135,27 @@ fn local_opts(url: String, model: String) -> SendOptions {
 
 // --- actions ---
 
-/// `App.handleSend`: agentic (tool-calling) path for the cloud provider, direct
+/// Agentic (tool-calling) path for tool-capable cloud providers, direct
 /// one-shot path for local providers.
 pub async fn handle_send(app: AppState, chat: ChatState, text: String) {
     let provider = app.provider.get_untracked();
     let key = storage::get_api_key(provider).await.unwrap_or_default();
-
-    if provider == ProviderType::OllamaCloud {
-        let local = storage::get_local_settings(provider).await;
-        send_agent_message(chat, key, text, local.url, local.model).await;
-        return;
-    }
-
     let local = storage::get_local_settings(provider).await;
-    send_message(chat, provider, key, text, local_opts(local.url, local.model)).await;
+    let opts = local_opts(local.url, local.model);
+
+    if provider.supports_native_tools() {
+        send_agent_message(chat, provider, key, text, opts).await;
+    } else {
+        send_message(chat, provider, key, text, opts).await;
+    }
 }
 
-/// Direct request/response send (`useChat.sendMessage`).
+/// Direct request/response send.
 pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, text: String, opts: SendOptions) {
     if text.trim().is_empty() {
         return;
     }
-    if key.is_empty() && provider == ProviderType::OllamaCloud {
+    if key.is_empty() && provider.requires_api_key() {
         return;
     }
     chat.add(Role::User, text.clone(), None, None);
@@ -201,8 +169,8 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
     chat.is_typing.set(false);
 }
 
-/// Agentic send (`useChat.sendAgentMessage`) with fallback to a direct reply.
-pub async fn send_agent_message(chat: ChatState, key: String, text: String, base_url: String, model: String) {
+/// Agentic send with fallback to a direct reply.
+pub async fn send_agent_message(chat: ChatState, provider: ProviderType, key: String, text: String, opts: SendOptions) {
     if text.trim().is_empty() || key.is_empty() {
         return;
     }
@@ -211,12 +179,11 @@ pub async fn send_agent_message(chat: ChatState, key: String, text: String, base
     chat.add(Role::Ai, chat::THINKING_PLACEHOLDER, None, None);
 
     let on_text = move |t: String| chat.update_last(t);
-    let opts = local_opts(base_url, model);
-    match agent::run_agent_turn(&key, &text, &opts, on_text).await {
+    match agent::run_agent_turn(provider, &key, &text, &opts, on_text).await {
         Ok(()) => {}
         Err(_) => {
-            // Fall back to a direct (no-tools) cloud reply.
-            match providers::send_message(ProviderType::OllamaCloud, &text, &key, &opts).await {
+            // Fall back to a direct (no-tools) reply from the same provider.
+            match providers::send_message(provider, &text, &key, &opts).await {
                 Ok(resp) => chat.update_last(resp),
                 Err(e) => chat.update_last(format!("Chyba: {e}")),
             }
@@ -225,43 +192,37 @@ pub async fn send_agent_message(chat: ChatState, key: String, text: String, base
     chat.is_typing.set(false);
 }
 
-/// `App.handleScanPage`: read page content from the active tab.
+/// Read page content from the active tab. No active tab → no alert; a
+/// messaging failure (null response) → "scan error"; a tab that answered with
+/// empty/missing content → "content load failed".
 pub async fn scan_page(app: AppState, chat: ChatState) {
     app.is_scanning.set(true);
-    // Mirror App.handleScanPage's three outcomes: no active tab → no alert;
-    // messaging failure (null response) → "scan error"; tab responded but the
-    // content is empty/missing → "content load failed".
-    match active_tab_id().await {
-        None => {}
-        Some(tab_id) => {
-            let resp = send_to_tab(tab_id, json!({ "action": "get_page_content" })).await;
-            if resp.is_null() {
-                alert(&app.tr().alert_scan_error);
-            } else {
-                let content = resp
-                    .get("content")
-                    .and_then(Value::as_str)
-                    .map(str::to_string)
-                    .filter(|c| !c.is_empty());
-                let is_selection = resp.get("isSelection").and_then(Value::as_bool).unwrap_or(false);
-                match content {
-                    Some(c) => handle_page_context(chat, c, is_selection),
-                    None => alert(&app.tr().alert_content_load_failed),
-                }
+    if let Some(resp) = tabs::send_json_to_active(&json!({ "action": "get_page_content" })).await {
+        if resp.is_null() {
+            alert(&app.tr().alert_scan_error);
+        } else {
+            let content = resp
+                .get("content")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .filter(|c| !c.is_empty());
+            let is_selection = resp.get("isSelection").and_then(Value::as_bool).unwrap_or(false);
+            match content {
+                Some(c) => handle_page_context(chat, c, is_selection),
+                None => alert(&app.tr().alert_content_load_failed),
             }
         }
     }
     app.is_scanning.set(false);
 }
 
-/// `useChat.handlePageContext`: store context + surface action buttons.
+/// Store the scanned context and surface the action buttons.
 pub fn handle_page_context(chat: ChatState, content: String, is_selection: bool) {
     chat.last_page_context.set(content.clone());
     let cp = chat::build_page_context(&content, is_selection);
     chat.add(Role::Ai, cp.message, Some(cp.actions), None);
 }
 
-/// `App.handleActionClick`.
 pub async fn handle_action_click(app: AppState, chat: ChatState, action: String) {
     if action == "search_web" {
         let query = derive_search_query(chat);
@@ -290,7 +251,6 @@ fn derive_search_query(chat: ChatState) -> String {
     chat.last_page_context.get_untracked()
 }
 
-/// `App.handleSearchWeb`.
 pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     chat.add(Role::User, format!("Search web: {query}"), None, None);
     chat.is_typing.set(true);
@@ -301,7 +261,7 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     let local = storage::get_local_settings(provider).await;
     let opts = local_opts(local.url.clone(), local.model.clone());
 
-    if provider == ProviderType::OllamaCloud {
+    if provider.supports_native_tools() {
         match providers::web_search(provider, query.trim(), &key, &opts).await {
             Ok(answer) => chat.update_last(if answer.is_empty() { "No results found.".to_string() } else { answer }),
             Err(e) => chat.update_last(format!("Search error: {e}")),
@@ -311,15 +271,7 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     }
 
     // Local providers: DuckDuckGo then summarize.
-    let resp = runtime::send_message(&to_js(&json!({
-        "action": "search_web",
-        "payload": { "query": query.trim() }
-    })))
-    .await
-    .map(from_js)
-    .unwrap_or(Value::Null);
-
-    let results = resp.get("results").and_then(Value::as_array).cloned().unwrap_or_default();
+    let results = agent::duckduckgo_results(query.trim()).await;
     if results.is_empty() {
         chat.update_last("No search results found.");
         chat.is_typing.set(false);
@@ -352,7 +304,6 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     send_message(chat, provider, key, search_prompt, opts).await;
 }
 
-/// `App.handleGenerateImage`.
 pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     chat.add(Role::User, format!("🎨 {prompt}"), None, None);
     chat.is_typing.set(true);
@@ -367,31 +318,32 @@ pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     } else {
         (!local.url.is_empty()).then_some(local.url)
     };
+    // The stored SVG model defaults to an Ollama Cloud id; on other backends
+    // draw with the provider's own chat model instead.
+    let model = imagegen::resolve_svg_model(provider, &app.image_gen_model.get_untracked(), &local.model);
 
     let options = imagegen::ImageGenOptions {
         provider: img_provider,
+        chat_provider: provider,
         api_key: key,
         base_url,
-        model: app.image_gen_model.get_untracked(),
+        model,
         size: app.image_gen_size.get_untracked(),
     };
 
     match imagegen::generate_image(&prompt, &options).await {
-        Ok(result) => chat.update_last_image(result.data_url, Some(result.revised_prompt.unwrap_or(prompt))),
+        Ok(data_url) => chat.update_last_image(data_url, prompt),
         Err(e) => chat.update_last(format!("{}: {e}", app.tr().image_gen_failed)),
     }
     chat.is_typing.set(false);
 }
 
-/// `App.handleAutoAnswer`: detect the exam question and auto-fill the answer.
+/// Detect the exam question and auto-fill the answer.
 pub async fn auto_answer(app: AppState, chat: ChatState) {
     app.is_auto_answering.set(true);
     let run = async {
-        let tab_id = match active_tab_id().await {
-            Some(id) => id,
-            None => return,
-        };
-        let q = send_to_tab(tab_id, json!({ "action": "get_exam_question" })).await;
+        let Some(tab_id) = tabs::active_tab_id().await else { return };
+        let q = tabs::send_json(tab_id, &json!({ "action": "get_exam_question" })).await;
         if !q.get("ok").and_then(Value::as_bool).unwrap_or(false) {
             chat.add(Role::Ai, "⚠️ No exam question found on this page.", None, None);
             return;
@@ -402,9 +354,7 @@ pub async fn auto_answer(app: AppState, chat: ChatState) {
         let choices = q.get("choices").and_then(Value::as_array);
         let has_choices = choices.map(|c| !c.is_empty()).unwrap_or(false);
         let mut prompt = String::from("Answer this exam question concisely.\n\n");
-        // Combined condition mirrors `inputType === 'choice' && choices?.length > 0`;
-        // the single else always builds a question prompt (so choice-without-choices
-        // still asks the question rather than producing an empty prompt).
+        // A choice question without options still gets the plain prompt.
         if input_type == "choice" && has_choices {
             prompt.push_str(&format!("Question:\n{question_text}\n\nOptions:\n"));
             let opts = choices
@@ -443,9 +393,9 @@ pub async fn auto_answer(app: AppState, chat: ChatState) {
             }
         };
 
-        let fill = send_to_tab(
+        let fill = tabs::send_json(
             tab_id,
-            json!({ "action": "fill_answer", "payload": { "inputType": input_type, "value": answer } }),
+            &json!({ "action": "fill_answer", "payload": { "inputType": input_type, "value": answer } }),
         )
         .await;
 

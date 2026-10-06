@@ -12,9 +12,7 @@ pub mod imagegen;
 pub mod markdown;
 pub mod providers;
 pub mod proxy;
+pub mod remote_ui;
 pub mod storage;
 pub mod types;
-
-pub fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}
+pub mod updates;

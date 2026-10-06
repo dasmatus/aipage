@@ -1,0 +1,80 @@
+name: Deploy hosted UI
+
+# Builds the sidebar as a static site (`cargo run -p xtask -- build --target
+# web` → dist-web/) and deploys that prebuilt directory to the Vercel project
+# `aipage` (team `dasmatus-personal`) as the production deployment. No build
+# runs on Vercel's side: the CLI uploads dist-web as-is and the headers come
+# from the bundled vercel.json.
+#
+# Required repository secret: VERCEL_TOKEN (a Vercel account token with access
+# to the team). The org/project ids below are not secrets.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/aipage-sidebar/**"
+      - "crates/aipage-core/**"
+      - "crates/aipage-bindings/**"
+      - "assets/**"
+      - "xtask/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "flake.nix"
+      - "flake.lock"
+      - "package.json"
+      - "bun.lock"
+      - "tailwind.config.js"
+      - "postcss.config.js"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_7Z3rZakz7VA0GFsobgGCSMBN
+  VERCEL_PROJECT_ID: prj_ItmdNa5y83DzyeCRFgm9iarKmoDZ
+
+jobs:
+  deploy:
+    name: Build web target & deploy to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Build dist-web (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            cargo run -p xtask -- build --target web
+          '
+
+      - name: Verify dist-web
+        run: |
+          set -euo pipefail
+          ls -la dist-web
+          jq -e . dist-web/vercel.json > /dev/null
+          test -f dist-web/sidebar.html
+          ls dist-web/sidebar_bg.*.wasm dist-web/sidebar.*.js dist-web/sidebar_loader.*.js
+
+      - name: Deploy to Vercel (production, prebuilt static)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          # shellcheck disable=SC2016 # the quoted script is expanded by the inner bash
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            if [ -z "${VERCEL_TOKEN:-}" ]; then
+              echo "::error::VERCEL_TOKEN secret is not set" >&2
+              exit 1
+            fi
+            bunx vercel@latest deploy dist-web --prod --yes --token="$VERCEL_TOKEN"
+          '

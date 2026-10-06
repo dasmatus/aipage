@@ -1,7 +1,5 @@
-//! Markdown → HTML rendering. Replaces the `marked` dependency.
-//!
-//! Used by the chat message list to render AI responses. Output is inserted via
-//! Leptos `inner_html`, matching the old `dangerouslySetInnerHTML` behaviour.
+//! Markdown → HTML rendering for AI responses in the chat message list; the
+//! output is inserted via Leptos `inner_html`.
 
 use pulldown_cmark::{html, Options, Parser};
 

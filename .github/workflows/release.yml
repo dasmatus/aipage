@@ -9,37 +9,93 @@ permissions:
   contents: write
 
 jobs:
+  # Build + package via the shared workflow (same steps as CI and nightly).
+  # Install tests are left off here to keep tagged releases behaving as
+  # before (CI already gates `main` on them); flip `install-tests: true` to
+  # make a failing install test block a tagged release as well.
+  build:
+    name: Build all targets
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+    # AMO credentials (WEB_EXT_API_KEY / WEB_EXT_API_SECRET) for signing the
+    # Firefox xpi; without them the release gets aipage-firefox-unsigned.xpi.
+    secrets: inherit
+    with:
+      install-tests: false
+      sign-firefox: true
+      artifact-name: aipage-release
+
   release:
-    name: Build & publish release
+    name: Publish release
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v7
+        with:
+          # git-cliff needs the history and the previous release tag.
+          fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@v23
       - uses: DeterminateSystems/magic-nix-cache-action@v15
 
-      - name: Build all targets (in nix devShell)
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+
+      # The release body is this tag's changelog section, generated from the
+      # conventional commits since the previous `v*` tag by git-cliff
+      # (cliff.toml, scripts/changelog.sh) — the same generator that rebuilds
+      # book/src/changelog.md on main.
+      - name: Generate release notes (git-cliff, in nix devShell)
+        env:
+          NOTES_FILE: release-notes.md
         run: |
+          # shellcheck disable=SC2016 # the quoted script is expanded by the inner bash
           nix develop --accept-flake-config -c bash -c '
             set -euo pipefail
-            bun install --frozen-lockfile
-            cargo run -p xtask -- build-all
+            bash scripts/changelog.sh --release "$GITHUB_REF_NAME" > "$NOTES_FILE"
           '
+          if [ ! -s "$NOTES_FILE" ]; then
+            echo "Release $GITHUB_REF_NAME" > "$NOTES_FILE"
+          fi
+          cat "$NOTES_FILE"
 
-      - name: Package artifacts (canonical names)
-        run: |
-          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
-          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
-          mkdir -p packages
-          rm -f packages/*.xpi
-          bunx web-ext build -s dist-firefox -a packages
-          cp packages/*.xpi aipage-firefox.xpi
+      # The macOS wrapper job in build.yml is advisory (continue-on-error):
+      # when it failed there is no artifact and the release ships without
+      # aipage-safari-macos.zip.
+      - name: Download the Safari app wrapper (macOS build)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.safari-artifact-name }}
 
       - name: Create or update GitHub release and upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIREFOX_SIGNED: ${{ needs.build.outputs.firefox-signed }}
         run: |
-          notes_file="$(mktemp)"
-          node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" > "$notes_file"
+          set -euo pipefail
+          notes_file=release-notes.md
+
+          # Packages present in this run: the Firefox name depends on whether
+          # AMO signed it, the Safari app on the macOS job.
+          assets=()
+          for f in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
+            [ -f "$f" ] && assets+=("$f")
+          done
+          for f in aipage-web.zip aipage-web.json web-assets/*; do
+            [ -f "$f" ] && assets+=("$f")
+          done
+          test -f aipage-chrome.zip
+          test -f aipage-safari.zip
+          { [ -f aipage-firefox.xpi ] || [ -f aipage-firefox-unsigned.xpi ]; }
+          printf 'assets: %s\n' "${assets[*]}"
+          if [ "${FIREFOX_SIGNED}" != "true" ]; then
+            echo "::warning title=Unsigned Firefox release asset::aipage-firefox-unsigned.xpi was not signed by AMO (WEB_EXT_API_KEY / WEB_EXT_API_SECRET missing or signing failed); it can only be loaded as a temporary add-on."
+          fi
+          if [ ! -f aipage-safari-macos.zip ]; then
+            echo "::warning title=No Safari app wrapper::the macOS job produced no aipage-safari-macos.zip; the release only carries the bare web extension (aipage-safari.zip)."
+          fi
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" \
@@ -51,18 +107,18 @@ jobs:
               --notes-file "$notes_file"
           fi
 
+          # Drop anything that is not one of ours, then replace ours. Both
+          # Firefox names are removed so a re-run that gains (or loses) AMO
+          # signing never leaves two xpi variants on the same release.
           existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq '.assets[].name' || true)"
           for asset in $existing_assets; do
             case "$asset" in
-              aipage-chrome.zip|aipage-firefox.xpi|aipage-safari.zip) ;;
+              aipage-chrome.zip|aipage-firefox.xpi|aipage-firefox-unsigned.xpi|aipage-safari.zip|aipage-safari-macos.zip|aipage-web.zip|aipage-web.json) ;;
               *) gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes ;;
             esac
           done
-          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip; do
+          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip aipage-web.zip aipage-web.json; do
             gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes >/dev/null 2>&1 || true
           done
 
-          gh release upload "$GITHUB_REF_NAME" \
-            aipage-chrome.zip \
-            aipage-firefox.xpi \
-            aipage-safari.zip
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}"
