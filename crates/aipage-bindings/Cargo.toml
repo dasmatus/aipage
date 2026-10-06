@@ -23,4 +23,16 @@ features = [
     "EventTarget",
     "MessageEvent",
     "MessagePort",
+    # IndexedDB (downloaded sidebar bundle, see `idb.rs`)
+    "Event",
+    "DomException",
+    "DomStringList",
+    "IdbFactory",
+    "IdbOpenDbRequest",
+    "IdbRequest",
+    "IdbDatabase",
+    "IdbObjectStore",
+    "IdbObjectStoreParameters",
+    "IdbTransaction",
+    "IdbTransactionMode",
 ]

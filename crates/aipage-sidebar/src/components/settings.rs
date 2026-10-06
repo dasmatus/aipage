@@ -2,10 +2,13 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use serde_json::{json, Value};
 
+use aipage_bindings::{from_js, runtime, to_js};
 use aipage_core::i18n::Translation;
 use aipage_core::providers::{self, ModelInfo, SendOptions};
 use aipage_core::types::ProviderType;
+use aipage_core::updates::UpdateChannel;
 use aipage_core::{remote_ui, storage};
 
 use crate::icons::{self, icon};
@@ -53,6 +56,120 @@ fn api_key_strings(t: &Translation, p: ProviderType) -> (String, String, String)
     }
 }
 
+/// Send `{ action }` to the background and decode its JSON reply (a failed
+/// `sendMessage` becomes `{ ok: false, error }`).
+async fn background_call(action: &str) -> Value {
+    match runtime::send_message(&to_js(&json!({ "action": action }))).await {
+        Ok(v) if !v.is_null() && !v.is_undefined() => from_js(&v),
+        Ok(_) => json!({ "ok": false, "error": "no reply from the background" }),
+        Err(e) => json!({ "ok": false, "error": e.as_string().unwrap_or_else(|| "sendMessage failed".into()) }),
+    }
+}
+
+/// Human-readable line for the installed UI bundle (`uiBundle.installed` /
+/// `ui_bundle_status.installed`), `None` when nothing is installed.
+fn describe_installed_bundle(installed: &Value) -> Option<String> {
+    let version = installed.get("version")?.as_str()?;
+    let channel = installed.get("channel").and_then(Value::as_str).unwrap_or("?");
+    let sha = installed.get("sha").and_then(Value::as_str).unwrap_or("");
+    let date = installed.get("installedAt").and_then(Value::as_str).unwrap_or("");
+    let short_sha = sha.get(..7).unwrap_or(sha);
+    let day = date.get(..10).unwrap_or(date);
+    let mut s = format!("{version} ({channel}");
+    if !short_sha.is_empty() {
+        s.push_str(&format!(", {short_sha}"));
+    }
+    if !day.is_empty() {
+        s.push_str(&format!(", {day}"));
+    }
+    s.push(')');
+    Some(s)
+}
+
+/// Settings strings for the `extension` part of an update report.
+fn describe_extension_result(t: &Translation, report: &Value) -> String {
+    if !report.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+        let err = report.get("error").and_then(Value::as_str).unwrap_or("unknown error");
+        return t.update_check_failed.replace("{error}", err);
+    }
+    let ext = &report["extension"];
+    let current = ext.get("current").and_then(Value::as_str).unwrap_or("?");
+    match (ext.get("updateAvailable").and_then(Value::as_bool), ext.get("remote").and_then(Value::as_str)) {
+        (Some(true), Some(remote)) => t.update_extension_available.replace("{version}", remote),
+        _ => t.update_extension_up_to_date.replace("{version}", current),
+    }
+}
+
+/// Settings strings for the `uiBundle` part of an update report; `None`
+/// when there is nothing to say (bundle updates off).
+fn describe_bundle_result(t: &Translation, report: &Value) -> Option<String> {
+    if !report.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+        let err = report.get("error").and_then(Value::as_str).unwrap_or("unknown error");
+        return Some(t.update_check_failed.replace("{error}", err));
+    }
+    let b = &report["uiBundle"];
+    let version = b.get("version").and_then(Value::as_str).unwrap_or("?");
+    Some(match b.get("result").and_then(Value::as_str).unwrap_or("") {
+        "installed" => t.ui_bundle_result_installed.replace("{version}", version),
+        "up_to_date" => t.ui_bundle_result_up_to_date.clone(),
+        "not_available" => t.ui_bundle_result_not_available.clone(),
+        "older_than_extension" => t.ui_bundle_result_older.replace("{version}", version),
+        "error" => t.update_check_failed.replace("{error}", b.get("error").and_then(Value::as_str).unwrap_or("?")),
+        _ => return None,
+    })
+}
+
+/// Everything the update controls share between the two settings cards.
+#[derive(Clone, Copy)]
+struct UpdateControls {
+    channel: RwSignal<String>,
+    checking: RwSignal<bool>,
+    extension_result: RwSignal<Option<String>>,
+    bundle_enabled: RwSignal<bool>,
+    bundle_installed: RwSignal<Option<String>>,
+    bundle_result: RwSignal<Option<String>>,
+}
+
+impl UpdateControls {
+    fn new() -> Self {
+        Self {
+            channel: RwSignal::new(UpdateChannel::default().as_str().to_string()),
+            checking: RwSignal::new(false),
+            extension_result: RwSignal::new(None),
+            bundle_enabled: RwSignal::new(false),
+            bundle_installed: RwSignal::new(None),
+            bundle_result: RwSignal::new(None),
+        }
+    }
+
+    /// Load the stored settings and the installed-bundle status.
+    async fn load(self) {
+        self.channel.set(storage::get_update_channel().await.as_str().to_string());
+        self.bundle_enabled.set(storage::get_ui_bundle_update_enabled().await);
+        let status = background_call("ui_bundle_status").await;
+        self.bundle_installed.set(describe_installed_bundle(&status["installed"]));
+    }
+
+    /// Settings "Check now": run the full check in the background and show
+    /// both results.
+    fn check_now(self, app: AppState) {
+        if self.checking.get_untracked() {
+            return;
+        }
+        self.checking.set(true);
+        self.extension_result.set(Some(app.tr().update_checking));
+        self.bundle_result.set(None);
+        spawn_local(async move {
+            let report = background_call("check_updates").await;
+            let t = app.tr();
+            self.extension_result.set(Some(describe_extension_result(&t, &report)));
+            self.bundle_result.set(describe_bundle_result(&t, &report));
+            self.bundle_installed.set(describe_installed_bundle(&report["uiBundle"]["installed"]));
+            self.checking.set(false);
+        });
+    }
+}
+
 #[component]
 pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
@@ -61,6 +178,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let theme = RwSignal::new("default".to_string());
     let global_theme = RwSignal::new(false);
     let auto_update = RwSignal::new(false);
+    let updates = UpdateControls::new();
     let base_url = RwSignal::new(String::new());
     let model_name = RwSignal::new(String::new());
     let available_models = RwSignal::<Vec<ModelInfo>>::new(Vec::new());
@@ -110,6 +228,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             image_gen_size.set(storage::get_image_gen_size().await);
             remote_ui_enabled.set(storage::get_remote_ui_enabled().await);
             remote_ui_url.set(storage::get_remote_ui_url().await);
+            updates.load().await;
 
             let url = if local.url.is_empty() {
                 providers::default_base_url(provider).to_string()
@@ -174,6 +293,15 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
         let v = event_target_value(&ev);
         app.language.set(v.clone());
         spawn_local(async move { storage::set_language(&v).await });
+    };
+
+    let change_channel = move |ev| {
+        let v = event_target_value(&ev);
+        let channel = UpdateChannel::from_str_or_default(&v);
+        updates.channel.set(channel.as_str().to_string());
+        updates.extension_result.set(None);
+        updates.bundle_result.set(None);
+        spawn_local(async move { storage::save_update_channel(channel).await });
     };
 
     let select_style = "background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color);";
@@ -271,6 +399,23 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                         <Toggle label=Signal::derive(move || app.tr().apply_theme_global) checked=global_theme on_toggle=Callback::new(move |v: bool| { global_theme.set(v); spawn_local(async move { storage::save_global_theme_enabled(v).await }); })/>
                         <Toggle label=Signal::derive(move || app.tr().auto_update) checked=auto_update on_toggle=Callback::new(move |v: bool| { auto_update.set(v); spawn_local(async move { storage::save_auto_update_enabled(v).await }); })/>
                         <div class="space-y-2">
+                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().update_channel}</label>
+                            <div class="flex gap-2">
+                                <select id="update-channel" class="flex-1 h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || updates.channel.get() on:change=change_channel>
+                                    <option value="stable">{move || app.tr().update_channel_stable}</option>
+                                    <option value="nightly">{move || app.tr().update_channel_nightly}</option>
+                                </select>
+                                <button id="update-check-now" class="h-9 px-3 rounded-lg border shrink-0 text-xs" style="border-color: var(--border-color)"
+                                    disabled=move || updates.checking.get()
+                                    title=move || app.tr().update_check_now
+                                    on:click=move |_| updates.check_now(app)>
+                                    {icon(icons::REFRESH_CW, "w-4 h-4")}
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-muted-foreground opacity-70">{move || app.tr().update_channel_hint}</p>
+                            {move || updates.extension_result.get().map(|s| view! { <p id="update-extension-result" class="text-[11px] text-muted-foreground">{s}</p> })}
+                        </div>
+                        <div class="space-y-2">
                             <div class="flex items-center gap-2 mb-1">
                                 {icon(icons::LANGUAGES, "w-4 h-4 text-muted-foreground")}
                                 <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().language}</label>
@@ -321,8 +466,8 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     </div>
                 </Card>
 
-                // Hosted (remote) UI
-                <RemoteUiSection enabled=remote_ui_enabled url=remote_ui_url/>
+                // Hosted (remote) UI + the GitHub-downloaded sidebar bundle
+                <RemoteUiSection enabled=remote_ui_enabled url=remote_ui_url updates=updates/>
 
                 // Exam tools
                 <Card>
@@ -345,11 +490,13 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     }
 }
 
-/// Self-contained "Hosted UI" card: the auto-updating remote UI toggle and
-/// the advanced URL override. Both persist immediately; the content script
-/// reloads the sidebar iframe when either key changes.
+/// Self-contained "Hosted UI" card: the auto-updating remote UI toggle, the
+/// advanced URL override, and the second UI-update mode — the sidebar bundle
+/// downloaded from GitHub releases (precedence: hosted → downloaded bundle →
+/// bundled). Everything persists immediately; the content script reloads the
+/// sidebar iframe when a remote-UI key changes.
 #[component]
-fn RemoteUiSection(enabled: RwSignal<bool>, url: RwSignal<String>) -> impl IntoView {
+fn RemoteUiSection(enabled: RwSignal<bool>, url: RwSignal<String>, updates: UpdateControls) -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
     let input_style = "background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color);";
     let url_invalid = move || {
@@ -361,6 +508,41 @@ fn RemoteUiSection(enabled: RwSignal<bool>, url: RwSignal<String>) -> impl IntoV
         let normalized = remote_ui::normalize_remote_ui_url(&raw).unwrap_or_default();
         url.set(normalized.clone());
         spawn_local(async move { storage::save_remote_ui_url(&normalized).await });
+    };
+
+    let bundle_label = move || {
+        let t = app.tr();
+        let channel = match UpdateChannel::from_str_or_default(&updates.channel.get()) {
+            UpdateChannel::Stable => t.update_channel_stable.clone(),
+            UpdateChannel::Nightly => t.update_channel_nightly.clone(),
+        };
+        t.ui_bundle_update.replace("{channel}", &channel)
+    };
+    let toggle_bundle = move |v: bool| {
+        updates.bundle_enabled.set(v);
+        updates.bundle_result.set(None);
+        spawn_local(async move {
+            storage::save_ui_bundle_update_enabled(v).await;
+            if v {
+                // Fetch the bundle right away instead of waiting for the hourly alarm.
+                updates.check_now(app);
+            }
+        });
+    };
+    let use_bundled = move |_| {
+        updates.bundle_enabled.set(false);
+        spawn_local(async move {
+            storage::save_ui_bundle_update_enabled(false).await;
+            let r = background_call("ui_bundle_clear").await;
+            let t = app.tr();
+            if r.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+                updates.bundle_installed.set(None);
+                updates.bundle_result.set(Some(t.ui_bundle_cleared));
+            } else {
+                let err = r.get("error").and_then(Value::as_str).unwrap_or("?");
+                updates.bundle_result.set(Some(t.update_check_failed.replace("{error}", err)));
+            }
+        });
     };
 
     view! {
@@ -386,6 +568,29 @@ fn RemoteUiSection(enabled: RwSignal<bool>, url: RwSignal<String>) -> impl IntoV
                         </Show>
                     </div>
                 </Show>
+
+                // Second UI-update mode: the bundle downloaded from GitHub releases.
+                <div class="space-y-3 pt-3 border-t" style="border-color: var(--border-color)">
+                    <Toggle label=Signal::derive(bundle_label) checked=updates.bundle_enabled on_toggle=Callback::new(toggle_bundle)/>
+                    <p class="text-[11px] text-muted-foreground">{move || app.tr().ui_bundle_description}</p>
+                    <p id="ui-bundle-installed" class="text-[11px]">
+                        <span class="font-medium">{move || app.tr().ui_bundle_installed}": "</span>
+                        {move || updates.bundle_installed.get().unwrap_or_else(|| app.tr().ui_bundle_none)}
+                    </p>
+                    <div class="flex gap-2">
+                        <button id="ui-bundle-check-now" class="flex-1 h-9 px-3 rounded-lg border text-xs" style="border-color: var(--border-color)"
+                            disabled=move || updates.checking.get()
+                            on:click=move |_| updates.check_now(app)>
+                            {move || if updates.checking.get() { app.tr().update_checking } else { app.tr().ui_bundle_check_now }}
+                        </button>
+                        <button id="ui-bundle-use-bundled" class="flex-1 h-9 px-3 rounded-lg border text-xs" style="border-color: var(--border-color)"
+                            disabled=move || updates.checking.get()
+                            on:click=use_bundled>
+                            {move || app.tr().ui_bundle_use_bundled}
+                        </button>
+                    </div>
+                    {move || updates.bundle_result.get().map(|s| view! { <p id="ui-bundle-result" class="text-[11px] text-muted-foreground">{s}</p> })}
+                </div>
             </div>
         </Card>
     }

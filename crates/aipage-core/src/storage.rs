@@ -9,6 +9,7 @@ use wasm_bindgen::JsValue;
 
 use crate::remote_ui::{KEY_REMOTE_UI_ENABLED, KEY_REMOTE_UI_URL};
 use crate::types::ProviderType;
+use crate::updates::{UpdateChannel, KEY_UI_BUNDLE_UPDATE_ENABLED, KEY_UPDATE_CHANNEL, KEY_UPDATE_NOTIFIED_SHA};
 
 const KEY_PROVIDER: &str = "ai_provider";
 const KEY_PROVIDER_BACKEND: &str = "providerBackend";
@@ -225,6 +226,34 @@ pub async fn get_auto_update_enabled() -> bool {
 
 pub async fn save_auto_update_enabled(enabled: bool) {
     set_bool(KEY_AUTO_UPDATE, enabled).await;
+}
+
+/// Release channel the update manager follows (`stable` by default).
+pub async fn get_update_channel() -> UpdateChannel {
+    UpdateChannel::from_str_or_default(&get_string(KEY_UPDATE_CHANNEL).await.unwrap_or_default())
+}
+
+pub async fn save_update_channel(channel: UpdateChannel) {
+    set_string(KEY_UPDATE_CHANNEL, channel.as_str()).await;
+}
+
+/// Whether the sidebar UI bundle is downloaded from GitHub releases into
+/// IndexedDB. Defaults to `false`.
+pub async fn get_ui_bundle_update_enabled() -> bool {
+    get_bool(KEY_UI_BUNDLE_UPDATE_ENABLED).await
+}
+
+pub async fn save_ui_bundle_update_enabled(enabled: bool) {
+    set_bool(KEY_UI_BUNDLE_UPDATE_ENABLED, enabled).await;
+}
+
+/// Commit sha of the last extension update the user was notified about.
+pub async fn get_update_notified_sha() -> Option<String> {
+    get_string(KEY_UPDATE_NOTIFIED_SHA).await.filter(|s| !s.is_empty())
+}
+
+pub async fn save_update_notified_sha(sha: &str) {
+    set_string(KEY_UPDATE_NOTIFIED_SHA, sha).await;
 }
 
 // --- hosted (remote) UI ---

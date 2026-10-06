@@ -15,6 +15,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 pulldown-cmark = { workspace = true }
+sha2 = { workspace = true }
 # SVG → PNG rasterization. default-features off drops the text / system-font /
 # mmap features that do not fit wasm.
 resvg = { version = "0.48", default-features = false }

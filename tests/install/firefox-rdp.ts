@@ -57,7 +57,7 @@ export class FirefoxRdp {
     const c = new FirefoxRdp();
     return new Promise((resolve, reject) => {
       c.sock = net.createConnection({ port, host });
-      c.sock.on('data', (d) => c.onData(d));
+      c.sock.on('data', (d: Buffer) => c.onData(d));
       c.sock.on('error', (e) => {
         for (const w of c.waiters.values()) w.reject(e);
         c.waiters.clear();

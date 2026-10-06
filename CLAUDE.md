@@ -24,7 +24,7 @@ Never commit directly to `main`.
 # Build (cargo + wasm-bindgen + wasm-opt + Sass/Tailwind + asset copy) → dist-<target>/
 cargo run -p xtask -- build --target chrome     # or firefox / safari
 cargo run -p xtask -- build-all                 # the three browsers
-cargo run -p xtask -- build --target web        # hosted sidebar only → dist-web/ (hashed assets + vercel.json)
+cargo run -p xtask -- build --target web        # hosted sidebar only → dist-web/ (hashed assets + vercel.json + aipage-web.json hash manifest)
 bun run build                                   # alias for the chrome build
 
 # Nightly-style manifest version stamp (version_name is Chrome-only)
@@ -62,12 +62,12 @@ A Cargo workspace. The three browser contexts are separate `cdylib` crates; shar
 ```
 crates/
   aipage-bindings/   # wasm-bindgen bindings to chrome.*, the Direct/Bridge transport, JSON interop helpers
-  aipage-core/       # shared logic: types, storage, i18n, providers, agent loop, imagegen, markdown, chat heuristics, remote_ui
+  aipage-core/       # shared logic: types, storage, i18n, providers, agent loop, imagegen, markdown, chat heuristics, remote_ui, updates
   aipage-sidebar/    # cdylib → wasm: the Leptos CSR sidebar UI
-  aipage-background/ # cdylib → wasm: CORS proxy, DuckDuckGo search, toolbar toggle, update check
+  aipage-background/ # cdylib → wasm: CORS proxy, DuckDuckGo search, toolbar toggle, GitHub update check, sidebar-bundle download (IndexedDB)
   aipage-content/    # cdylib → wasm: navbar button, sidebar iframe + hosted-UI bridge host, theming, exam tools, anti-cheat
-xtask/               # Rust build orchestrator (browser targets, the web target, version stamping)
-assets/              # manifests (×3), sidebar.html, JS loaders, anti_cheat.js, sidebar.scss, tailwind.css, vercel.json
+xtask/               # Rust build orchestrator (browser targets, the web target + aipage-web.json, version stamping)
+assets/              # manifests (×3), sidebar.html, JS loaders (sidebar_loader.js also boots the downloaded bundle), anti_cheat.js, sidebar.scss, tailwind.css, vercel.json
 tests/install/       # Playwright: real unpacked install in Chromium, web-ext lint / temporary install in Firefox, dist structure
 tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome.* (scripts/serve-dist.ts)
 .github/workflows/   # ci, build (reusable), release (v* tags), nightly (rolling pre-release), deploy-web (Vercel)
@@ -84,8 +84,11 @@ tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome
   - `imagegen.rs` — an SVG drawn by the chat model and rasterized with `resvg`/`tiny-skia`, or SD WebUI.
   - `storage.rs` — typed wrappers over `storage.local`; **the key strings are the persisted contract**, never rename them.
   - `remote_ui.rs` — hosted-UI constants (`DEFAULT_REMOTE_UI_URL`, storage keys) and pure URL/origin helpers.
+  - `updates.rs` — everything pure about updates: `UpdateChannel` (`stable` default | `nightly`, key `update_channel`), the GitHub release API URLs, `compare_versions` (component-wise; nightly `base.YYYYMMDD` sorts above its base), the extension/bundle "is newer" rules (equal version + different commit = nightly rebuild), browser-package matching by prefix, the `aipage-web.json` manifest (`WebManifest`), `sha256_hex` and the `ui_source` precedence (hosted → GitHub bundle → bundled).
   - `i18n.rs` + `locales/*.json` — 5 languages (`sk` default) deserialized into a typed `Translation`; every key must exist in all five files (the locale test enforces it).
 - **`aipage-sidebar`** — Leptos app. `state.rs` holds the reactive `AppState`/`ChatState` and all async actions; `components/` the chat, settings and widgets views; `icons.rs` inline SVGs. It runs either from the extension bundle or from the hosted origin (Vercel) over the bridge transport.
+- **`aipage-background`** — `update.rs` polls the channel's GitHub release hourly (`alarms`) and on demand (`check_updates` message from settings): notifies + downloads the matching browser package via `downloads` (Auto-update), and with `ui_bundle_update_enabled` on runs `ui_bundle.rs`, which downloads the glue/wasm/css listed in the release's `aipage-web.json` as individual assets, verifies each sha256 and writes them to IndexedDB (`aipage-ui-bundle`/`ui-bundle`, records per file + `meta`; helpers in `aipage-bindings::idb`). `ui_bundle_status` / `ui_bundle_clear` serve the settings card. The nightly tag is `nightly`, so its version/commit come from the `nightly.json` asset.
+- **`assets/sidebar_loader.js`** — before importing the bundled `sidebar.js`, checks `ui_bundle_update_enabled` + the IndexedDB `meta`; if a bundle not older than the extension is installed it imports the downloaded glue as a `blob:` module (`script-src … blob:` in the MV2 manifests), instantiates the wasm from bytes and attaches the css as `blob:` links; any failure logs once, clears the bundle and boots the bundled files. MV2-only: MV3 forbids remotely sourced code.
 - **`aipage-content`** — `sidebar_controller.rs` loads the hosted sidebar by default and falls back to the bundled one when the bridge does not connect within 8 s; `bridge.rs` is the privileged bridge end (origin + source checks, private `MessageChannel`).
 
 ### Key constraints
@@ -96,7 +99,8 @@ tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome
 - **Manifest V2:** all three manifests are MV2 (required for Firefox/Safari; see the Chromium note above). CSP includes `'unsafe-eval' 'wasm-unsafe-eval'` for WASM instantiation. **No inline scripts:** extension pages forbid them (`'unsafe-inline'` is ignored), so `sidebar.html` boots via the external `sidebar_loader.js`; `scripts/serve-dist.ts` replays the manifest CSP so the e2e harness catches violations, and the structure install test rejects inline scripts.
 - **WASM in content scripts:** the content WASM is fetched from the extension origin via `runtime.getURL` and listed in `web_accessible_resources`.
 - **Hosted UI:** the content script passes initials via `sidebar.html#initials=XY` to both the bundled and the hosted page; the hosted page may only be embedded by `*.edupage.org` (`frame-ancestors` in `assets/vercel.json`).
-- **Persisted contracts:** storage keys, the `ProviderType` strings and the bridge wire format (`aipage-bindings/src/bridge.rs`) must stay stable.
+- **Updates come from GitHub Releases:** `release.yml` (tags `vX.Y.Z`) and `nightly.yml` (tag `nightly`, version `<base>.<YYYYMMDD>`) upload `aipage-chrome.zip`, `aipage-firefox.xpi`, `aipage-safari.zip`, `aipage-web.zip`, `aipage-web.json` and the individual `dist-web` files; the manifests allow `https://api.github.com`, `https://github.com` and `https://objects.githubusercontent.com` (asset downloads redirect there). Sidebar precedence: Vercel hosted → GitHub-downloaded bundle → bundled.
+- **Persisted contracts:** storage keys, the `ProviderType` strings, the bridge wire format (`aipage-bindings/src/bridge.rs`) and the IndexedDB bundle schema shared by `ui_bundle.rs` and `sidebar_loader.js` must stay stable.
 
 ## Validation before committing
 
@@ -104,7 +108,7 @@ tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo check --target wasm32-unknown-unknown -p aipage-sidebar -p aipage-background -p aipage-content
-cargo run -p xtask -- build --target chrome && env -u LD_PRELOAD bun run test:install:structure
+cargo run -p xtask -- build --target chrome && cargo run -p xtask -- build --target web && env -u LD_PRELOAD bun run test:install:structure
 ```
 
-Keep the `Unreleased` section of `book/src/changelog.md` (`CHANGELOG.md` is a symlink to it) up to date; `README.md` and `CONTRIBUTING.md` are symlinks into `book/src/` as well.
+`book/src/changelog.md` (`CHANGELOG.md` is a symlink to it) is generated by CI from commit messages: do not edit it, write descriptive conventional commits instead. `README.md` and `CONTRIBUTING.md` are symlinks into `book/src/` as well.

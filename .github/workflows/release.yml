@@ -83,6 +83,9 @@ jobs:
           for f in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
             [ -f "$f" ] && assets+=("$f")
           done
+          for f in aipage-web.zip aipage-web.json web-assets/*; do
+            [ -f "$f" ] && assets+=("$f")
+          done
           test -f aipage-chrome.zip
           test -f aipage-safari.zip
           { [ -f aipage-firefox.xpi ] || [ -f aipage-firefox-unsigned.xpi ]; }
@@ -110,11 +113,11 @@ jobs:
           existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq '.assets[].name' || true)"
           for asset in $existing_assets; do
             case "$asset" in
-              aipage-chrome.zip|aipage-firefox.xpi|aipage-firefox-unsigned.xpi|aipage-safari.zip|aipage-safari-macos.zip) ;;
+              aipage-chrome.zip|aipage-firefox.xpi|aipage-firefox-unsigned.xpi|aipage-safari.zip|aipage-safari-macos.zip|aipage-web.zip|aipage-web.json) ;;
               *) gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes ;;
             esac
           done
-          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
+          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip aipage-web.zip aipage-web.json; do
             gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes >/dev/null 2>&1 || true
           done
 

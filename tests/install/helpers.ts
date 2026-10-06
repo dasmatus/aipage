@@ -38,7 +38,7 @@ export type Manifest = {
   web_accessible_resources?: (string | { resources: string[]; matches: string[] })[];
   host_permissions?: string[];
   action?: { default_title?: string };
-  browser_action?: { default_popup?: string; default_icon?: string | Record<string, string> };
+  browser_action?: { default_title?: string; default_popup?: string; default_icon?: string | Record<string, string> };
   icons?: Record<string, string>;
   options_ui?: { page?: string };
   options_page?: string;

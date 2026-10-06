@@ -72,6 +72,22 @@ from Brave's apt repository (extracted with `dpkg-deb -x`, no install). Then:
    extension origin (remote resource failures such as Google Fonts are
    tolerated, sandboxes may be offline).
 
+Two more scenarios cover the self-updating sidebar bundle and run only when
+`dist-web/aipage-web.json` exists (`cargo run -p xtask -- build --target web`):
+
+6. seeds the extension origin's IndexedDB (`aipage-ui-bundle` / `ui-bundle`)
+   with the just-built `dist-web` files exactly as the background's
+   `ui_bundle::sync` writes them, turns `ui_bundle_update_enabled` on and
+   reloads `sidebar.html`: the loader must report `loaded from the
+   downloaded GitHub bundle`, boot the wasm, render into `#root`, attach
+   `blob:` stylesheets and disable the bundled ones, with no CSP violation —
+   proof that `blob:` module imports work under the extension CSP;
+7. seeds the same bundle with one corrupted file: the loader must warn about
+   the sha256 failure, boot the **bundled** UI instead and clear the store.
+
+The real download path (GitHub release → IndexedDB) is not exercised here;
+no network is needed.
+
 ### `firefox.spec.ts` — lint + temporary install that really runs
 
 - `web-ext lint` (addons-linter) on `dist-firefox` must report **zero
@@ -118,8 +134,15 @@ is MV2, the `version` matches the shared Chrome/Firefox/Safari format
 manifest references exists, the three `*_bg.wasm` modules start with the wasm
 magic and have their glue and loader files, `sidebar.html` contains no inline
 script / inline handler / `javascript:` URL (the extension CSP would block
-them) and only references bundled files, Firefox has a gecko id, non-Chrome
-manifests carry no `version_name`, and all dists share one version.
+them) and only references bundled files, the CSP allows `blob:` scripts and
+the GitHub hosts the update manager needs (and no Codeberg), Firefox has a
+gecko id, non-Chrome manifests carry no `version_name`, and all dists share
+one version.
+
+When `dist-web/` exists, `aipage-web.json` is checked against it: every
+listed file exists with the listed size and sha256, exactly one hashed glue
+js and one wasm are listed, and every published file (except `vercel.json`
+and the manifest itself) is listed.
 
 For `dist-safari` additionally (what Apple's
 `safari-web-extension-packager`/`-converter` and `scripts/setup-safari.sh`

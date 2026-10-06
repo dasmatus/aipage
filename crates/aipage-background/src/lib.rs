@@ -2,9 +2,11 @@
 //!
 //! Acts as the CORS proxy (`proxy_fetch`), serves DuckDuckGo instant-answer
 //! search (`search_web`), toggles the sidebar on toolbar click, and runs the
-//! auto-update manager. The background has host permissions, so it can `fetch`
-//! the external APIs directly.
+//! auto-update manager (`check_updates`, `ui_bundle_status`,
+//! `ui_bundle_clear` for the settings view). The background has host
+//! permissions, so it can `fetch` the external APIs directly.
 
+mod ui_bundle;
 mod update;
 
 use js_sys::{Array, Object, Reflect, Uint8Array};
@@ -34,6 +36,13 @@ pub fn start() {
         match action.as_str() {
             "proxy_fetch" => handle_proxy_fetch(message).await,
             "search_web" => handle_search_web(message).await,
+            // Settings → "Check for updates now": extension package + UI bundle.
+            "check_updates" => to_js(&update::check_updates(true).await),
+            "ui_bundle_status" => to_js(&ui_bundle_status().await),
+            "ui_bundle_clear" => match ui_bundle::clear().await {
+                Ok(()) => obj(&[("ok", JsValue::TRUE)]),
+                Err(e) => error_response(&e),
+            },
             _ => JsValue::NULL,
         }
     });
@@ -62,19 +71,93 @@ fn get_val(obj: &JsValue, key: &str) -> JsValue {
     Reflect::get(obj, &JsValue::from_str(key)).unwrap_or(JsValue::UNDEFINED)
 }
 
-/// GET a URL and decode the JSON body. Used by the update manager.
-pub(crate) async fn fetch_json(url: &str) -> Result<Value, String> {
-    let resp = JsFuture::from(js_fetch(JsValue::from_str(url), &Object::new().into()))
-        .await
-        .map_err(|e| e.as_string().unwrap_or_default())?;
-    let resp: web_sys::Response = resp.unchecked_into();
-    if !resp.ok() {
-        return Err(format!("HTTP {}", resp.status()));
+/// Installed UI bundle + the settings the sidebar needs to render its card.
+async fn ui_bundle_status() -> Value {
+    json!({
+        "ok": true,
+        "extensionVersion": update::current_version(),
+        "channel": aipage_core::storage::get_update_channel().await.as_str(),
+        "enabled": aipage_core::storage::get_ui_bundle_update_enabled().await,
+        "installed": ui_bundle::installed_meta().await.map(|m| m.to_json()).unwrap_or(Value::Null),
+    })
+}
+
+/// GET `url` with the given request headers; the response object, whatever
+/// its status. A network failure is an `Err`.
+async fn fetch_response(url: &str, headers: &[(&str, &str)]) -> Result<web_sys::Response, String> {
+    let init = Object::new();
+    if !headers.is_empty() {
+        let h = Object::new();
+        for (k, v) in headers {
+            let _ = Reflect::set(&h, &JsValue::from_str(k), &JsValue::from_str(v));
+        }
+        let _ = Reflect::set(&init, &"headers".into(), &h);
     }
+    let resp = JsFuture::from(js_fetch(JsValue::from_str(url), &init.into()))
+        .await
+        .map_err(|e| e.as_string().unwrap_or_else(|| format!("fetch {url} failed")))?;
+    Ok(resp.unchecked_into())
+}
+
+fn status_error(resp: &web_sys::Response) -> Result<(), String> {
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("HTTP {}", resp.status()))
+    }
+}
+
+/// GET a URL and decode the JSON body (plain fetch, no API headers; used for
+/// release assets such as `nightly.json`).
+pub(crate) async fn fetch_json(url: &str) -> Result<Value, String> {
+    let resp = fetch_response(url, &[]).await?;
+    status_error(&resp)?;
     let v = JsFuture::from(resp.json().map_err(|_| "no json".to_string())?)
         .await
         .map_err(|_| "json await failed".to_string())?;
     serde_wasm_bindgen::from_value(v).map_err(|e| format!("{e:?}"))
+}
+
+/// GET a GitHub REST endpoint (unauthenticated, `Accept:
+/// application/vnd.github+json`) and decode the JSON body. A rate-limit
+/// answer (403/429 with `x-ratelimit-remaining: 0`) is reported as
+/// `"GitHub API rate limit reached (HTTP <status>)"`.
+pub(crate) async fn fetch_github_json(url: &str) -> Result<Value, String> {
+    let resp = fetch_response(
+        url,
+        &[("Accept", "application/vnd.github+json"), ("X-GitHub-Api-Version", "2022-11-28")],
+    )
+    .await?;
+    let remaining = resp.headers().get("x-ratelimit-remaining").ok().flatten();
+    if aipage_core::updates::is_rate_limited(resp.status(), remaining.as_deref()) {
+        return Err(format!("GitHub API rate limit reached (HTTP {})", resp.status()));
+    }
+    status_error(&resp)?;
+    let v = JsFuture::from(resp.json().map_err(|_| "no json".to_string())?)
+        .await
+        .map_err(|_| "json await failed".to_string())?;
+    serde_wasm_bindgen::from_value(v).map_err(|e| format!("{e:?}"))
+}
+
+/// GET a URL as text (release assets).
+pub(crate) async fn fetch_text(url: &str) -> Result<String, String> {
+    let resp = fetch_response(url, &[]).await?;
+    status_error(&resp)?;
+    JsFuture::from(resp.text().map_err(|_| "no body".to_string())?)
+        .await
+        .ok()
+        .and_then(|v| v.as_string())
+        .ok_or_else(|| "Failed to read body".to_string())
+}
+
+/// GET a URL as raw bytes (release assets).
+pub(crate) async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let resp = fetch_response(url, &[]).await?;
+    status_error(&resp)?;
+    let buf = JsFuture::from(resp.array_buffer().map_err(|_| "no body".to_string())?)
+        .await
+        .map_err(|_| "Failed to read body".to_string())?;
+    Ok(Uint8Array::new(&buf).to_vec())
 }
 
 /// `{ ok: false, error }`.

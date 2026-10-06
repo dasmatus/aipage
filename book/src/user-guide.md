@@ -64,7 +64,7 @@ Every night (and on demand) the head of `main` is built for all three browsers a
 
 **<https://github.com/dasmatus/aipage/releases/tag/nightly>**
 
-- The release is re-created in place: the `nightly` tag moves to the built commit, the assets (`aipage-chrome.zip`, `aipage-firefox.xpi` or `aipage-firefox-unsigned.xpi`, `aipage-safari.zip`, `aipage-safari-macos.zip`) are replaced, and the notes list the commits since the previous nightly. `nightly.json` records the exact commit the assets were built from, the asset names and whether the Firefox xpi was signed (`firefox_signed`).
+- The release is re-created in place: the `nightly` tag moves to the built commit, the assets (`aipage-chrome.zip`, `aipage-firefox.xpi` or `aipage-firefox-unsigned.xpi`, `aipage-safari.zip`, `aipage-safari-macos.zip`, plus the hosted sidebar bundle `aipage-web.zip` / `aipage-web.json` and its individual files, see [Updates](#updates)) are replaced, and the notes list the commits since the previous nightly. `nightly.json` records the exact commit the assets were built from, the asset names and whether the Firefox xpi was signed (`firefox_signed`).
 - The manifest version is stamped as `<base>.<YYYYMMDD>` (for example `1.7.0.20261006`), so a nightly sorts above the release it is based on and below the next release. Chrome additionally shows the human-readable `version_name` (`1.7.0-nightly.20261006+<sha>`).
 - Nothing is published when `main` has not changed since the last nightly, and a nightly whose extension install tests fail is never published.
 - Nightlies are development builds of whatever is on `main` — including half-finished features. The Chrome and Safari packages are unsigned (unpacked install / unsigned-extension mode); the Firefox xpi is signed by AMO like a release when the repository has the AMO credentials configured (see [Firefox signing (AMO)](#firefox-signing-amo)), each nightly being its own AMO version.
@@ -82,6 +82,96 @@ Every night (and on demand) the head of `main` is built for all three browsers a
 **Firefox** — `aipage-firefox.xpi` is AMO-signed: open it in Firefox and confirm **Add**; it installs permanently and each night's build is a higher version than the last, so opening the next nightly upgrades in place. When the nightly only offers `aipage-firefox-unsigned.xpi`, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and pick the file (removed when Firefox exits).
 
 **Safari (macOS)** — unzip `aipage-safari-macos.zip`, open `AIPage.app` once (right-click → **Open**, it is unsigned), switch on **Allow unsigned extensions** in Safari's Developer settings and enable AIPage under **Settings → Extensions**, exactly as for a [release](#safari-macos-only). `aipage-safari.zip` is the bare extension for wrapping it yourself with `scripts/setup-safari.sh`. Safari cannot run on Linux: the Linux job checks the Safari dist structurally and the macOS job proves that Apple's packager and `xcodebuild` accept it, but nobody clicks through the extension before it is published.
+
+## Updates
+
+The extension checks **GitHub Releases** for updates — the same place you
+install from. There is no store listing, so updating the *extension package*
+is always a manual reinstall; the *sidebar UI* can update itself (see below).
+
+### Channels
+
+Settings → *Appearance & App* → **Update channel**:
+
+| Channel | Release followed | Version format |
+| ------- | ---------------- | -------------- |
+| **Stable** (default) | the latest `vX.Y.Z` release (`releases/latest`) | `1.7.0` |
+| **Nightly** | the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly) | `1.7.0.20261006` (`<base>.<YYYYMMDD>`) |
+
+The setting is stored under the `update_channel` key (absent = `stable`).
+Versions are compared component by component, so a nightly sorts above the
+release it was built from and below the next release, and a later date is
+newer. On the nightly channel two builds can share a version (a forced
+rebuild on the same day): the check then compares the commit recorded in
+the release's `nightly.json` with the installed one (Chrome exposes it via
+`version_name`; Firefox/Safari do not, so there the check remembers the
+last commit it notified about) and treats a different commit as an update —
+once.
+
+### Extension package
+
+With **Auto-update** on, the background checks the channel's release every
+hour through the unauthenticated GitHub API (one request per hour, far below
+the 60/hour limit; a rate-limit answer is logged and retried next hour, a
+missing release is ignored). When a newer package exists you get a
+notification; clicking it (or *Download*) downloads the package for your
+browser — `aipage-chrome.zip`, `aipage-firefox.xpi` or `aipage-safari.zip`
+(any `aipage-safari*` asset) — which you then install as described above.
+**Check for updates now** next to the channel runs the same check on demand,
+even with Auto-update off, and shows the result inline.
+
+### Self-updating sidebar UI (GitHub bundle)
+
+Every release also carries the hosted sidebar as `aipage-web.zip`, its hash
+manifest `aipage-web.json` (`version`, git `sha`, `built_at`, and the
+sha256/size of every file) and the individual files (`sidebar.html`,
+`sidebar.<hash>.js`, `sidebar_bg.<hash>.wasm`, `sidebar_loader.<hash>.js`,
+`sidebar.<hash>.css`, `tailwind.<hash>.css`). Settings → *Hosted UI* →
+**Update the sidebar from GitHub releases (<channel>)** (off by default, key
+`ui_bundle_update_enabled`) makes the background download the glue, wasm and
+stylesheets of the channel's release — directly from the release assets, no
+zip is unpacked — verify each file's sha256 against `aipage-web.json` and
+store them in the extension's IndexedDB (database `aipage-ui-bundle`, store
+`ui-bundle`: one record per file plus a `meta` record with version, commit,
+channel and install time). The hourly check (and *Check for UI updates now*)
+replaces the bundle when the release's `version` is higher, or equal with a
+different commit, or when the channel changed; a bundle older than the
+installed extension's own sidebar is never installed, and an existing one
+that became older after an extension update is discarded. **Use bundled UI**
+removes the download and switches the mode off; the card shows the installed
+bundle's version, channel, commit and date.
+
+When the bundled `sidebar.html` loads, its loader looks the bundle up before
+importing the built-in files: the downloaded glue is imported as a `blob:`
+module, the wasm is instantiated from the stored bytes and the stylesheets
+are attached as `blob:` links. Any problem — missing or corrupt record,
+hash mismatch, import or start-up error, timeout — is logged once, the
+broken bundle is cleared and the built-in UI boots instead.
+
+**Manifest V2 only.** Importing a downloaded module needs `blob:` in the
+extension page's `script-src`, which MV2 allows. Manifest V3 forbids
+remotely sourced code altogether, so an MV3 build of AIPage cannot offer
+this mode; the Vercel-hosted UI (an iframe to a web origin) remains the
+auto-updating option there.
+
+### Which sidebar is used: precedence
+
+1. **Hosted UI (Vercel)** — whenever *Remote UI (auto-updating)* is on; its
+   own fallback on failure is the bundled page, which then continues with 2.
+2. **GitHub-downloaded bundle** — when *Update the sidebar from GitHub
+   releases* is on, a bundle is installed and its version is not older than
+   the installed extension.
+3. **Bundled files** — the sidebar shipped inside the extension package.
+
+### Security notes
+
+The bundle's files come from GitHub over TLS and are hash-checked against
+`aipage-web.json`, which comes from the same release; the manifest's own
+integrity rests on the release, so this trusts the repository's release
+pipeline (GitHub Actions publishing `vX.Y.Z` tags and the nightly) exactly
+the way installing the extension package does — no more. The downloaded UI
+runs with the privileges of the bundled sidebar page (same origin, same
+CSP), and nothing is executed from a release the background did not verify.
 
 ## Setting Up Your AI Provider
 
@@ -269,9 +359,9 @@ The extension is a Rust workspace compiled to WebAssembly (`wasm32-unknown-unkno
 crates/aipage-bindings/   # bindings to the chrome.* API, hosted-UI bridge transport
 crates/aipage-core/       # shared logic: types, storage, i18n, providers, agent loop, imagegen
 crates/aipage-sidebar/    # Leptos sidebar UI
-crates/aipage-background/ # CORS proxy, web search, toolbar toggle, update check
+crates/aipage-background/ # CORS proxy, web search, toolbar toggle, GitHub update check + sidebar bundle download
 crates/aipage-content/    # navbar button, sidebar iframe, theming, exam tools, anti-cheat
-xtask/                    # build orchestrator
+xtask/                    # build orchestrator (also writes dist-web/aipage-web.json)
 assets/                   # manifests, sidebar.html, JS loaders, anti_cheat.js, stylesheets
 scripts/setup-safari.sh   # Safari: Xcode project generator + unsigned app build/zip (macOS)
 scripts/sign-firefox.sh   # Firefox: AMO signing (web-ext sign) with same-version fallback
@@ -312,10 +402,10 @@ bun run package:safari:app    # aipage-safari-macos.zip: AIPage.app built unsign
 This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
-- **Build workflow** (`build.yml`, reusable): on Ubuntu, `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), packages `aipage-chrome.zip`, `aipage-safari.zip` and the Firefox `.xpi`, then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium, `web-ext lint` + a temporary install in headless Firefox that boots the background and sidebar WASM over the remote debugging protocol, a structural check of the Safari dist). A failing install test fails the job. With `sign-firefox: true` the xpi is then signed through AMO (below); otherwise it is uploaded as `aipage-firefox-unsigned.xpi`. A second, **macOS** job downloads the Ubuntu-built `dist-safari`, runs `scripts/setup-safari.sh --package aipage-safari-macos.zip` (Apple's packager + unsigned `xcodebuild`) and uploads the app as its own artifact (`<artifact-name>-safari-macos`); it is marked `continue-on-error`, so a converter/Xcode breakage shows as a red job and a missing asset rather than blocking the other packages. Accepts an optional manifest version stamp.
+- **Build workflow** (`build.yml`, reusable): on Ubuntu, `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari) and `build --target web`, packages `aipage-chrome.zip`, `aipage-safari.zip`, the Firefox `.xpi`, `aipage-web.zip` and `aipage-web.json` (plus the individual web files), then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium — including booting the `dist-web` bundle from IndexedDB through `blob:` imports —, `web-ext lint` + a temporary install in headless Firefox that boots the background and sidebar WASM over the remote debugging protocol, a structural check of the Safari dist and of `aipage-web.json` against `dist-web`). A failing install test fails the job. With `sign-firefox: true` the xpi is then signed through AMO (below); otherwise it is uploaded as `aipage-firefox-unsigned.xpi`. A second, **macOS** job downloads the Ubuntu-built `dist-safari`, runs `scripts/setup-safari.sh --package aipage-safari-macos.zip` (Apple's packager + unsigned `xcodebuild`) and uploads the app as its own artifact (`<artifact-name>-safari-macos`); it is marked `continue-on-error`, so a converter/Xcode breakage shows as a red job and a missing asset rather than blocking the other packages. Accepts an optional manifest version stamp.
 - **E2e job** (best-effort): Playwright against the built Chrome dist served over HTTP
-- **Release workflow**: on a pushed `v*` tag, runs the build workflow (signing on) and publishes a GitHub Release with `aipage-chrome.zip`, `aipage-firefox.xpi` (or `-unsigned`), `aipage-safari.zip` and, when the macOS job succeeded, `aipage-safari-macos.zip`
-- **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests, signs the Firefox xpi and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly)
+- **Release workflow**: on a pushed `v*` tag, runs the build workflow (signing on) and publishes a GitHub Release with `aipage-chrome.zip`, `aipage-firefox.xpi` (or `-unsigned`), `aipage-safari.zip` and, when the macOS job succeeded, `aipage-safari-macos.zip`, plus the sidebar bundle (`aipage-web.zip`, `aipage-web.json` and its files); the extension's update check reads these releases
+- **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests, signs the Firefox xpi and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly) (the *Nightly* update channel)
 
 ### Firefox signing (AMO)
 
