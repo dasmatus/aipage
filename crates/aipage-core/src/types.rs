@@ -1,4 +1,4 @@
-//! Core data model. Mirrors `src/sidebar/types.ts` and `providers/types.ts`.
+//! Core data model.
 
 use serde::{Deserialize, Serialize};
 
@@ -49,18 +49,6 @@ impl Message {
             image_url: None,
         }
     }
-}
-
-/// Response shape returned by the content script's `get_page_content`.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct PageContentResponse {
-    pub content: Option<String>,
-    #[serde(default, rename = "isSelection")]
-    pub is_selection: Option<bool>,
-    #[serde(default)]
-    pub images: Option<Vec<String>>,
-    #[serde(default)]
-    pub error: Option<String>,
 }
 
 /// Which AI backend a request targets:
@@ -121,10 +109,10 @@ impl ProviderType {
         }
     }
 
-    /// Parse a stored string, defaulting to Ollama Cloud for unknown values
-    /// (matches `getProviderPreference`). `"anthropic"` is the stored value
-    /// of the Claude provider again, so installs that saved it before the
-    /// Ollama Cloud migration come back on Claude with their old key.
+    /// Parse a stored string, defaulting to Ollama Cloud for unknown values.
+    /// `"anthropic"` is the stored value of the Claude provider, so installs
+    /// that saved it before the Ollama Cloud migration come back on Claude
+    /// with their old key.
     pub fn from_str_or_default(s: &str) -> Self {
         match s {
             "ollama-cloud" => ProviderType::OllamaCloud,
@@ -157,7 +145,6 @@ impl ProviderType {
         )
     }
 }
-
 
 #[cfg(test)]
 mod tests {

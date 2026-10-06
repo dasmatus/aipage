@@ -1,8 +1,7 @@
-//! Internationalization. Mirrors `src/sidebar/i18n.ts` + `locales/*`.
+//! Internationalization.
 //!
-//! The translation tables are the exact JSON dumped from the original TS
-//! locales (see `scripts/dump-locales.ts`), embedded and deserialized into a
-//! strongly-typed [`Translation`]. Default language is Slovak (`sk`).
+//! The translation tables in `locales/*.json` are embedded and deserialized
+//! into a strongly-typed [`Translation`]. Default language is Slovak (`sk`).
 
 use serde::Deserialize;
 
@@ -16,8 +15,8 @@ pub const LANGUAGES: &[(&str, &str)] = &[
 ];
 
 /// Strongly-typed translation table. Field names are snake_case; serde maps
-/// them to the camelCase JSON keys (with two explicit overrides for the keys
-/// that use consecutive capitals).
+/// them to the camelCase JSON keys (with explicit overrides for the keys that
+/// use consecutive capitals).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Translation {
@@ -33,13 +32,9 @@ pub struct Translation {
     pub apply_theme_global: String,
     pub auto_update: String,
 
-    // Instructions
-    pub instructions_title: String,
-
     // Input labels and hints
     pub base_url: String,
     pub model: String,
-    pub select_model: String,
     pub refresh_models: String,
     pub loading: String,
     pub api_key_placeholder: String,
@@ -54,34 +49,13 @@ pub struct Translation {
     pub alert_scan_error: String,
 
     // Chat
-    pub chat_placeholder: String,
     pub send: String,
-    pub error_api_key: String,
-    pub error_network: String,
-    pub error_general: String,
 
     // Providers
     #[serde(rename = "providerLMStudio")]
     pub provider_lmstudio: String,
     pub provider_ollama: String,
     pub provider_anthropic: String,
-
-    // LM Studio instructions
-    pub lmstudio_instructions_title: String,
-    pub lmstudio_step1: String,
-    pub lmstudio_step2: String,
-    pub lmstudio_step3: String,
-    pub lmstudio_step4: String,
-    pub lmstudio_step5: String,
-    pub lmstudio_note: String,
-
-    // Ollama instructions
-    pub ollama_instructions_title: String,
-    pub ollama_step1: String,
-    pub ollama_step2: String,
-    pub ollama_step3: String,
-    pub ollama_step4: String,
-    pub ollama_note: String,
 
     // Alerts
     pub alert_please_enter_key: String,
@@ -99,13 +73,8 @@ pub struct Translation {
     pub settings: String,
     pub chat: String,
     pub engine_mode: String,
-    pub standard_mode: String,
     pub ollama_cloud_mode: String,
-    pub anthropic_description: String,
-    pub standard_description: String,
     pub provider_engine: String,
-    pub select_engine: String,
-    pub select_provider: String,
     pub model_and_auth: String,
     pub free: String,
     pub search_placeholder: String,
@@ -136,25 +105,8 @@ pub struct Translation {
     pub anthropic_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
-    pub global_theme_description: String,
-    pub auto_update_description: String,
     pub user: String,
     pub ai: String,
-    pub anthropic_badge: String,
-    pub anthropic_get_key_notice: String,
-
-    // Exa
-    pub exa_api_key: String,
-    pub exa_api_key_placeholder: String,
-    pub exa_api_key_hint: String,
-    pub enable_exa_search: String,
-
-    // SearXNG
-    pub searxng_search: String,
-    pub searxng_enabled: String,
-    pub searxng_url: String,
-    pub searxng_url_placeholder: String,
-    pub searxng_url_hint: String,
 
     // Image Generation
     pub image_gen: String,
@@ -162,7 +114,6 @@ pub struct Translation {
     pub image_gen_prompt_placeholder: String,
     pub image_gen_provider: String,
     pub image_gen_ollama_svg: String,
-    pub image_gen_ollama_svg_hint: String,
     #[serde(rename = "imageGenSDWebUI")]
     pub image_gen_sd_webui: String,
     pub image_gen_sd_url: String,
@@ -200,7 +151,7 @@ fn raw(lang: &str) -> &'static str {
 }
 
 /// Parse the [`Translation`] table for `lang`, falling back to Slovak for any
-/// unknown code. Mirrors `t(key, lang)` resolution semantics.
+/// unknown code.
 pub fn translation(lang: &str) -> Translation {
     serde_json::from_str(raw(lang)).expect("embedded locale JSON is valid")
 }

@@ -1,5 +1,4 @@
 //! Chat message list with markdown rendering, avatars and action buttons.
-//! Mirrors `components/Chat/MessageList.tsx`.
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;

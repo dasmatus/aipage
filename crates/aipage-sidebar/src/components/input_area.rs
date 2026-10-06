@@ -1,5 +1,4 @@
-//! Chat input with scan / search / image-mode toolbar. Mirrors
-//! `components/Chat/InputArea.tsx`.
+//! Chat input with scan / search / image-mode toolbar.
 
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
@@ -64,7 +63,7 @@ pub fn InputArea() -> impl IntoView {
         search_mode.set(next);
         if next {
             image_mode.set(false);
-            // Focus the search input once it mounts (mirrors the TS setTimeout focus).
+            // Focus the search input once it mounts.
             Timeout::new(100, move || {
                 if let Some(el) = search_input_ref.get() {
                     let input: &web_sys::HtmlInputElement = &el;
@@ -84,7 +83,7 @@ pub fn InputArea() -> impl IntoView {
             search_mode.set(false);
             search_query.set(String::new());
         }
-        // The TS handler always refocuses the textarea after toggling.
+        // Refocus the textarea after toggling.
         Timeout::new(50, move || {
             if let Some(el) = textarea_ref.get() {
                 let ta: &web_sys::HtmlTextAreaElement = &el;

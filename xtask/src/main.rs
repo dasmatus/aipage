@@ -1,4 +1,4 @@
-//! Build orchestrator for the AIPage WASM extension. Replaces `build.ts`.
+//! Build orchestrator for the AIPage WASM extension.
 //!
 //! Usage:
 //!   cargo xtask build [--target chrome|firefox|safari|web]   (default: chrome)
@@ -197,7 +197,7 @@ fn build(target: &str, stamp: &Stamp) {
         println!("   ↳ stamping manifest version {v}");
     }
 
-    // Clean the dist dir so stale artifacts (e.g. an old magick.wasm) don't linger.
+    // Clean the dist dir so stale artifacts don't linger.
     let _ = std::fs::remove_dir_all(&dist);
     std::fs::create_dir_all(&dist).expect("create dist dir");
 

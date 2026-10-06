@@ -1,5 +1,5 @@
-//! Inline Lucide-style SVG icons. Replaces `lucide-react`. Each constant holds
-//! the inner SVG markup; [`icon`] wraps it in a sized, stroked `<svg>`.
+//! Inline Lucide-style SVG icons. Each constant holds the inner SVG markup;
+//! [`icon`] wraps it in a sized, stroked `<svg>`.
 
 use leptos::prelude::*;
 

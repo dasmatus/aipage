@@ -15,7 +15,3 @@ pub mod proxy;
 pub mod remote_ui;
 pub mod storage;
 pub mod types;
-
-pub fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}

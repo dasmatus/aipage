@@ -1,5 +1,4 @@
-//! Bridge to the background CORS proxy. Mirrors `performRequest` in
-//! `providers/utils.ts`.
+//! Bridge to the background CORS proxy.
 //!
 //! The sidebar iframe is cross-origin and cannot fetch external APIs directly,
 //! so every provider request is forwarded to the background service worker via
@@ -69,8 +68,7 @@ pub async fn perform_request(
     }
 }
 
-/// Convenience: a JSON POST with an `Authorization`-free header map built from
-/// `(key, value)` pairs.
+/// A JSON POST through the proxy.
 pub async fn post_json(
     url: &str,
     headers: &HashMap<String, String>,
@@ -80,7 +78,7 @@ pub async fn post_json(
     perform_request(url, "POST", headers, Some(&body_str)).await
 }
 
-/// Replicates the error-message extraction in `performRequest`'s failure path.
+/// The most specific error message in a failed proxy response.
 fn extract_error_message(resp: &Value) -> String {
     if let Some(data) = resp.get("data") {
         if data.is_object() {
