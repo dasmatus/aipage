@@ -117,7 +117,7 @@ function stripHtmlComments(html: string): string {
 export function inlineScriptViolations(html: string): string[] {
   const violations: string[] = [];
   const stripped = stripHtmlComments(html);
-  for (const m of stripped.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+  for (const m of stripped.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)) {
     if (!/\bsrc\s*=/.test(m[1]) && m[2].trim() !== '') violations.push(`inline <script>: ${m[2].trim().slice(0, 60)}`);
   }
   for (const m of stripped.matchAll(/\son[a-z]+\s*=\s*["'][^"']*["']/gi)) violations.push(`inline handler: ${m[0].trim()}`);
