@@ -24,11 +24,9 @@
         "test:install:chromium": "env -u LD_PRELOAD playwright test -c playwright.install.config.ts chromium",
         "test:install:firefox": "env -u LD_PRELOAD playwright test -c playwright.install.config.ts firefox",
         "test:install:structure": "env -u LD_PRELOAD playwright test -c playwright.install.config.ts structure",
-        "release": "standard-version",
-        "release:minor": "standard-version --release-as minor",
-        "release:major": "standard-version --release-as major",
-        "docs:build": "mdbook build",
-        "docs:serve": "mdbook serve --open"
+        "docs:build": "mdbook build && cp book/vercel.json book/book/vercel.json",
+        "docs:serve": "mdbook serve --open",
+        "changelog": "bash scripts/changelog.sh"
     },
     "devDependencies": {
         "@playwright/test": "^1.63.0",
@@ -37,7 +35,6 @@
         "postcss": "^8.5.28",
         "postcss-cli": "^12.0.0",
         "sass": "^1.105.1",
-        "standard-version": "^9.5.0",
         "tailwindcss": "4.3.3",
         "tailwindcss-animate": "^1.0.7",
         "web-ext": "^10.7.0",
