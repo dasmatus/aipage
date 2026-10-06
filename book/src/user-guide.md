@@ -58,6 +58,8 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 ### Supported Providers
 
+- **Ollama Cloud** — chat, agentic tools, native web search, and SVG image generation
+- **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
 - **Claude (Anthropic)** — chat, native web search, and SVG image generation
 - **LM Studio** (Local)
 - **Ollama** (Local)
@@ -81,6 +83,17 @@ The cloud provider talks directly to Claude through the official Anthropic API.
 4. Paste the key into the AIPage settings and pick a Claude model (e.g. `claude-opus-4-8`).
 
 > The key is stored locally in your browser and is only ever sent to `api.anthropic.com` (through the extension's background proxy). Claude also powers **web search** — its built-in search tool, so no extra key is needed — and **image generation**: Claude draws an SVG that the extension renders to a PNG in-browser with WebAssembly ImageMagick.
+
+#### OpenRouter
+
+OpenRouter exposes hundreds of models (OpenAI, Anthropic, Google, Meta, Mistral, ...) behind one OpenAI-compatible API, billed per request to your OpenRouter account.
+
+1. Go to **[openrouter.ai](https://openrouter.ai)** and sign in (or create an account).
+2. Open **[Keys](https://openrouter.ai/keys)**, click **Create Key** and copy it — the key starts with `sk-or-v1-`.
+3. In the AIPage settings pick **OpenRouter** as the engine, leave the **Base URL** at `https://openrouter.ai/api` (entering `https://openrouter.ai/api/v1` works too) and paste the key.
+4. Click the refresh button next to **Model** to list the available models and pick one, e.g. `openai/gpt-4.1-mini` (the default). Models that support function calling also power the agentic chat, native web search and SVG image generation.
+
+> The key is stored locally in your browser and is only ever sent to `openrouter.ai` (through the extension's background proxy). Requests carry the optional `HTTP-Referer`/`X-Title` attribution headers so OpenRouter can show AIPage on its app rankings.
 
 #### LM Studio (Local)
 

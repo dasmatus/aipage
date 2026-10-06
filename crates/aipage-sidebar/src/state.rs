@@ -166,15 +166,15 @@ fn local_opts(url: String, model: String) -> SendOptions {
 
 // --- actions ---
 
-/// `App.handleSend`: agentic (tool-calling) path for the cloud provider, direct
-/// one-shot path for local providers.
+/// `App.handleSend`: agentic (tool-calling) path for tool-capable cloud
+/// providers, direct one-shot path for local providers.
 pub async fn handle_send(app: AppState, chat: ChatState, text: String) {
     let provider = app.provider.get_untracked();
     let key = storage::get_api_key(provider).await.unwrap_or_default();
 
-    if provider == ProviderType::OllamaCloud {
+    if provider.supports_native_tools() {
         let local = storage::get_local_settings(provider).await;
-        send_agent_message(chat, key, text, local.url, local.model).await;
+        send_agent_message(chat, provider, key, text, local.url, local.model).await;
         return;
     }
 
@@ -187,7 +187,7 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
     if text.trim().is_empty() {
         return;
     }
-    if key.is_empty() && provider == ProviderType::OllamaCloud {
+    if key.is_empty() && provider.requires_api_key() {
         return;
     }
     chat.add(Role::User, text.clone(), None, None);
@@ -202,7 +202,14 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
 }
 
 /// Agentic send (`useChat.sendAgentMessage`) with fallback to a direct reply.
-pub async fn send_agent_message(chat: ChatState, key: String, text: String, base_url: String, model: String) {
+pub async fn send_agent_message(
+    chat: ChatState,
+    provider: ProviderType,
+    key: String,
+    text: String,
+    base_url: String,
+    model: String,
+) {
     if text.trim().is_empty() || key.is_empty() {
         return;
     }
@@ -212,11 +219,11 @@ pub async fn send_agent_message(chat: ChatState, key: String, text: String, base
 
     let on_text = move |t: String| chat.update_last(t);
     let opts = local_opts(base_url, model);
-    match agent::run_agent_turn(&key, &text, &opts, on_text).await {
+    match agent::run_agent_turn(provider, &key, &text, &opts, on_text).await {
         Ok(()) => {}
         Err(_) => {
-            // Fall back to a direct (no-tools) cloud reply.
-            match providers::send_message(ProviderType::OllamaCloud, &text, &key, &opts).await {
+            // Fall back to a direct (no-tools) reply from the same provider.
+            match providers::send_message(provider, &text, &key, &opts).await {
                 Ok(resp) => chat.update_last(resp),
                 Err(e) => chat.update_last(format!("Chyba: {e}")),
             }
@@ -301,7 +308,7 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     let local = storage::get_local_settings(provider).await;
     let opts = local_opts(local.url.clone(), local.model.clone());
 
-    if provider == ProviderType::OllamaCloud {
+    if provider.supports_native_tools() {
         match providers::web_search(provider, query.trim(), &key, &opts).await {
             Ok(answer) => chat.update_last(if answer.is_empty() { "No results found.".to_string() } else { answer }),
             Err(e) => chat.update_last(format!("Search error: {e}")),
@@ -367,12 +374,16 @@ pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     } else {
         (!local.url.is_empty()).then_some(local.url)
     };
+    // The stored SVG model defaults to an Ollama Cloud id; on other backends
+    // draw with the provider's own chat model instead.
+    let model = imagegen::resolve_svg_model(provider, &app.image_gen_model.get_untracked(), &local.model);
 
     let options = imagegen::ImageGenOptions {
         provider: img_provider,
+        chat_provider: provider,
         api_key: key,
         base_url,
-        model: app.image_gen_model.get_untracked(),
+        model,
         size: app.image_gen_size.get_untracked(),
     };
 

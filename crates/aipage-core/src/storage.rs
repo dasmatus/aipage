@@ -27,6 +27,7 @@ fn api_key_key(p: ProviderType) -> &'static str {
         ProviderType::Lmstudio => "lmstudio_api_key",
         ProviderType::Ollama => "ollama_api_key",
         ProviderType::OllamaCloud => "ollama_cloud_api_key",
+        ProviderType::OpenRouter => "openrouter_api_key",
     }
 }
 
@@ -36,6 +37,7 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
         ProviderType::Lmstudio => ("lmstudio_base_url", "lmstudio_model"),
         ProviderType::Ollama => ("ollama_base_url", "ollama_model"),
         ProviderType::OllamaCloud => ("ollama_cloud_base_url", "ollama_cloud_model"),
+        ProviderType::OpenRouter => ("openrouter_base_url", "openrouter_model"),
     }
 }
 
@@ -209,4 +211,19 @@ pub async fn get_widget_notes() -> String {
 
 pub async fn save_widget_notes(notes: &str) {
     set_string(KEY_WIDGET_NOTES, notes).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn storage_keys_are_the_persisted_contract() {
+        assert_eq!(api_key_key(ProviderType::OllamaCloud), "ollama_cloud_api_key");
+        assert_eq!(api_key_key(ProviderType::OpenRouter), "openrouter_api_key");
+        assert_eq!(api_key_key(ProviderType::Lmstudio), "lmstudio_api_key");
+        assert_eq!(api_key_key(ProviderType::Ollama), "ollama_api_key");
+        assert_eq!(local_settings_keys(ProviderType::OpenRouter), ("openrouter_base_url", "openrouter_model"));
+        assert_eq!(local_settings_keys(ProviderType::OllamaCloud), ("ollama_cloud_base_url", "ollama_cloud_model"));
+    }
 }

@@ -1,19 +1,23 @@
-//! Client-side tool-calling agent loop over Ollama Cloud's OpenAI-compatible
-//! `/v1/chat/completions` endpoint.
+//! Client-side tool-calling agent loop over an OpenAI-compatible
+//! `/v1/chat/completions` endpoint (Ollama Cloud, OpenRouter, ...).
 //!
-//! Replaces the old Anthropic Managed-Agents loop. Ollama is stateless, so the
-//! whole loop runs in the sidebar: POST the messages + tools, execute any
-//! `tool_calls` the model returns (page scrape / exam read / exam fill / web
-//! search), feed the results back as `role:"tool"` messages, and re-POST until
-//! the model answers with plain text. All network calls go through the
+//! Replaces the old Anthropic Managed-Agents loop. The backends are stateless,
+//! so the whole loop runs in the sidebar: POST the messages + tools, execute
+//! any `tool_calls` the model returns (page scrape / exam read / exam fill /
+//! web search), feed the results back as `role:"tool"` messages, and re-POST
+//! until the model answers with plain text. All network calls go through the
 //! one-shot background CORS proxy — no SSE, no polling.
+//!
+//! The loop is generic over [`OpenAiCompat`], so any provider whose
+//! [`ProviderType::supports_native_tools`] is true can use it unchanged.
 
 use serde_json::{json, Value};
 use wasm_bindgen::JsValue;
 
-use crate::providers::ollama_cloud::{auth_headers, chat_url, model_of};
+use crate::providers::openai_compat::OpenAiCompat;
 use crate::providers::SendOptions;
 use crate::proxy::post_json;
+use crate::types::ProviderType;
 
 /// Cap on tool-call rounds before we give up and return whatever we have.
 /// CHOICE: raise for multi-step scan→search→answer flows, lower to bound cost.
@@ -176,12 +180,13 @@ fn decode_arguments(raw: &Value) -> Value {
 
 // --- the loop ---
 
-/// Run a tool-calling round against Ollama Cloud.
+/// Run a tool-calling round against an OpenAI-compatible backend.
 ///
 /// Executes tool calls until the model returns a plain answer (no `tool_calls`)
 /// or [`MAX_ITERS`] is reached. Accumulated assistant text is streamed to
 /// `on_text` after each round (joined with `\n\n`, matching the old loop).
 async fn run_tool_loop<F>(
+    cfg: &OpenAiCompat,
     api_key: &str,
     opts: &SendOptions,
     messages: &mut Vec<Value>,
@@ -191,9 +196,9 @@ async fn run_tool_loop<F>(
 where
     F: Fn(String),
 {
-    let url = chat_url(opts);
-    let headers = auth_headers(api_key);
-    let model = model_of(opts);
+    let url = cfg.chat_url(opts);
+    let headers = cfg.headers(api_key);
+    let model = cfg.model_of(opts);
     let mut answer = String::new();
 
     for _ in 0..MAX_ITERS {
@@ -244,9 +249,10 @@ where
     Ok(answer)
 }
 
-/// Run one agentic chat turn for the cloud provider, streaming text via
+/// Run one agentic chat turn for a tool-capable provider, streaming text via
 /// `on_text`. Replaces the Anthropic Managed-Agents `run_agent_turn`.
 pub async fn run_agent_turn<F>(
+    provider: ProviderType,
     api_key: &str,
     user_text: &str,
     opts: &SendOptions,
@@ -255,26 +261,55 @@ pub async fn run_agent_turn<F>(
 where
     F: Fn(String),
 {
+    let cfg = OpenAiCompat::for_provider(provider);
     let mut messages = vec![
         json!({ "role": "system", "content": AGENT_SYSTEM_PROMPT }),
         json!({ "role": "user", "content": user_text }),
     ];
     let tools = openai_tools();
-    let answer = run_tool_loop(api_key, opts, &mut messages, &tools, &on_text).await?;
+    let answer = run_tool_loop(cfg, api_key, opts, &mut messages, &tools, &on_text).await?;
     if answer.is_empty() {
         on_text("(Agent finished without a textual answer.)".to_string());
     }
     Ok(())
 }
 
-/// Native web search for Ollama Cloud: a tool-calling round with only the
-/// `web_search` tool, returning the model's synthesized answer.
-pub async fn web_search(api_key: &str, query: &str, opts: &SendOptions) -> Result<String, String> {
+/// Native web search for a tool-capable provider: a tool-calling round with
+/// only the `web_search` tool, returning the model's synthesized answer.
+pub async fn web_search(
+    provider: ProviderType,
+    api_key: &str,
+    query: &str,
+    opts: &SendOptions,
+) -> Result<String, String> {
+    let cfg = OpenAiCompat::for_provider(provider);
     let mut messages = vec![
         json!({ "role": "system", "content": WEB_SEARCH_SYSTEM_PROMPT }),
         json!({ "role": "user", "content": query }),
     ];
     let tools = web_search_tool();
-    let answer = run_tool_loop(api_key, opts, &mut messages, &tools, &|_| {}).await?;
+    let answer = run_tool_loop(cfg, api_key, opts, &mut messages, &tools, &|_| {}).await?;
     Ok(answer)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decodes_string_and_object_arguments() {
+        assert_eq!(decode_arguments(&json!("{\"query\":\"x\"}")), json!({ "query": "x" }));
+        assert_eq!(decode_arguments(&json!({ "query": "y" })), json!({ "query": "y" }));
+        assert_eq!(decode_arguments(&json!("not json")), Value::Null);
+    }
+
+    #[test]
+    fn tool_definitions_are_openai_function_tools() {
+        for tool in openai_tools().as_array().unwrap() {
+            assert_eq!(tool["type"], "function");
+            assert!(tool["function"]["name"].is_string());
+            assert!(tool["function"]["parameters"].is_object());
+        }
+        assert_eq!(web_search_tool()[0]["function"]["name"], "web_search");
+    }
 }

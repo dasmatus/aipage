@@ -4,6 +4,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
+use aipage_core::i18n::Translation;
 use aipage_core::providers::{self, ModelInfo, SendOptions};
 use aipage_core::types::ProviderType;
 use aipage_core::storage;
@@ -25,6 +26,26 @@ fn model_label(id: &str) -> String {
         id.split_once('/').map(|x| x.1).unwrap_or(id).to_string()
     } else {
         id.to_string()
+    }
+}
+
+/// `(label, placeholder, hint)` for the API-key field of a provider. Cloud
+/// providers have their own strings; local ones share the generic set.
+fn api_key_strings(t: &Translation, p: ProviderType) -> (String, String, String) {
+    match p {
+        ProviderType::OllamaCloud => (
+            t.ollama_cloud_api_key.clone(),
+            t.ollama_cloud_api_key_placeholder.clone(),
+            t.ollama_cloud_api_key_hint.clone(),
+        ),
+        ProviderType::OpenRouter => (
+            t.openrouter_api_key.clone(),
+            t.openrouter_api_key_placeholder.clone(),
+            t.openrouter_api_key_hint.clone(),
+        ),
+        ProviderType::Lmstudio | ProviderType::Ollama => {
+            (t.api_key.clone(), t.api_key_placeholder.clone(), t.api_key_hint.clone())
+        }
     }
 }
 
@@ -82,30 +103,20 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             image_gen_sd_url.set(storage::get_image_gen_sd_url().await);
             image_gen_size.set(storage::get_image_gen_size().await);
 
-            match provider {
-                ProviderType::OllamaCloud => {
-                    let url = if local.url.is_empty() { "https://ollama.com".to_string() } else { local.url };
-                    base_url.set(url.clone());
-                    fetch_models(url, key);
-                }
-                ProviderType::Lmstudio | ProviderType::Ollama => {
-                    let default_url = if provider == ProviderType::Lmstudio {
-                        "http://localhost:1234/v1"
-                    } else {
-                        "http://localhost:11434"
-                    };
-                    let url = if local.url.is_empty() { default_url.to_string() } else { local.url };
-                    base_url.set(url.clone());
-                    fetch_models(url, key);
-                }
-            }
+            let url = if local.url.is_empty() {
+                providers::default_base_url(provider).to_string()
+            } else {
+                local.url
+            };
+            base_url.set(url.clone());
+            fetch_models(url, key);
         });
     });
 
     let save = move |_| {
         let provider = app.provider.get_untracked();
         let key = api_key.get_untracked();
-        if key.is_empty() && provider == ProviderType::OllamaCloud {
+        if key.is_empty() && provider.requires_api_key() {
             if let Some(w) = web_sys::window() {
                 let _ = w.alert_with_message(&app.tr().alert_please_enter_key);
             }
@@ -174,6 +185,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                         <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().engine_mode}</label>
                         <select class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || app.provider.get().as_str().to_string() on:change=change_backend>
                             <option value="ollama-cloud">{move || app.tr().ollama_cloud_mode}</option>
+                            <option value="openrouter">{move || app.tr().provider_openrouter}</option>
                             <option value="ollama">{move || app.tr().provider_ollama}</option>
                             <option value="lmstudio">{move || app.tr().provider_lmstudio}</option>
                         </select>
@@ -186,7 +198,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     <div class="p-4 space-y-4">
                         <div class="space-y-2">
                             <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().base_url}</label>
-                            <input class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || base_url.get() on:input=move |ev| base_url.set(event_target_value(&ev)) placeholder="https://ollama.com"/>
+                            <input class="w-full h-9 rounded-lg px-2 outline-none" style=select_style prop:value=move || base_url.get() on:input=move |ev| base_url.set(event_target_value(&ev)) placeholder=move || providers::default_base_url(backend())/>
                         </div>
                         <div class="space-y-2">
                             <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().model}</label>
@@ -219,11 +231,11 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                             {move || fetch_error.get().map(|e| view! { <p class="text-[10px] text-destructive mt-1 flex items-center gap-1">{icon(icons::ALERT_CIRCLE, "w-3 h-3")}{e}</p> })}
                         </div>
                         <div class="space-y-2">
-                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key } else { app.tr().api_key }}</label>
+                            <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || api_key_strings(&app.tr(), backend()).0}</label>
                             <input type="password" class="w-full h-9 rounded-lg px-2 outline-none" style=select_style
                                 prop:value=move || api_key.get() on:input=move |ev| api_key.set(event_target_value(&ev))
-                                placeholder=move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key_placeholder } else { app.tr().api_key_placeholder }/>
-                            <p class="text-[10px] text-muted-foreground opacity-70">{move || if backend() == ProviderType::OllamaCloud { app.tr().ollama_cloud_api_key_hint } else { app.tr().api_key_hint }}</p>
+                                placeholder=move || api_key_strings(&app.tr(), backend()).1/>
+                            <p class="text-[10px] text-muted-foreground opacity-70">{move || api_key_strings(&app.tr(), backend()).2}</p>
                         </div>
                     </div>
                 </Card>

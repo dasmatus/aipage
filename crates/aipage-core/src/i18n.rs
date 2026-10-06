@@ -115,6 +115,13 @@ pub struct Translation {
     pub ollama_cloud_api_key: String,
     pub ollama_cloud_api_key_placeholder: String,
     pub ollama_cloud_api_key_hint: String,
+
+    // OpenRouter
+    #[serde(rename = "providerOpenRouter")]
+    pub provider_openrouter: String,
+    pub openrouter_api_key: String,
+    pub openrouter_api_key_placeholder: String,
+    pub openrouter_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
     pub global_theme_description: String,
@@ -191,6 +198,8 @@ mod tests {
             assert!(!t.settings_title.is_empty(), "{code} settings_title empty");
             assert!(!t.widgets.is_empty(), "{code} widgets empty");
             assert!(!t.provider_lmstudio.is_empty(), "{code} providerLMStudio empty");
+            assert_eq!(t.provider_openrouter, "OpenRouter", "{code} providerOpenRouter");
+            assert!(!t.openrouter_api_key_hint.is_empty(), "{code} openrouterApiKeyHint empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
         }
     }

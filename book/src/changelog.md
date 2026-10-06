@@ -5,6 +5,17 @@ All notable changes to the AIPage extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### ✨ Features
+
+* **providers:** add an **OpenRouter** provider (`https://openrouter.ai/api`, Bearer key, `HTTP-Referer`/`X-Title` attribution, default model `openai/gpt-4.1-mini`) with chat, model listing, the agentic tool loop, native web search and SVG image generation. Settings keys: `openrouter_api_key`, `openrouter_base_url`, `openrouter_model`.
+
+### ♻️ Code Refactoring
+
+* **providers:** extract the OpenAI-compatible chat-completions + `/v1/models` client into `providers/openai_compat.rs` (`OpenAiCompat` config: base URL, default model, label, extra headers); Ollama Cloud, OpenRouter and LM Studio are thin wrappers over it, and the agent loop / image generator take any tool-capable provider. The base-URL normaliser now also strips a trailing `/`. An "Adding a provider" checklist lives at the top of `providers/mod.rs`.
+* **imagegen:** on providers other than Ollama Cloud the stored Ollama-Cloud-only SVG model default is swapped for the provider's configured chat model instead of being sent verbatim.
+
 ## [1.5.0](https://codeberg.org/dasmatus/aipage/compare/v1.4.0...v1.5.0) (2026-02-08)
 
 

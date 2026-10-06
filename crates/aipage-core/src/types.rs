@@ -63,9 +63,13 @@ pub struct PageContentResponse {
     pub error: Option<String>,
 }
 
-/// Which AI backend a request targets: `'ollama-cloud' | 'lmstudio' | 'ollama'`.
-/// `OllamaCloud` is the hosted Ollama service (OpenAI-compatible); the two
-/// local variants talk to a self-hosted Ollama / LM Studio on the loopback.
+/// Which AI backend a request targets:
+/// `'ollama-cloud' | 'openrouter' | 'lmstudio' | 'ollama'`.
+/// `OllamaCloud` is the hosted Ollama service and `OpenRouter` the OpenRouter
+/// gateway (both OpenAI-compatible, API key required); the two local variants
+/// talk to a self-hosted Ollama / LM Studio on the loopback.
+///
+/// See the "Adding a provider" checklist in [`crate::providers`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -73,14 +77,25 @@ pub enum ProviderType {
     #[default]
     #[serde(rename = "ollama-cloud")]
     OllamaCloud,
+    #[serde(rename = "openrouter")]
+    OpenRouter,
     Lmstudio,
     Ollama,
 }
 
 impl ProviderType {
+    /// Every provider, in settings-menu order.
+    pub const ALL: [ProviderType; 4] = [
+        ProviderType::OllamaCloud,
+        ProviderType::OpenRouter,
+        ProviderType::Ollama,
+        ProviderType::Lmstudio,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
             ProviderType::OllamaCloud => "ollama-cloud",
+            ProviderType::OpenRouter => "openrouter",
             ProviderType::Lmstudio => "lmstudio",
             ProviderType::Ollama => "ollama",
         }
@@ -89,6 +104,7 @@ impl ProviderType {
     pub fn display_name(self) -> &'static str {
         match self {
             ProviderType::OllamaCloud => "Ollama Cloud",
+            ProviderType::OpenRouter => "OpenRouter",
             ProviderType::Lmstudio => "LM Studio",
             ProviderType::Ollama => "Ollama",
         }
@@ -100,6 +116,7 @@ impl ProviderType {
     pub fn from_str_or_default(s: &str) -> Self {
         match s {
             "ollama-cloud" | "anthropic" => ProviderType::OllamaCloud,
+            "openrouter" => ProviderType::OpenRouter,
             "lmstudio" => ProviderType::Lmstudio,
             "ollama" => ProviderType::Ollama,
             _ => ProviderType::OllamaCloud,
@@ -110,6 +127,17 @@ impl ProviderType {
     pub fn is_local(self) -> bool {
         matches!(self, ProviderType::Lmstudio | ProviderType::Ollama)
     }
+
+    /// Whether this backend requires an API key (every cloud backend).
+    pub fn requires_api_key(self) -> bool {
+        !self.is_local()
+    }
+
+    /// Whether this backend accepts OpenAI-style function tools, enabling the
+    /// agentic chat loop and native web search in [`crate::agent`].
+    pub fn supports_native_tools(self) -> bool {
+        matches!(self, ProviderType::OllamaCloud | ProviderType::OpenRouter)
+    }
 }
 
 
@@ -119,12 +147,13 @@ mod tests {
 
     #[test]
     fn provider_roundtrips_through_json() {
-        for p in [ProviderType::OllamaCloud, ProviderType::Lmstudio, ProviderType::Ollama] {
+        for p in ProviderType::ALL {
             let json = serde_json::to_string(&p).unwrap();
             let back: ProviderType = serde_json::from_str(&json).unwrap();
             assert_eq!(p, back);
             // serialized form must match the stored string contract
             assert_eq!(json, format!("\"{}\"", p.as_str()));
+            assert_eq!(ProviderType::from_str_or_default(p.as_str()), p);
         }
     }
 
@@ -134,8 +163,15 @@ mod tests {
     }
 
     #[test]
+    fn openrouter_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenRouter).unwrap(), "\"openrouter\"");
+        assert_eq!(ProviderType::OpenRouter.display_name(), "OpenRouter");
+    }
+
+    #[test]
     fn provider_from_str_defaults_to_ollama_cloud() {
         assert_eq!(ProviderType::from_str_or_default("ollama-cloud"), ProviderType::OllamaCloud);
+        assert_eq!(ProviderType::from_str_or_default("openrouter"), ProviderType::OpenRouter);
         assert_eq!(ProviderType::from_str_or_default("ollama"), ProviderType::Ollama);
         assert_eq!(ProviderType::from_str_or_default("lmstudio"), ProviderType::Lmstudio);
         // legacy "anthropic" stored value migrates to the new default
@@ -151,8 +187,17 @@ mod tests {
     #[test]
     fn is_local_flag() {
         assert!(!ProviderType::OllamaCloud.is_local());
+        assert!(!ProviderType::OpenRouter.is_local());
         assert!(ProviderType::Lmstudio.is_local());
         assert!(ProviderType::Ollama.is_local());
+    }
+
+    #[test]
+    fn cloud_providers_need_a_key_and_support_tools() {
+        for p in ProviderType::ALL {
+            assert_eq!(p.requires_api_key(), !p.is_local(), "{p:?}");
+            assert_eq!(p.supports_native_tools(), !p.is_local(), "{p:?}");
+        }
     }
 
     #[test]

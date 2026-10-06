@@ -10,9 +10,26 @@ use std::collections::HashMap;
 
 use serde_json::{json, Value};
 
-use crate::providers::ollama_cloud::{auth_headers, chat_url};
+use crate::providers::openai_compat::OpenAiCompat;
 use crate::providers::SendOptions;
 use crate::proxy::{perform_request, post_json};
+use crate::types::ProviderType;
+
+/// The stored default for the SVG model (`image_gen_model`). It is an Ollama
+/// Cloud id, so other chat providers must not be sent it verbatim.
+pub const DEFAULT_SVG_MODEL: &str = "gpt-oss:120b-cloud";
+
+/// Pick the chat model used to draw the SVG. The user's explicit choice wins;
+/// the stored Ollama-Cloud-only default is swapped for the chat provider's
+/// own configured model (or that provider's default) on every other backend.
+pub fn resolve_svg_model(provider: ProviderType, stored: &str, chat_model: &str) -> String {
+    let cfg = OpenAiCompat::for_provider(provider);
+    let stored_is_default = stored.is_empty() || stored == DEFAULT_SVG_MODEL;
+    if provider == ProviderType::OllamaCloud || !stored_is_default {
+        return cfg.model_of(&SendOptions::with_model(stored));
+    }
+    cfg.model_of(&SendOptions::with_model(chat_model))
+}
 
 const SVG_SYSTEM_PROMPT: &str = "You are an SVG illustration generator. Given a description, respond with ONE complete, self-contained SVG document and nothing else.\nRules:\n- Output ONLY the <svg>...</svg> markup. No markdown fences, no commentary, no explanation.\n- Include an explicit viewBox plus width and height attributes.\n- Use only inline shapes, paths, gradients, and style attributes. No external images, fonts, scripts, or network references.";
 
@@ -21,6 +38,8 @@ const SVG_SYSTEM_PROMPT: &str = "You are an SVG illustration generator. Given a 
 pub struct ImageGenOptions {
     /// `"ollama-svg"` or `"sdwebui"`. Legacy `"claude-svg"` is treated as the svg path.
     pub provider: String,
+    /// The chat backend that draws the SVG (selects base URL / headers).
+    pub chat_provider: ProviderType,
     pub api_key: String,
     pub base_url: Option<String>,
     pub model: String,
@@ -44,13 +63,29 @@ pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<I
             .unwrap_or_else(|| "http://localhost:7860".to_string());
         generate_sdwebui(prompt, &base).await
     } else {
-        generate_ollama_svg(prompt, &options.api_key, options.base_url.as_deref().unwrap_or(""), &options.model, &options.size).await
+        generate_ollama_svg(
+            prompt,
+            options.chat_provider,
+            &options.api_key,
+            options.base_url.as_deref().unwrap_or(""),
+            &options.model,
+            &options.size,
+        )
+        .await
     }
 }
 
-async fn generate_ollama_svg(prompt: &str, api_key: &str, base_url: &str, model: &str, size: &str) -> Result<ImageResult, String> {
-    let model = if model.is_empty() { "gpt-oss:120b-cloud" } else { model };
+async fn generate_ollama_svg(
+    prompt: &str,
+    provider: ProviderType,
+    api_key: &str,
+    base_url: &str,
+    model: &str,
+    size: &str,
+) -> Result<ImageResult, String> {
+    let cfg = OpenAiCompat::for_provider(provider);
     let opts = SendOptions { base_url: (!base_url.is_empty()).then_some(base_url.to_string()), model_name: Some(model.to_string()) };
+    let model = cfg.model_of(&opts);
     let body = json!({
         "model": model,
         "messages": [
@@ -59,7 +94,7 @@ async fn generate_ollama_svg(prompt: &str, api_key: &str, base_url: &str, model:
         ],
         "stream": false,
     });
-    let resp = post_json(&chat_url(&opts), &auth_headers(api_key), &body).await?;
+    let resp = post_json(&cfg.chat_url(&opts), &cfg.headers(api_key), &body).await?;
 
     let text = resp
         .pointer("/choices/0/message/content")
@@ -167,6 +202,22 @@ mod tests {
         assert_eq!(parse_size("1792×1024"), (1792, 1024));
         assert_eq!(parse_size("bogus"), (1024, 1024));
         assert_eq!(parse_size(""), (1024, 1024));
+    }
+
+    #[test]
+    fn resolves_svg_model_per_provider() {
+        // Ollama Cloud keeps the stored default / explicit choice.
+        assert_eq!(resolve_svg_model(ProviderType::OllamaCloud, DEFAULT_SVG_MODEL, "x"), DEFAULT_SVG_MODEL);
+        assert_eq!(resolve_svg_model(ProviderType::OllamaCloud, "", "x"), DEFAULT_SVG_MODEL);
+        assert_eq!(resolve_svg_model(ProviderType::OllamaCloud, "llava:cloud", "x"), "llava:cloud");
+        // Other providers swap the cloud-only default for their chat model...
+        assert_eq!(resolve_svg_model(ProviderType::OpenRouter, DEFAULT_SVG_MODEL, "anthropic/claude-sonnet-4"), "anthropic/claude-sonnet-4");
+        assert_eq!(resolve_svg_model(ProviderType::Ollama, "", "llama3.2"), "llama3.2");
+        // ...or their own default when no chat model is configured...
+        assert_eq!(resolve_svg_model(ProviderType::OpenRouter, DEFAULT_SVG_MODEL, ""), "openai/gpt-4.1-mini");
+        assert_eq!(resolve_svg_model(ProviderType::Lmstudio, "", ""), "local-model");
+        // ...but honour an explicit non-default choice.
+        assert_eq!(resolve_svg_model(ProviderType::OpenRouter, "google/gemini-2.5-flash", "x"), "google/gemini-2.5-flash");
     }
 
     #[test]

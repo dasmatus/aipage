@@ -5,7 +5,6 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use aipage_core::storage;
-use aipage_core::types::ProviderType;
 
 use crate::components::{InputArea, MessageList, SettingsView, WidgetsView};
 use crate::icons::{self, icon};
@@ -54,8 +53,7 @@ pub fn App() -> impl IntoView {
         }
 
         // Show settings if a cloud provider has no key.
-        let is_local = matches!(provider, ProviderType::Lmstudio | ProviderType::Ollama);
-        if key.as_deref().unwrap_or("").is_empty() && !is_local {
+        if key.as_deref().unwrap_or("").is_empty() && provider.requires_api_key() {
             app.view.set(View::Settings);
         }
         initialized.set(true);
