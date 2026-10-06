@@ -41,7 +41,13 @@ cargo clippy --workspace --all-targets -- -D warnings
 # Package
 bun run package:chrome     # zip dist-chrome
 bun run package:firefox    # web-ext xpi
+
+# Docs / changelog
+bun run docs:build         # mdbook build → book/book/ (deployed to https://aipage-docs.vercel.app)
+bun run changelog          # regenerate book/src/changelog.md with git-cliff (CI does this on main)
 ```
+
+**Never edit `book/src/changelog.md` / `CHANGELOG.md` by hand:** it is generated from the conventional commit history (`cliff.toml`, `scripts/changelog.sh`, `.github/workflows/changelog.yml`) and CI rejects pull requests that touch it. Write a good `type(scope): subject` commit message instead.
 
 After building, load `dist-chrome/` (or the relevant dist dir) unpacked. **Manifest V2 on Chromium:** current Chrome/Chromium (153+, which is also what Playwright 1.63 bundles) no longer loads MV2 extensions at all, not even unpacked with `--load-extension`; the `ExtensionManifestV2Disabled`/`ExtensionManifestV2Unsupported` features, `AllowLegacyMV2Extensions` and the `ExtensionManifestV2Availability` enterprise policy no longer exist in that binary (MV3 extensions load fine). The Chrome build is only installable on Chromium ≤ 141-era builds (with those flags) or browsers that still allow MV2; CI pins the Chromium install test to Chrome 141. An MV3 manifest for Chrome is the pending fix. Brave (1.96+) still loads it and passes the install test; CI runs the Chromium install spec on both Chromium 141 and the latest Brave.
 

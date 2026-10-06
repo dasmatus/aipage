@@ -62,15 +62,30 @@ See `tests/install/README.md` and `tests/e2e/README.md` for details. The Playwri
 
 ## Documentation
 
-The book is built with [mdBook](https://rust-lang.github.io/mdBook/): `bun run docs:build` (`mdbook build`) or `bun run docs:serve`.
+The book is built with [mdBook](https://rust-lang.github.io/mdBook/) (in the Nix devShell): `bun run docs:build` (`mdbook build` → `book/book/`, plus the `vercel.json` for hosting) or `bun run docs:serve`. It is published at **<https://aipage-docs.vercel.app>** by `.github/workflows/deploy-docs.yml` on every push to `main` that touches `book/**` or `book.toml` (and after each changelog regeneration).
 
 ## Submitting changes
 
 1. Create a branch from `main` (`feat/...` or `fix/...`); never commit to `main` directly.
-2. Use [conventional commit](https://www.conventionalcommits.org/) messages; the changelog sections are derived from the type (`feat`, `fix`, `refactor`, `docs`, `ci`, `build`, `chore`, ...).
+2. Use [conventional commit](https://www.conventionalcommits.org/) messages: `type(scope): subject`. The changelog is generated from them, so the subject line is what users will read; the type picks the section (`feat` → Features, `fix` → Bug Fixes, `perf`, `refactor`, `ci`, `test`, `build`, `docs`, `style`, `chore`; `deps(...)` → Dependencies) and non-conventional subjects are left out.
 3. Run the tests and lint above. Storage keys, the serialized `ProviderType` strings and the bridge wire format are persisted contracts; do not rename them.
-4. Add a line to the *Unreleased* section of `book/src/changelog.md`.
+4. Do **not** edit `book/src/changelog.md` (`CHANGELOG.md`): it is generated (see below) and CI rejects pull requests that touch it.
 5. Open a pull request against `main` describing the change and linking any related issue.
+
+## Changelog
+
+`book/src/changelog.md` (`CHANGELOG.md` is a symlink to it) is **generated — never edit it by hand**. [git-cliff](https://git-cliff.org) renders it from the conventional commit history with the format in `cliff.toml`; `.github/workflows/changelog.yml` regenerates it on every push to `main` and commits the result as `docs(changelog): regenerate [skip ci]` (as `github-actions[bot]`, with the repository's `GITHUB_TOKEN`), and `ci.yml` fails a pull request that changes the file (unless the pull request also changes `cliff.toml` / `scripts/changelog.sh`, i.e. regenerates it). Commits after the latest `vX.Y.Z` tag render under *Unreleased*; each tag gets a `## [X.Y.Z](compare link) (date)` section.
+
+- `bun run changelog` (`scripts/changelog.sh`) regenerates the file locally for a preview; running it twice yields the same file (it depends only on the commit graph and `cliff.toml`, so it is deterministic — no timestamps for unreleased commits).
+- The generated part starts after the commit that released 1.5.0 (`34c5b38`, the boundary is set in `scripts/changelog.sh`). The sections for 1.5.0 and older were written by standard-version before the move to GitHub and are frozen verbatim in the `footer` of `cliff.toml`.
+- Merge commits, `chore(release):` and `docs(changelog):` commits are skipped; `(#123)` references are linked.
+
+## Releasing
+
+1. On `main`, bump the version in the four places that carry it: `Cargo.toml` (`[workspace.package] version`), `assets/manifest.chrome.json`, `assets/manifest.firefox.json`, `assets/manifest.safari.json` and `package.json`, and commit (`chore(release): X.Y.Z` — that commit is excluded from the changelog).
+2. Tag it and push the tag: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+3. The pushed `v*` tag runs `.github/workflows/release.yml`: it builds and packages all three targets and creates the GitHub release with the assets; the release body is this tag's changelog section, rendered by `scripts/changelog.sh --release vX.Y.Z` (the commits since the previous `v*` tag).
+4. `changelog.yml` then regenerates `book/src/changelog.md` on `main`, where the commits now appear under `## [X.Y.Z]`, and redeploys the book. Nothing is edited by hand at any step.
 
 ## Reporting issues
 

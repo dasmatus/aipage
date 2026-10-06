@@ -13,6 +13,7 @@ packages/
 *.xpi
 safari/
 public/
+book/book/
 
 # Bun
 bun.lockb

@@ -6,7 +6,7 @@ language = "en"
 src = "book/src"
 
 [build]
-build-dir = "public"
+build-dir = "book/book"
 create-missing = true
 
 [output.html]
@@ -14,8 +14,7 @@ default-theme = "light"
 preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/dasmatus/aipage"
 edit-url-template = "https://github.com/dasmatus/aipage/edit/main/{path}"
-site-url = "/aipage/"
-cname = ""
+site-url = "/"
 additional-css = ["docs/mdbook-theme.css"]
 
 [output.html.search]
