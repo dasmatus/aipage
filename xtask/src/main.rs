@@ -2,6 +2,7 @@
 //!
 //! Usage:
 //!   cargo xtask build [--target chrome|firefox|safari|web]   (default: chrome)
+//!   cargo xtask build --target chrome-mv3                     (experimental, see below)
 //!   cargo xtask build-all                                     (the 3 browsers)
 //!
 //! Both commands accept:
@@ -18,12 +19,21 @@
 //! (`dist-web/`): js/wasm/css get content-hashed filenames (safe to cache
 //! immutably), `sidebar.html` references them, and `assets/vercel.json`
 //! supplies the HTTP headers.
+//!
+//! The `chrome-mv3` target is an **experimental** Manifest V3 build of the
+//! Chrome extension (`dist-chrome-mv3/`): same WASM, `assets/manifest.chrome-mv3.json`
+//! and the service-worker loader `assets/background_sw.js` instead of the
+//! event-page loader. Its `version` and `host_permissions` are derived from
+//! `manifest.chrome.json` at build time so the two manifests cannot drift. It
+//! is not part of `build-all`. See `docs/mv3-feasibility.md`.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const TARGETS: &[&str] = &["chrome", "firefox", "safari"];
 const WEB_TARGET: &str = "web";
+/// Experimental Chrome Manifest V3 build; never part of `build-all`.
+const MV3_TARGET: &str = "chrome-mv3";
 
 /// wasm features `wasm-opt` may assume: the default feature set of rustc's
 /// `wasm32-unknown-unknown` target (see the wasm-opt step in [`build`]).
@@ -186,13 +196,17 @@ fn build(target: &str, stamp: &Stamp) {
         build_web();
         return;
     }
-    if !TARGETS.contains(&target) {
-        eprintln!("xtask: invalid target `{target}` (chrome | firefox | safari | web)");
+    let mv3 = target == MV3_TARGET;
+    if !TARGETS.contains(&target) && !mv3 {
+        eprintln!("xtask: invalid target `{target}` (chrome | firefox | safari | web | chrome-mv3)");
         std::process::exit(1);
     }
     let root = root();
     let dist = root.join(format!("dist-{target}"));
     println!("🔨 Building AIPage (Rust/WASM) for {}", target.to_uppercase());
+    if mv3 {
+        println!("   ↳ EXPERIMENTAL Manifest V3 build (service worker); see docs/mv3-feasibility.md");
+    }
     if let Some(v) = &stamp.version {
         println!("   ↳ stamping manifest version {v}");
     }
@@ -255,12 +269,98 @@ fn build(target: &str, stamp: &Stamp) {
 
     // 5. Static assets + manifest.
     let assets = root.join("assets");
-    for f in ["sidebar.html", "sidebar_loader.js", "background_loader.js", "content_loader.js", "anti_cheat.js"] {
+    // MV3: the background is a service worker booted by `background_sw.js`.
+    let background_loader = if mv3 { "background_sw.js" } else { "background_loader.js" };
+    for f in ["sidebar.html", "sidebar_loader.js", background_loader, "content_loader.js", "anti_cheat.js"] {
         copy(&assets.join(f), &dist.join(f));
     }
-    write_manifest(&assets.join(format!("manifest.{target}.json")), &dist.join("manifest.json"), target, stamp);
+    if mv3 {
+        write_mv3_manifest(&assets, &dist.join("manifest.json"), stamp);
+    } else {
+        write_manifest(&assets.join(format!("manifest.{target}.json")), &dist.join("manifest.json"), target, stamp);
+    }
 
     println!("✅ Build complete for {target} in dist-{target}/");
+}
+
+/// Write the experimental MV3 manifest: `assets/manifest.chrome-mv3.json`
+/// with `version` and `host_permissions` taken from `manifest.chrome.json`
+/// (the single source of truth), then the version stamp applied as for Chrome.
+fn write_mv3_manifest(assets: &Path, to: &Path, stamp: &Stamp) {
+    let read = |name: &str| {
+        std::fs::read_to_string(assets.join(name)).unwrap_or_else(|e| {
+            eprintln!("xtask: cannot read assets/{name}: {e}");
+            std::process::exit(1);
+        })
+    };
+    let derived = derive_mv3_manifest(&read("manifest.chrome-mv3.json"), &read("manifest.chrome.json"))
+        .unwrap_or_else(|e| {
+            eprintln!("xtask: cannot derive the MV3 manifest: {e}");
+            std::process::exit(1);
+        });
+    let out = stamp_manifest(&derived, stamp).unwrap_or_else(|e| {
+        eprintln!("xtask: cannot stamp the MV3 manifest: {e}");
+        std::process::exit(1);
+    });
+    std::fs::write(to, out).unwrap_or_else(|e| {
+        eprintln!("xtask: cannot write {}: {e}", to.display());
+        std::process::exit(1);
+    });
+}
+
+/// `true` for a manifest `permissions` entry that is a host match pattern
+/// (MV3 moves these to `host_permissions`).
+fn is_host_pattern(p: &str) -> bool {
+    p == "<all_urls>" || p.contains("://")
+}
+
+/// Copy `version` and the host patterns of `permissions` from the MV2 Chrome
+/// manifest into the MV3 one (as `host_permissions`). Fails if the API
+/// permissions of the two manifests differ, so the MV3 file never silently
+/// drops or adds a permission.
+fn derive_mv3_manifest(mv3: &str, mv2: &str) -> Result<String, String> {
+    let mut doc: serde_json::Value =
+        serde_json::from_str(mv3).map_err(|e| format!("MV3 manifest is not valid JSON: {e}"))?;
+    let base: serde_json::Value =
+        serde_json::from_str(mv2).map_err(|e| format!("MV2 manifest is not valid JSON: {e}"))?;
+    let obj = doc.as_object_mut().ok_or("MV3 manifest root is not an object")?;
+    if obj.get("manifest_version").and_then(serde_json::Value::as_u64) != Some(3) {
+        return Err("MV3 manifest must declare manifest_version 3".into());
+    }
+
+    let version = base.get("version").cloned().ok_or("MV2 manifest has no version")?;
+    obj.insert("version".into(), version);
+
+    let mv2_perms: Vec<&str> = base
+        .get("permissions")
+        .and_then(serde_json::Value::as_array)
+        .map(|a| a.iter().filter_map(serde_json::Value::as_str).collect())
+        .unwrap_or_default();
+    let (hosts, apis): (Vec<&str>, Vec<&str>) = mv2_perms.iter().partition(|p| is_host_pattern(p));
+
+    let mv3_apis: Vec<&str> = obj
+        .get("permissions")
+        .and_then(serde_json::Value::as_array)
+        .map(|a| a.iter().filter_map(serde_json::Value::as_str).collect())
+        .unwrap_or_default();
+    if let Some(bad) = mv3_apis.iter().find(|p| is_host_pattern(p)) {
+        return Err(format!("MV3 `permissions` may not contain the host pattern `{bad}` (use host_permissions)"));
+    }
+    let mut want = apis.clone();
+    want.sort_unstable();
+    let mut have = mv3_apis.clone();
+    have.sort_unstable();
+    if want != have {
+        return Err(format!("MV3 API permissions {have:?} differ from the MV2 ones {want:?}"));
+    }
+
+    obj.insert(
+        "host_permissions".into(),
+        serde_json::Value::Array(hosts.into_iter().map(|h| serde_json::Value::String(h.to_string())).collect()),
+    );
+    let mut out = serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?;
+    out.push('\n');
+    Ok(out)
 }
 
 /// Copy the target manifest into the dist dir, applying the version stamp
@@ -512,6 +612,38 @@ mod tests {
         let out: serde_json::Value = serde_json::from_str(&stamp_manifest(manifest, &stamp).unwrap()).unwrap();
         assert_eq!(out["version"], "2.0.0");
         assert_eq!(out["version_name"], "old");
+    }
+
+    #[test]
+    fn mv3_manifest_derives_version_and_host_permissions_from_mv2() {
+        let mv2 = r#"{"manifest_version":2,"version":"9.9.9","permissions":["storage","*://*.edupage.org/*","https://api.anthropic.com/*","alarms"]}"#;
+        let mv3 = r#"{"manifest_version":3,"version":"0.0.0","permissions":["alarms","storage"],"host_permissions":["stale"]}"#;
+        let out: serde_json::Value = serde_json::from_str(&derive_mv3_manifest(mv3, mv2).unwrap()).unwrap();
+        assert_eq!(out["version"], "9.9.9");
+        assert_eq!(out["host_permissions"], serde_json::json!(["*://*.edupage.org/*", "https://api.anthropic.com/*"]));
+        assert_eq!(out["permissions"], serde_json::json!(["alarms", "storage"]));
+    }
+
+    #[test]
+    fn mv3_manifest_rejects_permission_drift() {
+        let mv2 = r#"{"manifest_version":2,"version":"1","permissions":["storage","downloads","https://x/*"]}"#;
+        assert!(derive_mv3_manifest(r#"{"manifest_version":3,"permissions":["storage"]}"#, mv2).is_err());
+        assert!(derive_mv3_manifest(r#"{"manifest_version":3,"permissions":["storage","downloads","https://x/*"]}"#, mv2).is_err());
+        assert!(derive_mv3_manifest(r#"{"manifest_version":2,"permissions":["storage","downloads"]}"#, mv2).is_err());
+        assert!(derive_mv3_manifest(r#"{"manifest_version":3,"permissions":["storage","downloads"]}"#, mv2).is_ok());
+    }
+
+    #[test]
+    fn the_checked_in_mv3_manifest_derives_cleanly() {
+        let assets = root().join("assets");
+        let mv2 = std::fs::read_to_string(assets.join("manifest.chrome.json")).unwrap();
+        let mv3 = std::fs::read_to_string(assets.join("manifest.chrome-mv3.json")).unwrap();
+        let out: serde_json::Value = serde_json::from_str(&derive_mv3_manifest(&mv3, &mv2).unwrap()).unwrap();
+        assert_eq!(out["manifest_version"], 3);
+        assert!(out["background"]["service_worker"].is_string());
+        assert!(out["content_security_policy"]["extension_pages"].as_str().unwrap().contains("'wasm-unsafe-eval'"));
+        assert!(!out["content_security_policy"]["extension_pages"].as_str().unwrap().contains("'unsafe-eval'"));
+        assert!(!out["host_permissions"].as_array().unwrap().is_empty());
     }
 
     #[test]

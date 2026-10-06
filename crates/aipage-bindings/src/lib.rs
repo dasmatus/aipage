@@ -87,10 +87,6 @@ extern "C" {
     #[wasm_bindgen(js_namespace = ["chrome", "tabs"], js_name = query)]
     fn chrome_tabs_query(query: &JsValue, cb: &Function);
 
-    // --- browserAction (MV2) ---
-    #[wasm_bindgen(js_namespace = ["chrome", "browserAction", "onClicked"], js_name = addListener)]
-    fn chrome_action_on_clicked_add(cb: &Function);
-
     // --- notifications ---
     #[wasm_bindgen(js_namespace = ["chrome", "notifications"], js_name = create)]
     fn chrome_notifications_create(id: &str, opts: &JsValue);
@@ -322,13 +318,37 @@ pub mod tabs {
 pub mod action {
     use super::*;
 
-    /// Register a `chrome.browserAction.onClicked` listener `(tab)`.
+    /// The toolbar-button API object: `chrome.action` (Manifest V3) or
+    /// `chrome.browserAction` (Manifest V2); whichever the manifest enabled.
+    fn api() -> Option<JsValue> {
+        let chrome = Reflect::get(&js_sys::global(), &"chrome".into()).ok()?;
+        ["action", "browserAction"]
+            .iter()
+            .filter_map(|k| Reflect::get(&chrome, &JsValue::from_str(k)).ok())
+            .find(|v| v.is_object())
+    }
+
+    /// Register a toolbar-button click listener `(tab)` on
+    /// `chrome.action.onClicked` or `chrome.browserAction.onClicked`.
+    /// Logs and returns without registering when neither API exists.
     pub fn on_clicked<F>(handler: F)
     where
         F: Fn(JsValue) + 'static,
     {
+        let Some(api) = api() else {
+            super::console::warn("aipage: neither chrome.action nor chrome.browserAction is available");
+            return;
+        };
+        let on_clicked = Reflect::get(&api, &"onClicked".into()).unwrap_or(JsValue::UNDEFINED);
+        let add = Reflect::get(&on_clicked, &"addListener".into())
+            .ok()
+            .and_then(|f| f.dyn_into::<Function>().ok());
+        let Some(add) = add else {
+            super::console::warn("aipage: action.onClicked.addListener is not a function");
+            return;
+        };
         let cb = Closure::wrap(Box::new(move |tab: JsValue| handler(tab)) as Box<dyn Fn(JsValue)>);
-        chrome_action_on_clicked_add(cb.as_ref().unchecked_ref());
+        let _ = add.call1(&on_clicked, cb.as_ref().unchecked_ref());
         cb.forget();
     }
 }

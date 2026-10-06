@@ -4,6 +4,7 @@ node_modules/
 # Build
 dist/
 dist-chrome/
+dist-chrome-mv3/
 dist-firefox/
 dist-safari/
 dist-web/

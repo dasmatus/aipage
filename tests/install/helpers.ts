@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-export type Target = 'chrome' | 'firefox' | 'safari';
+export type Target = 'chrome' | 'firefox' | 'safari' | 'chrome-mv3';
+/** The shipped (MV2) targets; `chrome-mv3` is the experimental prototype (`mv3.spec.ts`). */
 export const TARGETS: Target[] = ['chrome', 'firefox', 'safari'];
 
 /** Repository root (the config lives there; Playwright runs from it). */
@@ -32,14 +33,16 @@ export type Manifest = {
   name: string;
   version: string;
   version_name?: string;
-  background?: { scripts?: string[]; page?: string; persistent?: boolean };
+  background?: { scripts?: string[]; page?: string; persistent?: boolean; service_worker?: string; type?: string };
   content_scripts?: { js?: string[]; css?: string[]; matches: string[] }[];
-  web_accessible_resources?: string[];
+  web_accessible_resources?: (string | { resources: string[]; matches: string[] })[];
+  host_permissions?: string[];
+  action?: { default_title?: string };
   browser_action?: { default_popup?: string; default_icon?: string | Record<string, string> };
   icons?: Record<string, string>;
   options_ui?: { page?: string };
   options_page?: string;
-  content_security_policy?: string;
+  content_security_policy?: string | { extension_pages?: string };
   browser_specific_settings?: { gecko?: { id?: string } };
   [key: string]: unknown;
 };
