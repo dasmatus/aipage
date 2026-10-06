@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+* **providers:** add a **Claude (Anthropic)** provider over the Anthropic Messages API (`https://api.anthropic.com/v1/messages`, `x-api-key` + `anthropic-version: 2023-06-01`, default model `claude-opus-5-5`) with chat, model listing (`/v1/models`, paginated), an Anthropic-format agentic tool loop (`input_schema` tools, `tool_use` → `tool_result`), native web search via Claude's server-side `web_search` tool (resumed on `pause_turn`) and SVG image generation. Reuses the settings keys of the original Claude builds (`anthropic_api_key`, `anthropic_base_url`, `anthropic_model`), and a stored `"anthropic"` engine selects Claude again instead of Ollama Cloud.
 * **providers:** add an **OpenRouter** provider (`https://openrouter.ai/api`, Bearer key, `HTTP-Referer`/`X-Title` attribution, default model `openai/gpt-4.1-mini`) with chat, model listing, the agentic tool loop, native web search and SVG image generation. Settings keys: `openrouter_api_key`, `openrouter_base_url`, `openrouter_model`.
 
 ### ♻️ Code Refactoring

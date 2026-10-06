@@ -53,6 +53,19 @@ pub const OPENROUTER: OpenAiCompat = OpenAiCompat {
     ],
 };
 
+/// Claude. The extension talks to Claude over the Anthropic Messages API
+/// (see [`super::anthropic`]), not this client; this config only exists so
+/// that [`OpenAiCompat::for_provider`] stays total — it supplies the label
+/// and default model for model resolution (e.g. the SVG model picker).
+/// Callers that would POST `/v1/chat/completions` must branch on
+/// [`ProviderType::Anthropic`] first (the agent loop and image generator do).
+pub const ANTHROPIC: OpenAiCompat = OpenAiCompat {
+    label: super::anthropic::LABEL,
+    default_base_url: super::anthropic::DEFAULT_BASE_URL,
+    default_model: super::anthropic::DEFAULT_MODEL,
+    extra_headers: &[],
+};
+
 /// LM Studio's local inference server.
 pub const LMSTUDIO: OpenAiCompat = OpenAiCompat {
     label: "LM Studio",
@@ -73,12 +86,14 @@ pub const OLLAMA: OpenAiCompat = OpenAiCompat {
 };
 
 impl OpenAiCompat {
-    /// The config for a provider. Every current provider has an
-    /// OpenAI-compatible surface, so this is total.
+    /// The config for a provider. Total: every OpenAI-compatible provider has
+    /// its real config, and Claude gets the label/default-model stub
+    /// [`ANTHROPIC`] (its requests go through [`super::anthropic`]).
     pub fn for_provider(p: ProviderType) -> &'static OpenAiCompat {
         match p {
             ProviderType::OllamaCloud => &OLLAMA_CLOUD,
             ProviderType::OpenRouter => &OPENROUTER,
+            ProviderType::Anthropic => &ANTHROPIC,
             ProviderType::Lmstudio => &LMSTUDIO,
             ProviderType::Ollama => &OLLAMA,
         }
@@ -224,13 +239,15 @@ mod tests {
     fn for_provider_covers_every_provider() {
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OllamaCloud).label, "Ollama Cloud");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenRouter).label, "OpenRouter");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).label, "Claude (Anthropic)");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).default_model, "claude-opus-5-5");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Lmstudio).label, "LM Studio");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Ollama).label, "Ollama");
     }
 
     #[test]
     fn default_base_urls_do_not_end_in_v1() {
-        for cfg in [OLLAMA_CLOUD, OPENROUTER, LMSTUDIO, OLLAMA] {
+        for cfg in [OLLAMA_CLOUD, OPENROUTER, ANTHROPIC, LMSTUDIO, OLLAMA] {
             assert!(!cfg.default_base_url.ends_with("/v1"), "{}", cfg.label);
             assert!(!cfg.default_base_url.ends_with('/'), "{}", cfg.label);
         }

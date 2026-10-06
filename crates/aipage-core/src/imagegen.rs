@@ -1,15 +1,16 @@
 //! Image generation (Ollama-SVG + SD WebUI). Mirrors `providers/imagegen.ts`.
 //!
-//! The Ollama-SVG path asks an OpenAI-compatible chat model (Ollama Cloud by
-//! default; also works against local Ollama / LM Studio) for a self-contained
-//! SVG and rasterizes it to PNG with the pure-Rust `resvg`/`tiny-skia` stack
-//! (replacing the WASM ImageMagick dependency). SD WebUI returns base64 PNG
-//! directly.
+//! The Ollama-SVG path asks the selected chat model (Ollama Cloud by default;
+//! also works against OpenRouter, local Ollama / LM Studio, and Claude over
+//! the Anthropic Messages API) for a self-contained SVG and rasterizes it to
+//! PNG with the pure-Rust `resvg`/`tiny-skia` stack (replacing the WASM
+//! ImageMagick dependency). SD WebUI returns base64 PNG directly.
 
 use std::collections::HashMap;
 
 use serde_json::{json, Value};
 
+use crate::providers::anthropic;
 use crate::providers::openai_compat::OpenAiCompat;
 use crate::providers::SendOptions;
 use crate::proxy::{perform_request, post_json};
@@ -83,24 +84,31 @@ async fn generate_ollama_svg(
     model: &str,
     size: &str,
 ) -> Result<ImageResult, String> {
-    let cfg = OpenAiCompat::for_provider(provider);
     let opts = SendOptions { base_url: (!base_url.is_empty()).then_some(base_url.to_string()), model_name: Some(model.to_string()) };
-    let model = cfg.model_of(&opts);
-    let body = json!({
-        "model": model,
-        "messages": [
-            { "role": "system", "content": SVG_SYSTEM_PROMPT },
-            { "role": "user", "content": format!("Create an SVG illustration of: {prompt}") }
-        ],
-        "stream": false,
-    });
-    let resp = post_json(&cfg.chat_url(&opts), &cfg.headers(api_key), &body).await?;
+    let user_prompt = format!("Create an SVG illustration of: {prompt}");
 
-    let text = resp
-        .pointer("/choices/0/message/content")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
+    let text = if provider == ProviderType::Anthropic {
+        // Messages API: `system` is top-level and the answer is a content array.
+        let messages = [json!({ "role": "user", "content": user_prompt })];
+        let body = anthropic::message_body(&anthropic::model_of(&opts), SVG_SYSTEM_PROMPT, &messages, None);
+        let resp = anthropic::post_messages(api_key, &opts, &body).await?;
+        anthropic::text_blocks(&resp)
+    } else {
+        let cfg = OpenAiCompat::for_provider(provider);
+        let body = json!({
+            "model": cfg.model_of(&opts),
+            "messages": [
+                { "role": "system", "content": SVG_SYSTEM_PROMPT },
+                { "role": "user", "content": user_prompt }
+            ],
+            "stream": false,
+        });
+        let resp = post_json(&cfg.chat_url(&opts), &cfg.headers(api_key), &body).await?;
+        resp.pointer("/choices/0/message/content")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
 
     let svg = extract_svg(&text).ok_or("The model did not return a valid SVG document")?;
     let (width, height) = parse_size(size);
@@ -213,6 +221,9 @@ mod tests {
         // Other providers swap the cloud-only default for their chat model...
         assert_eq!(resolve_svg_model(ProviderType::OpenRouter, DEFAULT_SVG_MODEL, "anthropic/claude-sonnet-4"), "anthropic/claude-sonnet-4");
         assert_eq!(resolve_svg_model(ProviderType::Ollama, "", "llama3.2"), "llama3.2");
+        assert_eq!(resolve_svg_model(ProviderType::Anthropic, DEFAULT_SVG_MODEL, "claude-sonnet-5-5"), "claude-sonnet-5-5");
+        assert_eq!(resolve_svg_model(ProviderType::Anthropic, "", ""), "claude-opus-5-5");
+        assert_eq!(resolve_svg_model(ProviderType::Anthropic, "claude-haiku-4-5", "x"), "claude-haiku-4-5");
         // ...or their own default when no chat model is configured...
         assert_eq!(resolve_svg_model(ProviderType::OpenRouter, DEFAULT_SVG_MODEL, ""), "openai/gpt-4.1-mini");
         assert_eq!(resolve_svg_model(ProviderType::Lmstudio, "", ""), "local-model");

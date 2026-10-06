@@ -28,6 +28,7 @@ fn api_key_key(p: ProviderType) -> &'static str {
         ProviderType::Ollama => "ollama_api_key",
         ProviderType::OllamaCloud => "ollama_cloud_api_key",
         ProviderType::OpenRouter => "openrouter_api_key",
+        ProviderType::Anthropic => "anthropic_api_key",
     }
 }
 
@@ -38,6 +39,7 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
         ProviderType::Ollama => ("ollama_base_url", "ollama_model"),
         ProviderType::OllamaCloud => ("ollama_cloud_base_url", "ollama_cloud_model"),
         ProviderType::OpenRouter => ("openrouter_base_url", "openrouter_model"),
+        ProviderType::Anthropic => ("anthropic_base_url", "anthropic_model"),
     }
 }
 
@@ -221,6 +223,9 @@ mod tests {
     fn storage_keys_are_the_persisted_contract() {
         assert_eq!(api_key_key(ProviderType::OllamaCloud), "ollama_cloud_api_key");
         assert_eq!(api_key_key(ProviderType::OpenRouter), "openrouter_api_key");
+        // the keys the pre-Ollama Claude builds wrote; old installs must find their key again
+        assert_eq!(api_key_key(ProviderType::Anthropic), "anthropic_api_key");
+        assert_eq!(local_settings_keys(ProviderType::Anthropic), ("anthropic_base_url", "anthropic_model"));
         assert_eq!(api_key_key(ProviderType::Lmstudio), "lmstudio_api_key");
         assert_eq!(api_key_key(ProviderType::Ollama), "ollama_api_key");
         assert_eq!(local_settings_keys(ProviderType::OpenRouter), ("openrouter_base_url", "openrouter_model"));

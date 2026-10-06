@@ -122,6 +122,12 @@ pub struct Translation {
     pub openrouter_api_key: String,
     pub openrouter_api_key_placeholder: String,
     pub openrouter_api_key_hint: String,
+
+    // Claude (Anthropic) — `provider_anthropic` is declared above with the
+    // other engine labels.
+    pub anthropic_api_key: String,
+    pub anthropic_api_key_placeholder: String,
+    pub anthropic_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
     pub global_theme_description: String,
@@ -200,6 +206,10 @@ mod tests {
             assert!(!t.provider_lmstudio.is_empty(), "{code} providerLMStudio empty");
             assert_eq!(t.provider_openrouter, "OpenRouter", "{code} providerOpenRouter");
             assert!(!t.openrouter_api_key_hint.is_empty(), "{code} openrouterApiKeyHint empty");
+            assert_eq!(t.provider_anthropic, "Claude (Anthropic)", "{code} providerAnthropic");
+            assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
+            assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");
+            assert!(!t.anthropic_api_key_hint.is_empty(), "{code} anthropicApiKeyHint empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
         }
     }
