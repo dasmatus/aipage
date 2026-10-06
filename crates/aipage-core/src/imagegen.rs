@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use crate::providers::anthropic;
 use crate::providers::openai_compat::{chat_messages, json_headers, parse_completion_text, OpenAiCompat};
-use crate::providers::SendOptions;
+use crate::providers::{responses, SendOptions};
 use crate::proxy::post_json;
 use crate::types::ProviderType;
 
@@ -39,6 +39,8 @@ pub struct ImageGenOptions {
     /// The chat backend that draws the SVG (selects base URL / headers).
     pub chat_provider: ProviderType,
     pub api_key: String,
+    /// `api_key` is a Sign-in-with-ChatGPT access token (Responses API).
+    pub oauth: bool,
     pub base_url: Option<String>,
     pub model: String,
     pub size: String,
@@ -59,6 +61,7 @@ pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<S
             prompt,
             options.chat_provider,
             &options.api_key,
+            options.oauth,
             options.base_url.as_deref().unwrap_or(""),
             &options.model,
             &options.size,
@@ -71,11 +74,16 @@ async fn generate_svg(
     prompt: &str,
     provider: ProviderType,
     api_key: &str,
+    oauth: bool,
     base_url: &str,
     model: &str,
     size: &str,
 ) -> Result<String, String> {
-    let opts = SendOptions { base_url: (!base_url.is_empty()).then_some(base_url.to_string()), model_name: Some(model.to_string()) };
+    let opts = SendOptions {
+        base_url: (!base_url.is_empty()).then_some(base_url.to_string()),
+        model_name: Some(model.to_string()),
+        oauth,
+    };
     let user_prompt = format!("Create an SVG illustration of: {prompt}");
 
     let text = if provider == ProviderType::Anthropic {
@@ -84,6 +92,8 @@ async fn generate_svg(
         let body = anthropic::message_body(&anthropic::model_of(&opts), SVG_SYSTEM_PROMPT, &messages, None);
         let resp = anthropic::post_messages(api_key, &opts, &body).await?;
         anthropic::text_blocks(&resp)
+    } else if opts.uses_responses_api(provider) {
+        responses::complete(SVG_SYSTEM_PROMPT, &user_prompt, api_key, &opts).await?
     } else {
         let cfg = OpenAiCompat::for_provider(provider);
         let body = json!({

@@ -14,7 +14,10 @@
 //! * the Anthropic Messages API loop for Claude: `tool_use` content blocks
 //!   answered by `tool_result` blocks in one `user` turn, plus Claude's
 //!   server-side `web_search` tool in place of the DuckDuckGo one, and
-//!   `pause_turn` resumption.
+//!   `pause_turn` resumption;
+//! * the Responses API loop for ChatGPT / OpenAI signed in with ChatGPT
+//!   (`SendOptions::oauth`): `function_call` output items answered by
+//!   `function_call_output` input items (see [`responses`]).
 //!
 //! [`run_agent_turn`] and [`web_search`] dispatch on [`ProviderType`]; any
 //! provider whose [`ProviderType::supports_native_tools`] is true lands in one
@@ -26,6 +29,7 @@ use aipage_bindings::{from_js, runtime, tabs, to_js};
 
 use crate::providers::anthropic;
 use crate::providers::openai_compat::OpenAiCompat;
+use crate::providers::responses;
 use crate::providers::SendOptions;
 use crate::proxy::post_json;
 use crate::types::ProviderType;
@@ -245,6 +249,57 @@ where
     Ok(answer)
 }
 
+/// Run a tool-calling round against the OpenAI Responses API (Sign in with
+/// ChatGPT).
+///
+/// Mirrors [`run_tool_loop`]: every output item of a round (messages,
+/// reasoning and `function_call` items) is echoed back into `input`, then
+/// one `function_call_output` per call; `store: false` means the server
+/// keeps nothing between rounds. Ends when a round returns no function
+/// calls, or at [`MAX_ITERS`].
+async fn run_responses_tool_loop<F>(
+    token: &str,
+    opts: &SendOptions,
+    instructions: &str,
+    input: &mut Vec<Value>,
+    tools: &Value,
+    on_text: &F,
+) -> Result<String, String>
+where
+    F: Fn(String),
+{
+    let model = OpenAiCompat::for_provider(ProviderType::OpenAi).model_of(opts);
+    let tools = responses::tools_from_openai(tools);
+    let mut answer = String::new();
+
+    for _ in 0..MAX_ITERS {
+        let body = responses::request_body(&model, instructions, input, Some(&tools));
+        let resp = responses::post(token, opts, &body).await?;
+
+        let text = responses::output_text(&resp);
+        if !text.is_empty() {
+            if !answer.is_empty() {
+                answer.push_str("\n\n");
+            }
+            answer.push_str(&text);
+            on_text(answer.clone());
+        }
+
+        let calls = responses::function_calls(&resp);
+        if calls.is_empty() {
+            return Ok(answer);
+        }
+        input.extend(responses::output_items(&resp));
+        for call in &calls {
+            let args = decode_arguments(&Value::String(call.arguments.clone()));
+            let (content, _is_error) = execute_tool(&call.name, &args).await;
+            input.push(responses::function_call_output(&call.call_id, &content));
+        }
+    }
+
+    Ok(answer)
+}
+
 /// Run a tool-calling round against the Anthropic Messages API.
 ///
 /// Mirrors [`run_tool_loop`] for Claude's wire format: the response's full
@@ -319,6 +374,9 @@ where
         let mut messages = vec![json!({ "role": "user", "content": user_text })];
         let tools = anthropic_tools(&anthropic::model_of(opts));
         run_anthropic_tool_loop(api_key, opts, AGENT_SYSTEM_PROMPT, &mut messages, &tools, &on_text).await?
+    } else if opts.uses_responses_api(provider) {
+        let mut input = vec![json!({ "role": "user", "content": user_text })];
+        run_responses_tool_loop(api_key, opts, AGENT_SYSTEM_PROMPT, &mut input, &openai_tools(), &on_text).await?
     } else {
         let cfg = OpenAiCompat::for_provider(provider);
         let mut messages = vec![
@@ -345,6 +403,10 @@ pub async fn web_search(
 ) -> Result<String, String> {
     if provider == ProviderType::Anthropic {
         return anthropic::web_search(query, api_key, opts).await;
+    }
+    if opts.uses_responses_api(provider) {
+        let mut input = vec![json!({ "role": "user", "content": query })];
+        return run_responses_tool_loop(api_key, opts, WEB_SEARCH_SYSTEM_PROMPT, &mut input, &web_search_tool(), &|_| {}).await;
     }
     let cfg = OpenAiCompat::for_provider(provider);
     let mut messages = vec![

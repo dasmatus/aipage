@@ -43,6 +43,26 @@ pub fn start() {
                 Ok(()) => obj(&[("ok", JsValue::TRUE)]),
                 Err(e) => error_response(&e),
             },
+            // Sign in with ChatGPT, relayed from the hosted sidebar by the
+            // content script (which has neither `identity` nor `tabs`).
+            "identity_get_redirect_url" => match aipage_bindings::identity::get_redirect_url().await {
+                Some(url) => obj(&[("ok", JsValue::TRUE), ("url", JsValue::from_str(&url))]),
+                None => error_response("this browser has no identity API"),
+            },
+            "identity_launch_web_auth_flow" => match get_str(&get_val(&message, "payload"), "url") {
+                Some(url) => match aipage_bindings::identity::launch_web_auth_flow(&url).await {
+                    Ok(redirect) => obj(&[("ok", JsValue::TRUE), ("url", JsValue::from_str(&redirect))]),
+                    Err(e) => error_response(&e),
+                },
+                None => error_response("Missing url"),
+            },
+            "tabs_create" => match get_str(&get_val(&message, "payload"), "url") {
+                Some(url) if url.starts_with("https://") => match tabs::create(&url).await {
+                    Ok(_) => obj(&[("ok", JsValue::TRUE)]),
+                    Err(e) => error_response(&e.as_string().unwrap_or_else(|| "tabs.create failed".into())),
+                },
+                _ => error_response("tabs_create: an https:// url is required"),
+            },
             _ => JsValue::NULL,
         }
     });

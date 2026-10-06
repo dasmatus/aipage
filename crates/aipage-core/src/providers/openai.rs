@@ -2,14 +2,19 @@
 //!
 //! Endpoints live under `https://api.openai.com/v1` (`/chat/completions`,
 //! `/models`) and are authenticated with `Authorization: Bearer <key>` (keys
-//! from `https://platform.openai.com/api-keys`). This is plain API-key access
-//! to the documented public API; there is deliberately no OAuth / "sign in
-//! with ChatGPT" flow. Chat goes through [`super::openai_compat`] via
-//! [`CONFIG`]; this module only exists because `GET /v1/models` returns every
-//! model on the account, including embeddings, speech, transcription, image,
-//! realtime and moderation models that cannot serve `/v1/chat/completions`.
-//! [`get_models`] keeps only chat-capable families (see [`is_chat_model`]) so
-//! the settings picker stays usable.
+//! from `https://platform.openai.com/api-keys`). Chat goes through
+//! [`super::openai_compat`] via [`CONFIG`]; this module only exists because
+//! `GET /v1/models` returns every model on the account, including
+//! embeddings, speech, transcription, image, realtime and moderation models
+//! that cannot serve `/v1/chat/completions`. [`get_models`] keeps only
+//! chat-capable families (see [`is_chat_model`]) so the settings picker stays
+//! usable.
+//!
+//! The alternative to a pasted key is "Sign in with ChatGPT"
+//! ([`crate::oauth`]): a saved key always wins, otherwise the OAuth access
+//! token is used with `SendOptions::oauth = true`, which routes chat, tools
+//! and model listing to the Responses API ([`super::responses`]) as OpenAI
+//! documents for plan-usage tokens.
 
 use super::openai_compat::{OpenAiCompat, OPENAI};
 use super::{ModelInfo, SendOptions};
@@ -71,9 +76,9 @@ mod tests {
 
     #[test]
     fn accepts_base_url_with_or_without_v1() {
-        let with_v1 = SendOptions { base_url: Some("https://api.openai.com/v1".into()), model_name: None };
-        let with_v1_slash = SendOptions { base_url: Some("https://api.openai.com/v1/".into()), model_name: None };
-        let without = SendOptions { base_url: Some("https://api.openai.com".into()), model_name: None };
+        let with_v1 = SendOptions { base_url: Some("https://api.openai.com/v1".into()), ..SendOptions::default() };
+        let with_v1_slash = SendOptions { base_url: Some("https://api.openai.com/v1/".into()), ..SendOptions::default() };
+        let without = SendOptions { base_url: Some("https://api.openai.com".into()), ..SendOptions::default() };
         let expected = "https://api.openai.com/v1/chat/completions";
         assert_eq!(CONFIG.chat_url(&with_v1), expected);
         assert_eq!(CONFIG.chat_url(&with_v1_slash), expected);

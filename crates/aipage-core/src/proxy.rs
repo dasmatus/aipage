@@ -5,6 +5,7 @@
 //! `runtime.sendMessage({ action: 'proxy_fetch', payload })`. The background
 //! performs the real `fetch` and returns `{ ok, data, error? }`.
 
+use std::cell::Cell;
 use std::collections::HashMap;
 
 use aipage_bindings::runtime;
@@ -23,6 +24,22 @@ struct ProxyPayload<'a> {
 struct ProxyMessage<'a> {
     action: &'a str,
     payload: ProxyPayload<'a>,
+}
+
+thread_local! {
+    /// HTTP status of the most recent proxied request that failed (cleared
+    /// when the next request starts). The provider API reports errors as
+    /// strings; this lets the sidebar tell a 401 (expired OAuth token →
+    /// refresh and retry) from everything else. The sidebar issues provider
+    /// requests one at a time, so reading it right after a failure is
+    /// unambiguous.
+    static LAST_ERROR_STATUS: Cell<Option<u16>> = const { Cell::new(None) };
+}
+
+/// Status of the last failed proxied request, `None` when the last request
+/// succeeded or failed before reaching the server.
+pub fn last_error_status() -> Option<u16> {
+    LAST_ERROR_STATUS.with(Cell::get)
 }
 
 /// Perform an HTTP request through the background proxy and return the decoded
@@ -44,6 +61,7 @@ pub async fn perform_request(
         .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
         .map_err(|e| format!("failed to serialize proxy message: {e:?}"))?;
 
+    LAST_ERROR_STATUS.with(|s| s.set(None));
     let resp = runtime::send_message(&js_msg)
         .await
         .map_err(|e| js_error_string(&e))?;
@@ -64,6 +82,8 @@ pub async fn perform_request(
         }
         Ok(data)
     } else {
+        let status = value.get("status").and_then(Value::as_u64).and_then(|s| u16::try_from(s).ok());
+        LAST_ERROR_STATUS.with(|s| s.set(status));
         Err(extract_error_message(&value))
     }
 }

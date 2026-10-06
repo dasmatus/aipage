@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use aipage_core::storage;
+use aipage_core::types::ProviderType;
 
 use crate::components::{InputArea, MessageList, SettingsView, WidgetsView};
 use crate::icons::{self, icon};
@@ -46,8 +47,10 @@ pub fn App() -> impl IntoView {
             app.user_initials.set(i);
         }
 
-        // Show settings if a cloud provider has no key.
-        if key.as_deref().unwrap_or("").is_empty() && provider.requires_api_key() {
+        // Show settings if a cloud provider has no key (a ChatGPT sign-in
+        // counts as a key for the OpenAI provider).
+        let signed_in = provider == ProviderType::OpenAi && storage::get_openai_oauth().await.is_some();
+        if key.as_deref().unwrap_or("").is_empty() && provider.requires_api_key() && !signed_in {
             app.view.set(View::Settings);
         }
         initialized.set(true);

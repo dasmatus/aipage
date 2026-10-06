@@ -5,9 +5,13 @@
 //! the configured hosted-UI origin **and** `event.source` is the sidebar
 //! iframe's `contentWindow`. The reply (`connect`, carrying a `MessagePort`)
 //! is posted with that origin as `targetOrigin`, so it cannot reach any other
-//! document. Every request is answered by one of five whitelisted handlers;
-//! `tabs.*` never touches the privileged `chrome.tabs` API at all — it is
-//! served from this tab, which is the only tab the sidebar may target.
+//! document. Every request is answered by one of the whitelisted handlers;
+//! `tabs.query` / `tabs.sendMessage` never touch the privileged
+//! `chrome.tabs` API at all — they are served from this tab, which is the
+//! only tab the sidebar may target. The Sign-in-with-ChatGPT calls
+//! (`identity.*`, `tabs.create`) need APIs a content script does not have,
+//! so they are relayed to the background as fixed `runtime.sendMessage`
+//! actions with only the URL taken from the request.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -143,5 +147,36 @@ async fn handle(method: Method, args: &[Value], dispatch: &LocalDispatch) -> Res
         // lives in; that is this tab.
         Method::TabsQuery => Ok(json!([{ "id": BRIDGE_TAB_ID, "active": true }])),
         Method::TabsSendMessage => Ok(from_js(&dispatch(arg(args, 1)))),
+        Method::TabsCreate => {
+            let url = args.first().and_then(|p| p.get("url")).and_then(Value::as_str).ok_or("tabs.create: missing url")?;
+            background_url_action("tabs_create", url).await.map(|_| Value::Null)
+        }
+        Method::IdentityGetRedirectUrl => {
+            // `null` (not an error) when the browser has no identity API.
+            Ok(background_action("identity_get_redirect_url", None).await.unwrap_or(Value::Null))
+        }
+        Method::IdentityLaunchWebAuthFlow => {
+            let url = args.first().and_then(Value::as_str).ok_or("identity.launchWebAuthFlow: missing url")?;
+            background_url_action("identity_launch_web_auth_flow", url).await
+        }
+    }
+}
+
+/// `runtime.sendMessage({ action, payload: { url } })` to the background;
+/// its `{ ok, url?, error? }` reply mapped to the `url` value.
+async fn background_url_action(action: &str, url: &str) -> Result<Value, String> {
+    background_action(action, Some(url)).await
+}
+
+async fn background_action(action: &str, url: Option<&str>) -> Result<Value, String> {
+    let msg = match url {
+        Some(u) => json!({ "action": action, "payload": { "url": u } }),
+        None => json!({ "action": action }),
+    };
+    let reply = runtime::send_message(&to_js(&msg)).await.map(|v| from_js(&v)).map_err(js_err)?;
+    if reply.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+        Ok(reply.get("url").cloned().unwrap_or(Value::Null))
+    } else {
+        Err(reply.get("error").and_then(Value::as_str).unwrap_or("background request failed").to_string())
     }
 }

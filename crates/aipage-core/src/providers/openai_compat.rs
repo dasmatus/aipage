@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn urls_are_built_from_normalized_base() {
-        let opts = SendOptions { base_url: Some("https://openrouter.ai/api/v1".into()), model_name: None };
+        let opts = SendOptions { base_url: Some("https://openrouter.ai/api/v1".into()), ..SendOptions::default() };
         assert_eq!(OPENROUTER.chat_url(&opts), "https://openrouter.ai/api/v1/chat/completions");
         assert_eq!(OPENROUTER.models_url(&opts), "https://openrouter.ai/api/v1/models");
         assert_eq!(OLLAMA_CLOUD.chat_url(&SendOptions::default()), "https://ollama.com/v1/chat/completions");

@@ -40,8 +40,16 @@
 //! `method` is one of `runtime.sendMessage`, `storage.local.get`,
 //! `storage.local.set`, `tabs.query`, `tabs.sendMessage`; `args` are the
 //! positional arguments of the corresponding `chrome.*` call (minus the
-//! callback). `tabs.*` is answered by the content script for *its own* tab,
-//! which is the only tab the sidebar can ever target.
+//! callback). `tabs.query` / `tabs.sendMessage` are answered by the content
+//! script for *its own* tab, which is the only tab the sidebar can ever
+//! target.
+//!
+//! Additive since the Sign-in-with-ChatGPT feature (same `v: 1`, older
+//! hosts answer them with an error): `identity.getRedirectURL` (no args →
+//! the redirect URL string, or `null` when the browser has no identity
+//! API), `identity.launchWebAuthFlow` (`[url]` → the final redirect URL)
+//! and `tabs.create` (`[createProperties]`). The content script has none of
+//! these APIs itself and relays them to the background.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -79,6 +87,12 @@ pub enum Method {
     TabsQuery,
     #[serde(rename = "tabs.sendMessage")]
     TabsSendMessage,
+    #[serde(rename = "tabs.create")]
+    TabsCreate,
+    #[serde(rename = "identity.getRedirectURL")]
+    IdentityGetRedirectUrl,
+    #[serde(rename = "identity.launchWebAuthFlow")]
+    IdentityLaunchWebAuthFlow,
 }
 
 /// `hello` / `connect` handshake envelope (sent via `window.postMessage`).
@@ -451,8 +465,9 @@ mod tests {
 
     #[test]
     fn unknown_methods_and_tags_are_rejected() {
-        assert!(serde_json::from_str::<Frame>(r#"{"t":"req","id":1,"method":"tabs.create","args":[]}"#).is_err());
+        assert!(serde_json::from_str::<Frame>(r#"{"t":"req","id":1,"method":"tabs.remove","args":[]}"#).is_err());
         assert!(serde_json::from_str::<Frame>(r#"{"t":"req","id":1,"method":"runtime.getURL","args":[]}"#).is_err());
+        assert!(serde_json::from_str::<Frame>(r#"{"t":"req","id":1,"method":"identity.getAuthToken","args":[]}"#).is_err());
         assert!(serde_json::from_str::<Frame>(r#"{"t":"zzz","id":1}"#).is_err());
         assert!(serde_json::from_str::<Frame>(r#"{"id":1,"ok":true}"#).is_err());
     }
@@ -465,6 +480,9 @@ mod tests {
             Method::StorageLocalSet,
             Method::TabsQuery,
             Method::TabsSendMessage,
+            Method::TabsCreate,
+            Method::IdentityGetRedirectUrl,
+            Method::IdentityLaunchWebAuthFlow,
         ]
         .iter()
         .map(|m| serde_json::to_string(m).unwrap())
@@ -477,6 +495,9 @@ mod tests {
                 "\"storage.local.set\"",
                 "\"tabs.query\"",
                 "\"tabs.sendMessage\"",
+                "\"tabs.create\"",
+                "\"identity.getRedirectURL\"",
+                "\"identity.launchWebAuthFlow\"",
             ]
         );
     }

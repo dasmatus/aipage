@@ -10,7 +10,9 @@
 //! [`openai_compat::OpenAiCompat`], selected per provider by
 //! [`OpenAiCompat::for_provider`]. Claude ([`anthropic`]) speaks the Anthropic
 //! Messages API and owns its wire format; local Ollama ([`ollama`]) uses its
-//! native `/api/*` endpoints for chat and model listing.
+//! native `/api/*` endpoints for chat and model listing. ChatGPT / OpenAI
+//! signed in with ChatGPT (`SendOptions::oauth`, see [`crate::oauth`]) uses
+//! the Responses API ([`responses`]) instead of chat completions.
 //!
 //! # Adding a provider
 //!
@@ -48,20 +50,32 @@ pub mod lmstudio;
 pub mod ollama;
 pub mod openai;
 pub mod openai_compat;
+pub mod responses;
 
 use crate::types::ProviderType;
 use openai_compat::OpenAiCompat;
 
-/// Per-request overrides (base URL / model).
+/// Per-request overrides (base URL / model) and how the request
+/// authenticates.
 #[derive(Clone, Debug, Default)]
 pub struct SendOptions {
     pub base_url: Option<String>,
     pub model_name: Option<String>,
+    /// The `api_key` passed alongside is a "Sign in with ChatGPT" access
+    /// token rather than an API key. Only meaningful for
+    /// [`ProviderType::OpenAi`], whose plan-usage tokens are accepted by the
+    /// Responses API (see [`responses`]) instead of `/v1/chat/completions`.
+    pub oauth: bool,
 }
 
 impl SendOptions {
     pub fn with_model(model: impl Into<String>) -> Self {
-        Self { base_url: None, model_name: Some(model.into()) }
+        Self { base_url: None, model_name: Some(model.into()), oauth: false }
+    }
+
+    /// Whether the ChatGPT / OpenAI provider should speak the Responses API.
+    pub fn uses_responses_api(&self, provider: ProviderType) -> bool {
+        self.oauth && provider == ProviderType::OpenAi
     }
 }
 
@@ -90,6 +104,7 @@ pub async fn send_message(
     opts: &SendOptions,
 ) -> Result<String, String> {
     match provider {
+        ProviderType::OpenAi if opts.oauth => responses::send_message(prompt, api_key, opts).await,
         ProviderType::Anthropic => anthropic::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, opts).await,
         // Local backends never send an auth header, even with a stored key.
@@ -108,6 +123,7 @@ pub async fn get_models(
         ProviderType::Anthropic => anthropic::get_models(api_key, opts).await,
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
+        ProviderType::OpenAi if opts.oauth => responses::get_models(api_key, opts).await,
         ProviderType::OpenAi => openai::get_models(api_key, opts).await,
         p => OpenAiCompat::for_provider(p).get_models(api_key, opts).await,
     }
@@ -133,6 +149,15 @@ pub async fn web_search(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn oauth_flag_selects_the_responses_api_for_openai_only() {
+        let oauth = SendOptions { oauth: true, ..SendOptions::default() };
+        assert!(oauth.uses_responses_api(ProviderType::OpenAi));
+        assert!(!oauth.uses_responses_api(ProviderType::OpenRouter));
+        assert!(!SendOptions::default().uses_responses_api(ProviderType::OpenAi));
+        assert!(!SendOptions::with_model("m").oauth);
+    }
 
     #[test]
     fn default_base_urls_per_provider() {

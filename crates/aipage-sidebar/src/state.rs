@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use serde_json::{json, Value};
 
 use aipage_bindings::tabs;
+use aipage_core::oauth::{self, Credential};
 use aipage_core::providers::SendOptions;
 use aipage_core::types::{ContextAction, Message, ProviderType, Role};
 use aipage_core::{agent, chat, i18n, imagegen, providers, storage};
@@ -126,11 +127,53 @@ fn alert(message: &str) {
     }
 }
 
-fn local_opts(url: String, model: String) -> SendOptions {
+fn local_opts(url: String, model: String, oauth: bool) -> SendOptions {
     SendOptions {
         base_url: (!url.is_empty()).then_some(url),
         model_name: (!model.is_empty()).then_some(model),
+        oauth,
     }
+}
+
+// --- credentials ---
+
+/// What a request to the current provider authenticates with: the API key,
+/// or (ChatGPT / OpenAI only) the Sign-in-with-ChatGPT access token.
+#[derive(Clone, Debug, Default)]
+pub struct Auth {
+    /// API key or OAuth access token; empty when nothing is configured.
+    pub key: String,
+    /// `key` is an OAuth access token (requests go to the Responses API).
+    pub oauth: bool,
+}
+
+/// Resolve the credential for `provider`: a saved API key wins, else the
+/// stored OAuth tokens (refreshed first when about to expire), else nothing.
+pub async fn resolve_auth(provider: ProviderType) -> Auth {
+    let key = storage::get_api_key(provider).await;
+    let key_set = key.as_deref().is_some_and(|k| !k.trim().is_empty());
+    let tokens = if provider == ProviderType::OpenAi && !key_set { oauth::flow::current_tokens().await } else { None };
+    match oauth::resolve_credential(key.as_deref(), tokens) {
+        Credential::ApiKey(k) => Auth { key: k, oauth: false },
+        Credential::OAuth(t) => Auth { key: t.access_token, oauth: true },
+        Credential::None => Auth::default(),
+    }
+}
+
+/// Run a provider request with `auth`; when it fails with HTTP 401 on an
+/// OAuth token, refresh the token once and retry.
+async fn with_auth_retry<T, F, Fut>(auth: &Auth, op: F) -> Result<T, String>
+where
+    F: Fn(String) -> Fut,
+    Fut: std::future::Future<Output = Result<T, String>>,
+{
+    let first = op(auth.key.clone()).await;
+    if first.is_err() && auth.oauth && oauth::flow::last_request_unauthorized() {
+        if let Some(fresh) = oauth::flow::force_refresh().await {
+            return op(fresh.access_token).await;
+        }
+    }
+    first
 }
 
 // --- actions ---
@@ -139,30 +182,31 @@ fn local_opts(url: String, model: String) -> SendOptions {
 /// one-shot path for local providers.
 pub async fn handle_send(app: AppState, chat: ChatState, text: String) {
     let provider = app.provider.get_untracked();
-    let key = storage::get_api_key(provider).await.unwrap_or_default();
+    let auth = resolve_auth(provider).await;
     let local = storage::get_local_settings(provider).await;
-    let opts = local_opts(local.url, local.model);
+    let opts = local_opts(local.url, local.model, auth.oauth);
 
     if provider.supports_native_tools() {
-        send_agent_message(chat, provider, key, text, opts).await;
+        send_agent_message(chat, provider, auth, text, opts).await;
     } else {
-        send_message(chat, provider, key, text, opts).await;
+        send_message(chat, provider, auth, text, opts).await;
     }
 }
 
 /// Direct request/response send.
-pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, text: String, opts: SendOptions) {
+pub async fn send_message(chat: ChatState, provider: ProviderType, auth: Auth, text: String, opts: SendOptions) {
     if text.trim().is_empty() {
         return;
     }
-    if key.is_empty() && provider.requires_api_key() {
+    if auth.key.is_empty() && provider.requires_api_key() {
         return;
     }
     chat.add(Role::User, text.clone(), None, None);
     chat.is_typing.set(true);
     chat.add(Role::Ai, chat::THINKING_PLACEHOLDER, None, None);
 
-    match providers::send_message(provider, &text, &key, &opts).await {
+    let (text_ref, opts_ref) = (&text, &opts);
+    match with_auth_retry(&auth, |k| async move { providers::send_message(provider, text_ref, &k, opts_ref).await }).await {
         Ok(resp) => chat.update_last(resp),
         Err(e) => chat.update_last(format!("Chyba: {e}")),
     }
@@ -170,8 +214,8 @@ pub async fn send_message(chat: ChatState, provider: ProviderType, key: String, 
 }
 
 /// Agentic send with fallback to a direct reply.
-pub async fn send_agent_message(chat: ChatState, provider: ProviderType, key: String, text: String, opts: SendOptions) {
-    if text.trim().is_empty() || key.is_empty() {
+pub async fn send_agent_message(chat: ChatState, provider: ProviderType, auth: Auth, text: String, opts: SendOptions) {
+    if text.trim().is_empty() || auth.key.is_empty() {
         return;
     }
     chat.add(Role::User, text.clone(), None, None);
@@ -179,11 +223,14 @@ pub async fn send_agent_message(chat: ChatState, provider: ProviderType, key: St
     chat.add(Role::Ai, chat::THINKING_PLACEHOLDER, None, None);
 
     let on_text = move |t: String| chat.update_last(t);
-    match agent::run_agent_turn(provider, &key, &text, &opts, on_text).await {
+    let (text_ref, opts_ref) = (&text, &opts);
+    let agent = with_auth_retry(&auth, |k| async move { agent::run_agent_turn(provider, &k, text_ref, opts_ref, on_text).await });
+    match agent.await {
         Ok(()) => {}
         Err(_) => {
             // Fall back to a direct (no-tools) reply from the same provider.
-            match providers::send_message(provider, &text, &key, &opts).await {
+            let direct = with_auth_retry(&auth, |k| async move { providers::send_message(provider, text_ref, &k, opts_ref).await });
+            match direct.await {
                 Ok(resp) => chat.update_last(resp),
                 Err(e) => chat.update_last(format!("Chyba: {e}")),
             }
@@ -257,12 +304,13 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
     chat.add(Role::Ai, "Searching the web...", None, None);
 
     let provider = app.provider.get_untracked();
-    let key = storage::get_api_key(provider).await.unwrap_or_default();
+    let auth = resolve_auth(provider).await;
     let local = storage::get_local_settings(provider).await;
-    let opts = local_opts(local.url.clone(), local.model.clone());
+    let opts = local_opts(local.url.clone(), local.model.clone(), auth.oauth);
 
     if provider.supports_native_tools() {
-        match providers::web_search(provider, query.trim(), &key, &opts).await {
+        let (q, opts_ref) = (query.trim(), &opts);
+        match with_auth_retry(&auth, |k| async move { providers::web_search(provider, q, &k, opts_ref).await }).await {
             Ok(answer) => chat.update_last(if answer.is_empty() { "No results found.".to_string() } else { answer }),
             Err(e) => chat.update_last(format!("Search error: {e}")),
         }
@@ -301,7 +349,7 @@ pub async fn search_web(app: AppState, chat: ChatState, query: String) {
         "Based on these web search results for \"{query}\":\n\n{formatted}\n\nPlease provide a comprehensive answer in {language_name} based on these search results."
     );
     // Reuse the direct send path (it appends its own user/placeholder bubbles).
-    send_message(chat, provider, key, search_prompt, opts).await;
+    send_message(chat, provider, auth, search_prompt, opts).await;
 }
 
 pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
@@ -310,7 +358,7 @@ pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     chat.add(Role::Ai, app.tr().image_gen_generating.clone(), None, None);
 
     let provider = app.provider.get_untracked();
-    let key = storage::get_api_key(provider).await.unwrap_or_default();
+    let auth = resolve_auth(provider).await;
     let local = storage::get_local_settings(provider).await;
     let img_provider = app.image_gen_provider.get_untracked();
     let base_url = if img_provider == "sdwebui" {
@@ -325,13 +373,19 @@ pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     let options = imagegen::ImageGenOptions {
         provider: img_provider,
         chat_provider: provider,
-        api_key: key,
+        api_key: auth.key.clone(),
+        oauth: auth.oauth,
         base_url,
         model,
         size: app.image_gen_size.get_untracked(),
     };
 
-    match imagegen::generate_image(&prompt, &options).await {
+    let (prompt_ref, options_ref) = (&prompt, &options);
+    let generated = with_auth_retry(&auth, |k| async move {
+        let opts = imagegen::ImageGenOptions { api_key: k, ..options_ref.clone() };
+        imagegen::generate_image(prompt_ref, &opts).await
+    });
+    match generated.await {
         Ok(data_url) => chat.update_last_image(data_url, prompt),
         Err(e) => chat.update_last(format!("{}: {e}", app.tr().image_gen_failed)),
     }
@@ -381,11 +435,13 @@ pub async fn auto_answer(app: AppState, chat: ChatState) {
         chat.is_typing.set(true);
 
         let provider = app.provider.get_untracked();
-        let key = storage::get_api_key(provider).await.unwrap_or_default();
+        let auth = resolve_auth(provider).await;
         let local = storage::get_local_settings(provider).await;
-        let opts = local_opts(local.url, local.model);
+        let opts = local_opts(local.url, local.model, auth.oauth);
 
-        let answer = match providers::send_message(provider, &prompt, &key, &opts).await {
+        let (prompt_ref, opts_ref) = (&prompt, &opts);
+        let sent = with_auth_retry(&auth, |k| async move { providers::send_message(provider, prompt_ref, &k, opts_ref).await });
+        let answer = match sent.await {
             Ok(a) => a.trim().to_string(),
             Err(e) => {
                 chat.update_last(format!("❌ Auto-answer error: {e}"));
