@@ -104,6 +104,31 @@ if [ -z "$project" ]; then
 fi
 echo "setup-safari: Xcode project: $project"
 
+# Pin the bundle identifiers to <bundle-id> (app) and <bundle-id>.Extension.
+# The Xcode 26 packager derives the app's id from the --bundle-identifier
+# prefix plus the app name (dev.hesburger.AIPage) while the extension keeps
+# <bundle-id>.Extension, so ValidateEmbeddedBinary rejects the build ("not
+# prefixed with the parent app's bundle identifier"). Rewrite every generated
+# id (pbxproj, plists, the Swift that names the extension); extension ids
+# first so an app id that prefixes one cannot clobber it.
+pbxproj="$project/project.pbxproj"
+generated_ids="$(perl -ne 'print "$1\n" while /PRODUCT_BUNDLE_IDENTIFIER = "?([^";\s]+)"?;/g' "$pbxproj" | sort -u)"
+for pass in extension app; do
+  while IFS= read -r old_id; do
+    [ -n "$old_id" ] || continue
+    case "$old_id" in
+      *.Extension) [ "$pass" = extension ] || continue; new_id="$bundle_id.Extension" ;;
+      *) [ "$pass" = app ] || continue; new_id="$bundle_id" ;;
+    esac
+    [ "$old_id" != "$new_id" ] || continue
+    echo "setup-safari: bundle id $old_id -> $new_id"
+    grep -rlF --exclude-dir=build "$old_id" "$out" | while IFS= read -r file; do
+      OLD="$old_id" NEW="$new_id" perl -pi -e 's/\Q$ENV{OLD}\E(?![\w.-])/$ENV{NEW}/g' "$file"
+    done
+  done <<<"$generated_ids"
+done
+echo "setup-safari: bundle ids: $(perl -ne 'print "$1 " while /PRODUCT_BUNDLE_IDENTIFIER = "?([^";\s]+)"?;/g' "$pbxproj" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+
 if [ "$do_build" -eq 0 ]; then
   cat <<EOF
 

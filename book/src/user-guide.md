@@ -127,7 +127,7 @@ manifest `aipage-web.json` (`version`, git `sha`, `built_at`, and the
 sha256/size of every file) and the individual files (`sidebar.html`,
 `sidebar.<hash>.js`, `sidebar_bg.<hash>.wasm`, `sidebar_loader.<hash>.js`,
 `sidebar.<hash>.css`, `tailwind.<hash>.css`). Settings → *Hosted UI* →
-**Update the sidebar from GitHub releases (<channel>)** (off by default, key
+**Update the sidebar from GitHub releases (&lt;channel&gt;)** (off by default, key
 `ui_bundle_update_enabled`) makes the background download the glue, wasm and
 stylesheets of the channel's release — directly from the release assets, no
 zip is unpacked — verify each file's sha256 against `aipage-web.json` and
