@@ -103,11 +103,21 @@ export function htmlLocalAssets(html: string): string[] {
   return out;
 }
 
+/** Remove HTML comments, repeating until none remain (nested `<!--` left by one pass). */
+function stripHtmlComments(html: string): string {
+  let out = html;
+  for (;;) {
+    const next = out.replace(/<!--[\s\S]*?-->/g, '');
+    if (next === out) return out;
+    out = next;
+  }
+}
+
 /** Inline-script constructs an MV2 extension page CSP (`script-src 'self'`) blocks. */
 export function inlineScriptViolations(html: string): string[] {
   const violations: string[] = [];
-  const stripped = html.replace(/<!--[\s\S]*?-->/g, '');
-  for (const m of stripped.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+  const stripped = stripHtmlComments(html);
+  for (const m of stripped.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
     if (!/\bsrc\s*=/.test(m[1]) && m[2].trim() !== '') violations.push(`inline <script>: ${m[2].trim().slice(0, 60)}`);
   }
   for (const m of stripped.matchAll(/\son[a-z]+\s*=\s*["'][^"']*["']/gi)) violations.push(`inline handler: ${m[0].trim()}`);
