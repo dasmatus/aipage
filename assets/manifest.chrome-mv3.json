@@ -8,7 +8,8 @@
     "activeTab",
     "downloads",
     "alarms",
-    "notifications"
+    "notifications",
+    "identity"
   ],
   "host_permissions": [
     "*://*.edupage.org/*",
