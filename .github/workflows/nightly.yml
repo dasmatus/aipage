@@ -107,10 +107,16 @@ jobs:
     uses: ./.github/workflows/build.yml
     permissions:
       contents: read
+    # `secrets: inherit` hands the AMO credentials (WEB_EXT_API_KEY /
+    # WEB_EXT_API_SECRET) to the reusable workflow; without them the nightly
+    # ships aipage-firefox-unsigned.xpi. The stamped version is unique per
+    # day, which is what AMO requires for every upload.
+    secrets: inherit
     with:
       version: ${{ needs.check.outputs.version }}
       version-name: ${{ needs.check.outputs.version-name }}
       install-tests: true
+      sign-firefox: true
       artifact-name: aipage-nightly
 
   publish:
@@ -127,6 +133,16 @@ jobs:
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
+      # Built on a macOS runner in the same build workflow. The macOS job is
+      # advisory (continue-on-error), so a missing artifact only drops the
+      # asset from the release and is reported in the notes.
+      - name: Download the Safari app wrapper (macOS build)
+        id: safari-app
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.safari-artifact-name }}
+
       - name: Write release notes and nightly.json
         env:
           PREVIOUS_SHA: ${{ needs.check.outputs.previous-sha }}
@@ -134,6 +150,7 @@ jobs:
           VERSION_NAME: ${{ needs.check.outputs.version-name }}
           DATE: ${{ needs.check.outputs.date }}
           SHORT_SHA: ${{ needs.check.outputs.short-sha }}
+          FIREFOX_SIGNED: ${{ needs.build.outputs.firefox-signed }}
         run: |
           set -euo pipefail
           pretty_date="$(date -u -d "${DATE}" +%Y-%m-%d)"
@@ -143,11 +160,34 @@ jobs:
           # One markdown bullet per commit, linking to the commit page.
           log_format="- %s ([\`%h\`](${repo_url}/commit/%H))"
 
+          # The packages present in this run (the Firefox name depends on
+          # whether AMO signing happened; the Safari app on the macOS job).
+          assets=()
+          for f in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
+            [ -f "$f" ] && assets+=("$f")
+          done
+          test -f aipage-chrome.zip
+          test -f aipage-safari.zip
+          { [ -f aipage-firefox.xpi ] || [ -f aipage-firefox-unsigned.xpi ]; }
+          printf 'assets: %s\n' "${assets[*]}"
+          printf '%s\n' "${assets[@]}" > assets.txt
+
+          if [ "${FIREFOX_SIGNED}" = "true" ]; then
+            firefox_note="**Firefox**: \`aipage-firefox.xpi\` is signed by addons.mozilla.org (self-distribution) — open it in Firefox and confirm the install; it stays installed across restarts."
+          else
+            firefox_note="**Firefox**: \`aipage-firefox-unsigned.xpi\` is *not* signed (no AMO credentials in this run) — load it as a temporary add-on from \`about:debugging\`; it is removed when Firefox exits."
+          fi
+          if [ -f aipage-safari-macos.zip ]; then
+            safari_note="**Safari (macOS)**: \`aipage-safari-macos.zip\` holds the unsigned \`AIPage.app\` wrapper — unzip, open it once (right-click → Open), enable *Allow unsigned extensions* in Safari's Developer settings, then enable AIPage under Safari → Settings → Extensions. \`aipage-safari.zip\` is the bare web extension for Xcode."
+          else
+            safari_note="**Safari (macOS)**: the macOS app wrapper was not produced in this run (see the *Safari app wrapper* job); \`aipage-safari.zip\` is the bare web extension for Xcode."
+          fi
+
           {
             echo "<!-- nightly-sha: ${GITHUB_SHA} -->"
             echo "Automated build of \`${GITHUB_REF_NAME}\` at [\`${SHORT_SHA}\`](${repo_url}/commit/${GITHUB_SHA}) — manifest version \`${VERSION}\` (\`${VERSION_NAME}\`)."
             echo
-            echo "Unsigned development build: install it unpacked (Chrome), as a temporary add-on (Firefox) or via Xcode (Safari) — see the README's \"Nightly builds\" section."
+            echo "Development build of whatever is on \`${GITHUB_REF_NAME}\`. **Chrome**: unpacked install of \`aipage-chrome.zip\` (Brave or an MV2-capable Chromium). ${firefox_note} ${safari_note} See the README's \"Nightly builds\" section."
             echo
             if [ -n "${PREVIOUS_SHA}" ] && git cat-file -e "${PREVIOUS_SHA}^{commit}" 2>/dev/null \
                && git merge-base --is-ancestor "${PREVIOUS_SHA}" "${GITHUB_SHA}"; then
@@ -176,9 +216,12 @@ jobs:
             --arg date "${DATE}" \
             --arg previous_sha "${PREVIOUS_SHA}" \
             --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --argjson firefox_signed "$([ "${FIREFOX_SIGNED}" = "true" ] && echo true || echo false)" \
+            --rawfile assets_txt assets.txt \
             '{sha: $sha, short_sha: $short_sha, version: $version, version_name: $version_name,
               date: $date, previous_sha: $previous_sha, run_url: $run_url,
-              assets: ["aipage-chrome.zip", "aipage-firefox.xpi", "aipage-safari.zip"]}' \
+              firefox_signed: $firefox_signed,
+              assets: ($assets_txt | split("\n") | map(select(length > 0)))}' \
             > nightly.json
           cat nightly.json
 
@@ -211,14 +254,14 @@ jobs:
 
           # Replace the assets. nightly.json goes last so the skip check in the
           # next run only sees this commit once every package uploaded.
+          # Every previous asset is deleted, so a run without AMO credentials
+          # (or without the macOS wrapper) never leaves a stale signed xpi /
+          # app from an earlier night next to this night's packages.
           existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/nightly" --jq '.assets[].name' || true)"
           for asset in $existing_assets; do
             gh release delete-asset nightly "$asset" --yes || true
           done
-          gh release upload nightly --clobber \
-            aipage-chrome.zip \
-            aipage-firefox.xpi \
-            aipage-safari.zip \
-            nightly.json
+          mapfile -t assets < assets.txt
+          gh release upload nightly --clobber "${assets[@]}" nightly.json
 
           echo "Published ${title}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/nightly"
