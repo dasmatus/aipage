@@ -13,7 +13,7 @@ use aipage_core::providers::{ModelInfo, SendOptions};
 use serde_json::{json, Value};
 
 fn opts(base: Option<&str>, model: Option<&str>) -> SendOptions {
-    SendOptions { base_url: base.map(str::to_string), model_name: model.map(str::to_string) }
+    SendOptions { base_url: base.map(str::to_string), model_name: model.map(str::to_string), oauth: false }
 }
 
 #[test]

@@ -87,6 +87,8 @@ extern "C" {
     fn chrome_tabs_send_message(tab_id: i32, msg: &JsValue, cb: &Function);
     #[wasm_bindgen(js_namespace = ["chrome", "tabs"], js_name = query)]
     fn chrome_tabs_query(query: &JsValue, cb: &Function);
+    #[wasm_bindgen(js_namespace = ["chrome", "tabs"], js_name = create)]
+    fn chrome_tabs_create(props: &JsValue, cb: &Function);
 
     // --- notifications ---
     #[wasm_bindgen(js_namespace = ["chrome", "notifications"], js_name = create)]
@@ -289,6 +291,17 @@ pub mod tabs {
         }
     }
 
+    /// `chrome.tabs.create({ url })`: open `url` in a new tab. Over the
+    /// bridge the content script asks the background to do it (content
+    /// scripts have no `chrome.tabs`).
+    pub async fn create(url: &str) -> JsResult {
+        let props = js_object(&[("url", JsValue::from_str(url))]);
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_tabs_create(&props, cb)).await,
+            Transport::Bridge => bridge::call(bridge::Method::TabsCreate, &[&props]).await,
+        }
+    }
+
     /// Id of the active tab in the last focused window, if any.
     pub async fn active_tab_id() -> Option<i32> {
         let q = to_js(&serde_json::json!({ "active": true, "lastFocusedWindow": true }));
@@ -351,6 +364,113 @@ pub mod action {
         let cb = Closure::wrap(Box::new(move |tab: JsValue| handler(tab)) as Box<dyn Fn(JsValue)>);
         let _ = add.call1(&on_clicked, cb.as_ref().unchecked_ref());
         cb.forget();
+    }
+}
+
+pub mod identity {
+    //! `chrome.identity` (Chrome, Firefox; absent on Safari): the OAuth
+    //! redirect URL and `launchWebAuthFlow`. Bound dynamically so a missing
+    //! namespace is reported as "unavailable" instead of throwing, and
+    //! `runtime.lastError` (user closed the window, bad redirect) becomes an
+    //! `Err`. Over the bridge both calls are relayed to the background,
+    //! which is the only bridge end with the `identity` API.
+    use super::*;
+
+    /// `chrome.identity` when it exists and has `launchWebAuthFlow`.
+    fn api() -> Option<JsValue> {
+        let chrome = Reflect::get(&js_sys::global(), &"chrome".into()).ok()?;
+        let identity = Reflect::get(&chrome, &"identity".into()).ok()?;
+        let has_launch = Reflect::get(&identity, &"launchWebAuthFlow".into())
+            .map(|f| f.is_function())
+            .unwrap_or(false);
+        (identity.is_object() && has_launch).then_some(identity)
+    }
+
+    /// Whether this context has the identity API (direct transport only).
+    pub fn available() -> bool {
+        transport() == Transport::Direct && api().is_some()
+    }
+
+    fn get_redirect_url_direct() -> Option<String> {
+        let identity = api()?;
+        let f = Reflect::get(&identity, &"getRedirectURL".into()).ok()?.dyn_into::<Function>().ok()?;
+        f.call0(&identity).ok()?.as_string()
+    }
+
+    /// `chrome.identity.getRedirectURL()`: the URL to register with the
+    /// OAuth provider (`https://<id>.chromiumapp.org/` on Chrome,
+    /// `https://<uuid>.extensions.allizom.org/` on Firefox). `None` when the
+    /// browser has no identity API.
+    pub async fn get_redirect_url() -> Option<String> {
+        match transport() {
+            Transport::Direct => get_redirect_url_direct(),
+            Transport::Bridge => bridge::call(bridge::Method::IdentityGetRedirectUrl, &[])
+                .await
+                .ok()
+                .and_then(|v| v.as_string()),
+        }
+    }
+
+    /// `chrome.runtime.lastError.message`, if set.
+    fn last_error() -> Option<String> {
+        let chrome = Reflect::get(&js_sys::global(), &"chrome".into()).ok()?;
+        let runtime = Reflect::get(&chrome, &"runtime".into()).ok()?;
+        let err = Reflect::get(&runtime, &"lastError".into()).ok()?;
+        if err.is_undefined() || err.is_null() {
+            return None;
+        }
+        Some(
+            Reflect::get(&err, &"message".into())
+                .ok()
+                .and_then(|m| m.as_string())
+                .unwrap_or_else(|| "identity.launchWebAuthFlow failed".to_string()),
+        )
+    }
+
+    async fn launch_direct(url: &str) -> Result<String, String> {
+        let identity = api().ok_or("this browser has no identity API")?;
+        let launch = Reflect::get(&identity, &"launchWebAuthFlow".into())
+            .ok()
+            .and_then(|f| f.dyn_into::<Function>().ok())
+            .ok_or("identity.launchWebAuthFlow is unavailable")?;
+        let details = js_object(&[("url", JsValue::from_str(url)), ("interactive", JsValue::TRUE)]);
+        let promise = Promise::new(&mut |resolve, _reject| {
+            let resolve_on_throw = resolve.clone();
+            let cb = Closure::once_into_js(move |result: JsValue| {
+                // Report lastError through the resolved value: a string
+                // redirect URL on success, `{ error }` on failure.
+                let out = match last_error() {
+                    Some(e) => js_object(&[("error", JsValue::from_str(&e))]),
+                    None => result,
+                };
+                let _ = resolve.call1(&JsValue::NULL, &out);
+            });
+            if launch.call2(&identity, &details, cb.unchecked_ref()).is_err() {
+                let _ = resolve_on_throw.call1(
+                    &JsValue::NULL,
+                    &js_object(&[("error", JsValue::from_str("identity.launchWebAuthFlow threw"))]),
+                );
+            }
+        });
+        let out = JsFuture::from(promise).await.map_err(|e| e.as_string().unwrap_or_else(|| format!("{e:?}")))?;
+        if let Some(url) = out.as_string() {
+            return Ok(url);
+        }
+        let err = Reflect::get(&out, &"error".into()).ok().and_then(|e| e.as_string());
+        Err(err.unwrap_or_else(|| "the sign-in window was closed".to_string()))
+    }
+
+    /// `chrome.identity.launchWebAuthFlow({ url, interactive: true })`:
+    /// opens the authorization page and resolves to the final redirect URL
+    /// (query string included).
+    pub async fn launch_web_auth_flow(url: &str) -> Result<String, String> {
+        match transport() {
+            Transport::Direct => launch_direct(url).await,
+            Transport::Bridge => bridge::call(bridge::Method::IdentityLaunchWebAuthFlow, &[&JsValue::from_str(url)])
+                .await
+                .map_err(|e| e.as_string().unwrap_or_else(|| format!("{e:?}")))
+                .and_then(|v| v.as_string().ok_or_else(|| "no redirect URL".to_string())),
+        }
     }
 }
 

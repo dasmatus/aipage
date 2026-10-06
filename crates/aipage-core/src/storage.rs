@@ -7,6 +7,7 @@ use aipage_bindings::storage;
 use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::JsValue;
 
+use crate::oauth::{TokenSet, KEY_OPENAI_OAUTH, KEY_OPENAI_OAUTH_CLIENT_ID};
 use crate::remote_ui::{KEY_REMOTE_UI_ENABLED, KEY_REMOTE_UI_URL};
 use crate::types::ProviderType;
 use crate::updates::{UpdateChannel, KEY_UI_BUNDLE_UPDATE_ENABLED, KEY_UPDATE_CHANNEL, KEY_UPDATE_NOTIFIED_SHA};
@@ -104,6 +105,37 @@ pub async fn get_api_key(provider: ProviderType) -> Option<String> {
 
 pub async fn set_api_key(provider: ProviderType, key: &str) {
     set_string(api_key_key(provider), key).await;
+}
+
+// --- Sign in with ChatGPT (OAuth) ---
+
+/// The stored OAuth token set for the ChatGPT / OpenAI provider, if signed
+/// in. An unreadable value counts as signed out.
+pub async fn get_openai_oauth() -> Option<TokenSet> {
+    let raw = get_raw(KEY_OPENAI_OAUTH).await;
+    if raw.is_undefined() || raw.is_null() {
+        return None;
+    }
+    serde_json::from_value(aipage_bindings::from_js(&raw)).ok()
+}
+
+pub async fn save_openai_oauth(tokens: &TokenSet) {
+    set_value(KEY_OPENAI_OAUTH, aipage_bindings::to_js(tokens)).await;
+}
+
+/// Forget the sign-in (the key is set to `null`; `storage.local.remove` is
+/// not part of the bridge surface).
+pub async fn clear_openai_oauth() {
+    set_value(KEY_OPENAI_OAUTH, JsValue::NULL).await;
+}
+
+/// Raw client-id override (may be empty); see `oauth::effective_client_id`.
+pub async fn get_openai_oauth_client_id() -> String {
+    get_string(KEY_OPENAI_OAUTH_CLIENT_ID).await.unwrap_or_default()
+}
+
+pub async fn save_openai_oauth_client_id(id: &str) {
+    set_string(KEY_OPENAI_OAUTH_CLIENT_ID, id.trim()).await;
 }
 
 // --- local settings (url + model) ---

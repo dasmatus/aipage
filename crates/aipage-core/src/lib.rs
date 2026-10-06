@@ -10,6 +10,7 @@ pub mod chat;
 pub mod i18n;
 pub mod imagegen;
 pub mod markdown;
+pub mod oauth;
 pub mod providers;
 pub mod proxy;
 pub mod remote_ui;

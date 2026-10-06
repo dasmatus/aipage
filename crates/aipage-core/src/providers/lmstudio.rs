@@ -29,7 +29,7 @@ mod tests {
     #[test]
     fn models_base_url_only_strips_v1() {
         assert_eq!(models_base_url(&SendOptions::default()), "http://localhost:1234");
-        let ws = SendOptions { base_url: Some("ws://host:1/v1".into()), model_name: None };
+        let ws = SendOptions { base_url: Some("ws://host:1/v1".into()), ..SendOptions::default() };
         assert_eq!(models_base_url(&ws), "ws://host:1");
     }
 

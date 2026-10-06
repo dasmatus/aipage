@@ -42,6 +42,14 @@ for (const target of TARGETS) {
         expect(m.permissions as string[]).toContain(`${host}/*`);
       }
       expect(m.permissions as string[]).not.toContain('https://codeberg.org/*');
+      // Sign in with ChatGPT: the OAuth endpoints go through the background
+      // proxy (host + connect-src everywhere); `identity.launchWebAuthFlow`
+      // exists on Chrome and Firefox only, Safari uses the paste-the-URL
+      // fallback and must not request a permission it cannot grant.
+      expect(m.permissions as string[]).toContain('https://auth.openai.com/*');
+      expect(m.content_security_policy).toMatch(/connect-src [^;]*https:\/\/auth\.openai\.com/);
+      if (target === 'safari') expect(m.permissions as string[]).not.toContain('identity');
+      else expect(m.permissions as string[]).toContain('identity');
       if (target === 'firefox') expect(m.browser_specific_settings?.gecko?.id).toBeTruthy();
       // `version_name` is Chrome-only; xtask drops it for the other targets.
       if (target !== 'chrome') expect(m.version_name).toBeUndefined();

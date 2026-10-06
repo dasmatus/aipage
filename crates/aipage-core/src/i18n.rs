@@ -100,6 +100,24 @@ pub struct Translation {
     pub openai_api_key_hint: String,
     // Claude (Anthropic) — `provider_anthropic` is declared above with the
     // other engine labels.
+    // Sign in with ChatGPT (OAuth) for the ChatGPT / OpenAI engine
+    pub openai_sign_in: String,
+    pub openai_sign_out: String,
+    pub openai_signed_in_as: String,
+    pub openai_not_signed_in: String,
+    pub openai_signing_in: String,
+    pub openai_oauth_description: String,
+    pub openai_oauth_client_id_missing: String,
+    pub openai_oauth_client_id: String,
+    pub openai_oauth_client_id_hint: String,
+    pub openai_redirect_url: String,
+    pub openai_redirect_url_hint: String,
+    pub openai_oauth_paste_url: String,
+    pub openai_oauth_paste_url_hint: String,
+    pub openai_oauth_complete: String,
+    pub openai_oauth_error: String,
+    pub openai_oauth_signed_out: String,
+    pub openai_oauth_no_plan_scope: String,
     pub anthropic_api_key: String,
     pub anthropic_api_key_placeholder: String,
     pub anthropic_api_key_hint: String,
@@ -198,6 +216,27 @@ mod tests {
             assert!(!t.openai_api_key.is_empty(), "{code} openaiApiKey empty");
             assert!(!t.openai_api_key_placeholder.is_empty(), "{code} openaiApiKeyPlaceholder empty");
             assert!(t.openai_api_key_hint.contains("platform.openai.com/api-keys"), "{code} openaiApiKeyHint");
+            assert!(t.openai_sign_in.contains("ChatGPT"), "{code} openaiSignIn should name ChatGPT");
+            assert!(t.openai_signed_in_as.contains("{email}"), "{code} openaiSignedInAs needs {{email}}");
+            assert!(t.openai_oauth_error.contains("{error}"), "{code} openaiOauthError needs {{error}}");
+            for (name, s) in [
+                ("openaiSignOut", &t.openai_sign_out),
+                ("openaiNotSignedIn", &t.openai_not_signed_in),
+                ("openaiSigningIn", &t.openai_signing_in),
+                ("openaiOauthDescription", &t.openai_oauth_description),
+                ("openaiOauthClientIdMissing", &t.openai_oauth_client_id_missing),
+                ("openaiOauthClientId", &t.openai_oauth_client_id),
+                ("openaiOauthClientIdHint", &t.openai_oauth_client_id_hint),
+                ("openaiRedirectUrl", &t.openai_redirect_url),
+                ("openaiRedirectUrlHint", &t.openai_redirect_url_hint),
+                ("openaiOauthPasteUrl", &t.openai_oauth_paste_url),
+                ("openaiOauthPasteUrlHint", &t.openai_oauth_paste_url_hint),
+                ("openaiOauthComplete", &t.openai_oauth_complete),
+                ("openaiOauthSignedOut", &t.openai_oauth_signed_out),
+                ("openaiOauthNoPlanScope", &t.openai_oauth_no_plan_scope),
+            ] {
+                assert!(!s.is_empty(), "{code} {name} empty");
+            }
             assert_eq!(t.provider_anthropic, "Claude (Anthropic)", "{code} providerAnthropic");
             assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
             assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");

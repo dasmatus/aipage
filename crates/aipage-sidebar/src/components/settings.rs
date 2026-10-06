@@ -4,8 +4,9 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_json::{json, Value};
 
-use aipage_bindings::{from_js, runtime, to_js};
+use aipage_bindings::{from_js, identity, runtime, tabs, to_js};
 use aipage_core::i18n::Translation;
+use aipage_core::oauth::{self, TokenSet};
 use aipage_core::providers::{self, ModelInfo, SendOptions};
 use aipage_core::types::ProviderType;
 use aipage_core::updates::UpdateChannel;
@@ -170,11 +171,157 @@ impl UpdateControls {
     }
 }
 
+/// State of the "Sign in with ChatGPT" controls (ChatGPT / OpenAI engine).
+#[derive(Clone, Copy)]
+struct OAuthControls {
+    /// The stored token set while signed in.
+    tokens: RwSignal<Option<TokenSet>>,
+    /// Effective client id (build-time constant or the stored override);
+    /// empty disables the sign-in button.
+    client_id: RwSignal<String>,
+    /// The stored override as typed.
+    client_id_override: RwSignal<String>,
+    /// The redirect URL to register with OpenAI (`identity.getRedirectURL`,
+    /// or the hosted-UI fallback when there is no identity API).
+    redirect_url: RwSignal<String>,
+    /// `false` when the browser has no `identity` API (Safari): the
+    /// authorization page opens in a tab and the user pastes the result.
+    has_identity: RwSignal<bool>,
+    /// A started sign-in waiting for the pasted redirect URL.
+    pending: RwSignal<Option<oauth::flow::Pending>>,
+    pasted_url: RwSignal<String>,
+    busy: RwSignal<bool>,
+    error: RwSignal<Option<String>>,
+    notice: RwSignal<Option<String>>,
+}
+
+impl OAuthControls {
+    fn new() -> Self {
+        Self {
+            tokens: RwSignal::new(None),
+            client_id: RwSignal::new(String::new()),
+            client_id_override: RwSignal::new(String::new()),
+            redirect_url: RwSignal::new(String::new()),
+            has_identity: RwSignal::new(true),
+            pending: RwSignal::new(None),
+            pasted_url: RwSignal::new(String::new()),
+            busy: RwSignal::new(false),
+            error: RwSignal::new(None),
+            notice: RwSignal::new(None),
+        }
+    }
+
+    /// Load the stored sign-in, the client id and the redirect URL.
+    async fn load(self) {
+        self.tokens.set(storage::get_openai_oauth().await);
+        let stored = storage::get_openai_oauth_client_id().await;
+        self.client_id.set(oauth::effective_client_id(&stored));
+        self.client_id_override.set(stored);
+        match identity::get_redirect_url().await {
+            Some(url) => {
+                self.has_identity.set(true);
+                self.redirect_url.set(url);
+            }
+            None => {
+                self.has_identity.set(false);
+                self.redirect_url.set(self.fallback_redirect_uri().await);
+            }
+        }
+    }
+
+    async fn fallback_redirect_uri(self) -> String {
+        let stored = storage::get_remote_ui_url().await;
+        oauth::fallback_redirect_uri(&remote_ui::effective_remote_ui_url(Some(&stored)))
+    }
+
+    fn set_client_id_override(self, raw: String) {
+        self.client_id_override.set(raw.clone());
+        self.client_id.set(oauth::effective_client_id(&raw));
+        spawn_local(async move { storage::save_openai_oauth_client_id(&raw).await });
+    }
+
+    fn fail(self, app: AppState, e: &str) {
+        self.error.set(Some(app.tr().openai_oauth_error.replace("{error}", e)));
+    }
+
+    /// Start the sign-in: through `identity.launchWebAuthFlow`, or in a new
+    /// tab with the paste-the-URL fallback.
+    fn sign_in(self, app: AppState, on_signed_in: Callback<()>) {
+        if self.busy.get_untracked() || self.client_id.get_untracked().is_empty() {
+            return;
+        }
+        self.busy.set(true);
+        self.error.set(None);
+        self.notice.set(None);
+        spawn_local(async move {
+            let redirect_uri = self.redirect_url.get_untracked();
+            match oauth::flow::begin(&redirect_uri).await {
+                Err(e) => self.fail(app, &e),
+                Ok(pending) if self.has_identity.get_untracked() => match identity::launch_web_auth_flow(&pending.url).await {
+                    Ok(url) => self.finish(app, &pending, &url, on_signed_in).await,
+                    Err(e) => self.fail(app, &e),
+                },
+                Ok(pending) => match tabs::create(&pending.url).await {
+                    Ok(_) => self.pending.set(Some(pending)),
+                    Err(e) => self.fail(app, &e.as_string().unwrap_or_else(|| "could not open a tab".into())),
+                },
+            }
+            self.busy.set(false);
+        });
+    }
+
+    /// Fallback path: the user pasted the final redirect URL.
+    fn complete_pasted(self, app: AppState, on_signed_in: Callback<()>) {
+        let Some(pending) = self.pending.get_untracked() else { return };
+        let url = self.pasted_url.get_untracked();
+        if self.busy.get_untracked() || url.trim().is_empty() {
+            return;
+        }
+        self.busy.set(true);
+        self.error.set(None);
+        spawn_local(async move {
+            self.finish(app, &pending, &url, on_signed_in).await;
+            self.busy.set(false);
+        });
+    }
+
+    async fn finish(self, app: AppState, pending: &oauth::flow::Pending, redirect_url: &str, on_signed_in: Callback<()>) {
+        match oauth::flow::complete(pending, redirect_url).await {
+            Ok(tokens) => {
+                if !tokens.has_plan_usage() {
+                    self.notice.set(Some(app.tr().openai_oauth_no_plan_scope));
+                }
+                self.tokens.set(Some(tokens));
+                self.pending.set(None);
+                self.pasted_url.set(String::new());
+                on_signed_in.run(());
+            }
+            Err(e) => self.fail(app, &e),
+        }
+    }
+
+    fn sign_out(self, app: AppState) {
+        if self.busy.get_untracked() {
+            return;
+        }
+        self.busy.set(true);
+        self.error.set(None);
+        spawn_local(async move {
+            oauth::flow::sign_out().await;
+            self.tokens.set(None);
+            self.pending.set(None);
+            self.notice.set(Some(app.tr().openai_oauth_signed_out));
+            self.busy.set(false);
+        });
+    }
+}
+
 #[component]
 pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let app = use_context::<AppState>().unwrap();
 
     let api_key = RwSignal::new(String::new());
+    let oauth_controls = OAuthControls::new();
     let theme = RwSignal::new("default".to_string());
     let global_theme = RwSignal::new(false);
     let auto_update = RwSignal::new(false);
@@ -200,7 +347,16 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
         loading_models.set(true);
         fetch_error.set(None);
         spawn_local(async move {
-            let opts = SendOptions { base_url: Some(url), model_name: None };
+            // No key typed for ChatGPT / OpenAI: list with the sign-in token.
+            let (key, oauth) = match oauth::resolve_credential(Some(&key), None) {
+                oauth::Credential::ApiKey(k) => (k, false),
+                _ if provider == ProviderType::OpenAi => match oauth::flow::current_tokens().await {
+                    Some(t) => (t.access_token, true),
+                    None => (String::new(), false),
+                },
+                _ => (key, false),
+            };
+            let opts = SendOptions { base_url: Some(url), model_name: None, oauth };
             let models = providers::get_models(provider, &key, &opts).await;
             if models.is_empty() {
                 fetch_error.set(Some("No models found".to_string()));
@@ -229,6 +385,9 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             remote_ui_enabled.set(storage::get_remote_ui_enabled().await);
             remote_ui_url.set(storage::get_remote_ui_url().await);
             updates.load().await;
+            if provider == ProviderType::OpenAi {
+                oauth_controls.load().await;
+            }
 
             let url = if local.url.is_empty() {
                 providers::default_base_url(provider).to_string()
@@ -243,7 +402,9 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let save = move |_| {
         let provider = app.provider.get_untracked();
         let key = api_key.get_untracked();
-        if key.is_empty() && provider.requires_api_key() {
+        // A ChatGPT sign-in stands in for the OpenAI key.
+        let signed_in = provider == ProviderType::OpenAi && oauth_controls.tokens.get_untracked().is_some();
+        if key.is_empty() && provider.requires_api_key() && !signed_in {
             if let Some(w) = web_sys::window() {
                 let _ = w.alert_with_message(&app.tr().alert_please_enter_key);
             }
@@ -375,6 +536,11 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                                 placeholder=move || api_key_strings(&app.tr(), backend()).1/>
                             <p class="text-[10px] text-muted-foreground opacity-70">{move || api_key_strings(&app.tr(), backend()).2}</p>
                         </div>
+                        <Show when=move || backend() == ProviderType::OpenAi>
+                            <OpenAiOAuthSection controls=oauth_controls on_signed_in=Callback::new(move |_| {
+                                fetch_models(base_url.get_untracked(), api_key.get_untracked());
+                            })/>
+                        </Show>
                     </div>
                 </Card>
 
@@ -485,6 +651,83 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                         {move || app.tr().back_to_chat}
                     </button>
                 </footer>
+            </div>
+        </div>
+    }
+}
+
+/// "Sign in with ChatGPT" for the ChatGPT / OpenAI engine: status line,
+/// sign-in / sign-out, the redirect URL the owner registers with OpenAI,
+/// the client-id override, and the paste-the-URL fallback for browsers
+/// without an identity API.
+#[component]
+fn OpenAiOAuthSection(controls: OAuthControls, #[prop(into)] on_signed_in: Callback<()>) -> impl IntoView {
+    let app = use_context::<AppState>().unwrap();
+    let input_style = "background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color);";
+    let signed_in = move || controls.tokens.get().is_some();
+    let status = move || {
+        let t = app.tr();
+        match controls.tokens.get() {
+            Some(tokens) => t.openai_signed_in_as.replace("{email}", tokens.email.as_deref().unwrap_or("ChatGPT")),
+            None => t.openai_not_signed_in,
+        }
+    };
+    let client_id_missing = move || controls.client_id.get().is_empty();
+
+    view! {
+        <div class="space-y-3 pt-3 border-t" style="border-color: var(--border-color)">
+            <p class="text-[11px] text-muted-foreground">{move || app.tr().openai_oauth_description}</p>
+            <p id="openai-oauth-status" class="text-[11px] font-medium">{status}</p>
+            <div class="flex gap-2">
+                <Show when=move || !signed_in()>
+                    <button id="openai-oauth-sign-in" class="flex-1 h-9 px-3 rounded-lg border text-xs font-semibold" style="border-color: var(--border-color)"
+                        disabled=move || controls.busy.get() || client_id_missing()
+                        on:click=move |_| controls.sign_in(app, on_signed_in)>
+                        {move || if controls.busy.get() { app.tr().openai_signing_in } else { app.tr().openai_sign_in }}
+                    </button>
+                </Show>
+                <Show when=signed_in>
+                    <button id="openai-oauth-sign-out" class="flex-1 h-9 px-3 rounded-lg border text-xs" style="border-color: var(--border-color)"
+                        disabled=move || controls.busy.get()
+                        on:click=move |_| controls.sign_out(app)>
+                        {move || app.tr().openai_sign_out}
+                    </button>
+                </Show>
+            </div>
+            <Show when=client_id_missing>
+                <p id="openai-oauth-client-id-missing" class="text-[10px] text-muted-foreground opacity-80">{move || app.tr().openai_oauth_client_id_missing}</p>
+            </Show>
+            <Show when=move || controls.pending.get().is_some()>
+                <div class="space-y-2">
+                    <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().openai_oauth_paste_url}</label>
+                    <input id="openai-oauth-paste-url" class="w-full h-9 rounded-lg px-2 outline-none" style=input_style
+                        prop:value=move || controls.pasted_url.get()
+                        on:input=move |ev| controls.pasted_url.set(event_target_value(&ev))
+                        placeholder=move || controls.redirect_url.get()/>
+                    <p class="text-[10px] text-muted-foreground opacity-70">{move || app.tr().openai_oauth_paste_url_hint}</p>
+                    <button id="openai-oauth-complete" class="w-full h-9 px-3 rounded-lg border text-xs font-semibold" style="border-color: var(--border-color)"
+                        disabled=move || controls.busy.get()
+                        on:click=move |_| controls.complete_pasted(app, on_signed_in)>
+                        {move || app.tr().openai_oauth_complete}
+                    </button>
+                </div>
+            </Show>
+            {move || controls.error.get().map(|e| view! { <p id="openai-oauth-error" class="text-[10px] text-destructive flex items-center gap-1">{icon(icons::ALERT_CIRCLE, "w-3 h-3")}{e}</p> })}
+            {move || controls.notice.get().map(|n| view! { <p id="openai-oauth-notice" class="text-[11px] text-muted-foreground">{n}</p> })}
+            <div class="space-y-2">
+                <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().openai_redirect_url}</label>
+                <input id="openai-oauth-redirect-url" class="w-full h-9 rounded-lg px-2 outline-none text-xs" style=input_style readonly=true
+                    prop:value=move || controls.redirect_url.get()
+                    on:focus=move |ev| { let el: web_sys::HtmlInputElement = event_target(&ev); el.select(); }/>
+                <p class="text-[10px] text-muted-foreground opacity-70">{move || app.tr().openai_redirect_url_hint}</p>
+            </div>
+            <div class="space-y-2">
+                <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().openai_oauth_client_id}</label>
+                <input id="openai-oauth-client-id" class="w-full h-9 rounded-lg px-2 outline-none" style=input_style
+                    prop:value=move || controls.client_id_override.get()
+                    on:change=move |ev| controls.set_client_id_override(event_target_value(&ev))
+                    placeholder="oaiapp_…"/>
+                <p class="text-[10px] text-muted-foreground opacity-70">{move || app.tr().openai_oauth_client_id_hint}</p>
             </div>
         </div>
     }

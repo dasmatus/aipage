@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn base_url_defaults_to_local_ollama() {
         assert_eq!(base_url(&SendOptions::default()), "http://localhost:11434");
-        let custom = SendOptions { base_url: Some("http://box:11434".into()), model_name: None };
+        let custom = SendOptions { base_url: Some("http://box:11434".into()), ..SendOptions::default() };
         assert_eq!(base_url(&custom), "http://box:11434");
         assert_eq!(CONFIG.model_of(&SendOptions::default()), "llama3");
     }
