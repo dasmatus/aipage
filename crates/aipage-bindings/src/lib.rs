@@ -16,6 +16,7 @@
 //! only ever used from extension contexts and stays direct.
 
 pub mod bridge;
+pub mod idb;
 
 use std::cell::Cell;
 

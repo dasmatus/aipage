@@ -15,3 +15,4 @@ pub mod proxy;
 pub mod remote_ui;
 pub mod storage;
 pub mod types;
+pub mod updates;

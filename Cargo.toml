@@ -30,6 +30,9 @@ console_error_panic_hook = "0.1"
 gloo-timers = "0.4"
 leptos = { version = "0.8", features = ["csr"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+# SHA-256 for the downloaded sidebar bundle (core/background, wasm-compatible)
+# and for xtask's `aipage-web.json` manifest.
+sha2 = { version = "0.10", default-features = false }
 
 # Size-optimised release profile for the WASM bundles.
 [profile.release]

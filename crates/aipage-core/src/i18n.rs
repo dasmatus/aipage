@@ -132,6 +132,30 @@ pub struct Translation {
     pub remote_ui_description: String,
     pub remote_ui_url: String,
     pub remote_ui_url_hint: String,
+
+    // Updates (GitHub releases): channel + extension check
+    pub update_channel: String,
+    pub update_channel_stable: String,
+    pub update_channel_nightly: String,
+    pub update_channel_hint: String,
+    pub update_check_now: String,
+    pub update_checking: String,
+    pub update_extension_up_to_date: String,
+    pub update_extension_available: String,
+    pub update_check_failed: String,
+
+    // Self-updating sidebar bundle (GitHub releases → IndexedDB)
+    pub ui_bundle_update: String,
+    pub ui_bundle_description: String,
+    pub ui_bundle_installed: String,
+    pub ui_bundle_none: String,
+    pub ui_bundle_check_now: String,
+    pub ui_bundle_use_bundled: String,
+    pub ui_bundle_result_installed: String,
+    pub ui_bundle_result_up_to_date: String,
+    pub ui_bundle_result_not_available: String,
+    pub ui_bundle_result_older: String,
+    pub ui_bundle_cleared: String,
 }
 
 const SK: &str = include_str!("locales/sk.json");
@@ -180,6 +204,15 @@ mod tests {
             assert!(!t.anthropic_api_key_hint.is_empty(), "{code} anthropicApiKeyHint empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
             assert!(!t.remote_ui_enabled.is_empty(), "{code} remoteUiEnabled empty");
+            assert!(t.auto_update.contains("GitHub"), "{code} autoUpdate should name GitHub");
+            assert!(!t.update_channel_nightly.is_empty(), "{code} updateChannelNightly empty");
+            // placeholders the settings view substitutes
+            assert!(t.ui_bundle_update.contains("{channel}"), "{code} uiBundleUpdate needs {{channel}}");
+            assert!(t.ui_bundle_result_installed.contains("{version}"), "{code} uiBundleResultInstalled needs {{version}}");
+            assert!(t.ui_bundle_result_older.contains("{version}"), "{code} uiBundleResultOlder needs {{version}}");
+            assert!(t.update_extension_up_to_date.contains("{version}"), "{code} updateExtensionUpToDate needs {{version}}");
+            assert!(t.update_extension_available.contains("{version}"), "{code} updateExtensionAvailable needs {{version}}");
+            assert!(t.update_check_failed.contains("{error}"), "{code} updateCheckFailed needs {{error}}");
         }
     }
 

@@ -71,6 +71,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "sha2",
  "wasm-bindgen",
 ]
 
@@ -2162,6 +2163,7 @@ name = "xtask"
 version = "1.7.0"
 dependencies = [
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
