@@ -5,6 +5,27 @@ All notable changes to the AIPage extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### 👷 CI/CD
+
+* Factor the "build all targets + package" steps shared by CI and releases into a reusable `build.yml` workflow (optional manifest version stamp, install tests, artifact upload).
+* Add a nightly workflow publishing the head of `main` to a rolling `nightly` GitHub pre-release (tag force-moved, assets replaced, notes = commits since the previous nightly, built commit recorded in `nightly.json`); skips when nothing changed, and never publishes when the install tests fail.
+* CI now runs the extension install tests as a hard gate.
+
+### ✅ Tests
+
+* New extension install tests (`bun run test:install`): real unpacked MV2 install in headless Chromium (background page via CDP, sidebar WASM boot, background round-trip, no CSP/console errors), `web-ext lint` on the Firefox dist and xpi plus a temporary install in headless Firefox when available, structural checks of all dists (the Safari check).
+
+### 🏗️ Build System
+
+* `xtask build`/`build-all` accept `--version-stamp <version>` and `--version-name <text>` (Chrome-only `version_name`) for date-stamped nightly manifests.
+* Fix `wasm-opt` producing modules current engines refuse to instantiate (`unknown import kind 0x7f`): pass rustc's default wasm32 feature set instead of `-all`, which with binaryen ≥ 132 enabled post-MVP encodings.
+
+### 📚 Documentation
+
+* README: "Nightly builds" section with per-browser install steps (including the Chromium MV2 flags); contributing guide and `tests/install/README.md` for the new scripts.
+
 ## [1.5.0](https://codeberg.org/dasmatus/aipage/compare/v1.4.0...v1.5.0) (2026-02-08)
 
 

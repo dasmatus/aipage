@@ -1,0 +1,116 @@
+name: Build
+
+# Reusable build: compiles all three targets inside the flake's devShell,
+# packages the canonical artifacts (aipage-chrome.zip, aipage-firefox.xpi,
+# aipage-safari.zip), optionally runs the extension install tests against the
+# built dists, and uploads the three packages as one workflow artifact.
+#
+# Called by ci.yml (push/PR), release.yml (tags) and nightly.yml.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: >-
+          Manifest `version` to stamp into every dist (1–4 dot-separated
+          integers, e.g. 1.7.0.20261006). Empty keeps the committed version.
+        type: string
+        required: false
+        default: ""
+      version-name:
+        description: >-
+          Free-form display version written as Chrome's `version_name`
+          (ignored by Firefox/Safari). Requires `version`.
+        type: string
+        required: false
+        default: ""
+      install-tests:
+        description: Run the extension install tests (tests/install) against the built dists.
+        type: boolean
+        required: false
+        default: true
+      artifact-name:
+        description: Name of the uploaded workflow artifact holding the three packages.
+        type: string
+        required: false
+        default: aipage-build
+    outputs:
+      artifact-name:
+        description: Name of the uploaded workflow artifact.
+        value: ${{ inputs.artifact-name }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & package
+    runs-on: ubuntu-latest
+    env:
+      STAMP_VERSION: ${{ inputs.version }}
+      STAMP_VERSION_NAME: ${{ inputs.version-name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Build chrome / firefox / safari (in nix devShell)
+        run: |
+          # The single-quoted script is expanded by the inner bash (inside the
+          # devShell), where STAMP_* come from the job env.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            args=()
+            if [ -n "${STAMP_VERSION}" ]; then
+              args+=(--version-stamp "${STAMP_VERSION}")
+              if [ -n "${STAMP_VERSION_NAME}" ]; then
+                args+=(--version-name "${STAMP_VERSION_NAME}")
+              fi
+            fi
+            cargo run -p xtask -- build-all "${args[@]}"
+          '
+
+      - name: Package artifacts (canonical names)
+        run: |
+          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
+          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          rm -rf packages && mkdir -p packages
+          # bun ships in the flake's devShell, not on the bare runner; this
+          # step must enter it for bunx to resolve. web-ext 10 writes a .zip,
+          # which is what an .xpi is.
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            bunx web-ext build -s dist-firefox -a packages --overwrite-dest
+          '
+          cp packages/*.zip aipage-firefox.xpi
+          ls -la aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip
+
+      - name: Install tests (unpacked Chromium MV2, Firefox lint/temporary install, Safari structure)
+        if: ${{ inputs.install-tests }}
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bun install --frozen-lockfile
+            bunx playwright install --with-deps chromium
+            env -u LD_PRELOAD bun run test:install
+          '
+
+      - name: Upload install-test report
+        if: ${{ failure() && inputs.install-tests }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-install-test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            aipage-chrome.zip
+            aipage-firefox.xpi
+            aipage-safari.zip
+          if-no-files-found: error

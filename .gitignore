@@ -42,3 +42,6 @@ playwright-report/
 
 # Vercel
 .vercel
+
+# web-ext
+web-ext-artifacts/

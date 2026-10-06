@@ -52,6 +52,31 @@ To install the extension, download the latest build directly from our GitHub Rel
 4.  Open Safari Preferences → Extensions.
 5.  Enable the **AIPage** extension.
 
+## Nightly builds
+
+Every night (and on demand) the head of `main` is built for all three browsers and published to a single rolling pre-release:
+
+**<https://github.com/dasmatus/aipage/releases/tag/nightly>**
+
+- The release is re-created in place: the `nightly` tag moves to the built commit, the assets (`aipage-chrome.zip`, `aipage-firefox.xpi`, `aipage-safari.zip`) are replaced, and the notes list the commits since the previous nightly. `nightly.json` records the exact commit the assets were built from.
+- The manifest version is stamped as `<base>.<YYYYMMDD>` (for example `1.7.0.20261006`), so a nightly sorts above the release it is based on and below the next release. Chrome additionally shows the human-readable `version_name` (`1.7.0-nightly.20261006+<sha>`).
+- Nothing is published when `main` has not changed since the last nightly, and a nightly whose extension install tests fail is never published.
+- Nightlies are unsigned development builds: they cannot be installed from a store, only unpacked / as a temporary add-on, and they carry whatever is on `main` — including half-finished features.
+
+### Installing a nightly
+
+**Chrome / Chromium / Brave** — unzip `aipage-chrome.zip`, open `chrome://extensions/`, enable **Developer mode** and **Load unpacked** the folder. Current Chromium builds refuse to load Manifest V2 extensions, even unpacked ones; start the browser with
+
+```
+--disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported
+```
+
+(or enable the `AllowLegacyMV2Extensions` feature, exposed as *Allow legacy extension manifest versions* in `chrome://flags` on builds that still have it). This is exactly what the install tests do in CI; Brave keeps MV2 support without any flag.
+
+**Firefox** — open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and pick `aipage-firefox.xpi` (or the `manifest.json` of the unzipped file). Temporary add-ons are removed when Firefox exits; a nightly is not signed by AMO, so it cannot be installed permanently on release builds of Firefox.
+
+**Safari (macOS)** — unzip `aipage-safari.zip` and wrap it with Xcode's converter (`xcrun safari-web-extension-converter dist-safari`, see `scripts/setup-safari.sh`), then enable *Allow unsigned extensions* in Safari's Develop menu. Safari cannot run on Linux, so nightlies only receive a structural check for this target.
+
 ## Setting Up Your AI Provider
 
 The extension supports multiple AI providers. Choose your preferred provider and configure the corresponding API key.
@@ -205,9 +230,10 @@ bun run package:firefox
 This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
-- **Build job**: `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), then packages `aipage-chrome.zip`, `aipage-safari.zip`, and the Firefox `.xpi`
-- **E2e job** (best-effort): Playwright against the built Chrome dist
-- **Release job**: on a pushed `v*` tag, builds all targets and publishes a GitHub Release with the packaged assets
+- **Build workflow** (`build.yml`, reusable): `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), packages `aipage-chrome.zip`, `aipage-safari.zip` and the Firefox `.xpi`, then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium, `web-ext lint` + a temporary install in headless Firefox, a structural check of the Safari dist). A failing install test fails the job. Accepts an optional manifest version stamp.
+- **E2e job** (best-effort): Playwright against the built Chrome dist served over HTTP
+- **Release workflow**: on a pushed `v*` tag, runs the build workflow and publishes a GitHub Release with the packaged assets
+- **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly)
 
 ## Troubleshooting
 
