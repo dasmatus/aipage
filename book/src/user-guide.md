@@ -181,7 +181,7 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 - **Ollama Cloud** — chat, agentic tools, native web search, and SVG image generation
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
-- **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
+- **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key or *Sign in with ChatGPT*)
 - **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
 - **LM Studio** (Local)
 - **Ollama** (Local)
@@ -220,7 +220,9 @@ OpenRouter exposes hundreds of models (OpenAI, Anthropic, Google, Meta, Mistral,
 
 #### ChatGPT / OpenAI
 
-The public OpenAI platform API (the models behind ChatGPT), billed per request to your OpenAI account. This uses an ordinary API key only — there is no "sign in with ChatGPT" flow.
+The public OpenAI platform API (the models behind ChatGPT). Two ways to authenticate: an ordinary **API key** (billed per request to your OpenAI account), or **Sign in with ChatGPT** (eligible requests use your ChatGPT plan). A saved API key always takes precedence over the sign-in.
+
+**With an API key**
 
 1. Go to **[platform.openai.com](https://platform.openai.com)** and sign in (or create an account and add billing).
 2. Open **[API keys](https://platform.openai.com/api-keys)**, click **Create new secret key** and copy it — the key starts with `sk-`.
@@ -228,6 +230,25 @@ The public OpenAI platform API (the models behind ChatGPT), billed per request t
 4. Click the refresh button next to **Model** to list your available chat models and pick one, e.g. `gpt-4.1-mini` (the default). The list is filtered to chat-capable families (`gpt-*`, `o*`, `chatgpt-*`); embedding, audio, realtime, image and moderation models are hidden. Function-calling models power the agentic chat, native web search and SVG image generation.
 
 > The key is stored locally in your browser and is only ever sent to `api.openai.com` (through the extension's background proxy).
+
+**With Sign in with ChatGPT**
+
+The settings card shows a **Sign in with ChatGPT** button under the API-key field. It runs a standard OAuth 2.1 authorization-code flow with PKCE against OpenAI's authorization server (`https://auth.openai.com`, endpoints taken from its [OpenID discovery document](https://auth.openai.com/.well-known/openid-configuration)) and asks for the scopes OpenAI documents for third-party apps: `openid profile email offline_access` for identity plus `resource.invoke chatgpt.tokens.use.direct` for *ChatGPT plan usage*, with `resource=https://api.openai.com/v1`.
+
+What the sign-in grants: a short-lived access token (one hour) and a rotating refresh token, stored locally under `openai_oauth`, plus an ID token whose `email` claim is only used for the "Signed in as …" line. Following OpenAI's docs for plan-usage tokens, requests made with the token go to the **Responses API** (`POST https://api.openai.com/v1/responses` with `store: false`) and the model list comes from `GET /v1/models` with the same token; chat, the agentic tools, web search and SVG image generation all work over it. The token is refreshed automatically a minute before it expires or after a `401`, and **Sign out** revokes the refresh token at OpenAI's revocation endpoint and forgets it.
+
+The button is disabled with a hint until the extension has an **OAuth client id**. OpenAI issues these to app owners, not to end users, so whoever distributes this extension has to register it once:
+
+1. Request a client id from OpenAI: [developers.openai.com/siwc/request-client-id](https://developers.openai.com/siwc/request-client-id) (the integration guide is at [developers.openai.com/api/docs/guides/sign-in-with-chatgpt](https://developers.openai.com/api/docs/guides/sign-in-with-chatgpt), the ChatGPT-plan-usage pages under [developers.openai.com/siwc/token-sharing-open-source](https://developers.openai.com/siwc/token-sharing-open-source)). Register a **public client** (no client secret; token-endpoint auth `none`, PKCE `S256`).
+2. Register the **redirect URL** shown read-only in the settings card ("Redirect URL to register"; click the field to select it). It differs per browser and must match exactly:
+   - Chrome / Chromium / Brave: `https://<extension-id>.chromiumapp.org/`
+   - Firefox: `https://<uuid>.extensions.allizom.org/` (the uuid is per installation; a signed build keeps it stable through its add-on id)
+   - Safari has no `identity` API, so the fallback redirect is `<hosted-UI origin>/oauth/callback` (by default `https://aipage-sooty.vercel.app/oauth/callback`; it follows the *Custom UI URL* if you changed it).
+3. Put the issued `oaiapp_…` id either in `OPENAI_OAUTH_CLIENT_ID` in `crates/aipage-core/src/oauth.rs` before building, or paste it into **OAuth client id (advanced)** in the settings card, which stores it locally (`openai_oauth_client_id`) and overrides the built-in value without a rebuild.
+
+> **Safari:** because there is no `identity.launchWebAuthFlow`, the sign-in page opens in a new tab. After approving, copy the full URL of the page you land on (it contains `code=…&state=…`) and paste it into the **Paste the final redirect URL** field that appears, then click **Complete sign-in**. Chrome and Firefox finish automatically.
+
+> OpenAI currently offers Sign in with ChatGPT to selected partners and to open-source, locally hosted apps; whether a given account may use its plan this way is decided by OpenAI at sign-in (the token's granted scopes) and per request. Without a registered client id the API-key path above is unaffected.
 
 #### LM Studio (Local)
 
