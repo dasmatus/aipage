@@ -46,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **providers:** add Claude via the Anthropic Messages API ([3bc6111](https://github.com/dasmatus/aipage/commit/3bc6111e57afec647e0f5a59715427c44e3f15cb))
 * **web:** host sidebar UI on Vercel with bundled fallback ([55da34f](https://github.com/dasmatus/aipage/commit/55da34f2754e4be0ae3d14b613eacf4f6395594e))
 * **chrome:** experimental MV3 manifest and service-worker loader ([62d416c](https://github.com/dasmatus/aipage/commit/62d416c2d46d137de7fbbb6a3521af22f4ff408e))
+* **update:** check GitHub releases with a stable/nightly channel and self-update the sidebar bundle ([61be9ef](https://github.com/dasmatus/aipage/commit/61be9efd71b56c7ad30fe06569294b95d6c71d75))
+* **web:** publish the sidebar bundle with a hash manifest ([b155acd](https://github.com/dasmatus/aipage/commit/b155acd514e9b8521752afb70c33f3c52b20a6ab))
 
 ### 🐛 Bug Fixes
 
@@ -62,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **ci:** copy the archive web-ext actually produces ([1115a27](https://github.com/dasmatus/aipage/commit/1115a275e120af0e2759f38c1879cbf8607917cc))
 * **ci:** download Brave's package index before parsing it ([bb5a587](https://github.com/dasmatus/aipage/commit/bb5a5873e4c4332829b3bc8df320b637fe8aecb0))
 * **firefox:** declare data-collection consent and drop 'unsafe-eval' from the CSP ([0c428e9](https://github.com/dasmatus/aipage/commit/0c428e9fc444afa70d4e81068ea7b99892cd5218))
+* **ci:** reinstall Nix in the check job ([dd230a8](https://github.com/dasmatus/aipage/commit/dd230a8bf2c41ca2a7796c053300d2afcc0602d6))
 
 ### 📦 Dependencies
 
@@ -137,6 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * MV3 feasibility study ([7b6140a](https://github.com/dasmatus/aipage/commit/7b6140ab1701a8af419f9e415bdef8b1d9c0db5f))
 * describe the generated changelog, the release flow and the docs site ([073093a](https://github.com/dasmatus/aipage/commit/073093a3a987680086db5d5c155c0d99e1908455))
 * **user-guide:** installing the signed Firefox xpi and the Safari app wrapper ([921d78c](https://github.com/dasmatus/aipage/commit/921d78ca63d1e900f3b3ce7566e0ff92fc421b07))
+* describe GitHub updates, channels and the self-updating sidebar ([b297379](https://github.com/dasmatus/aipage/commit/b2973796f25269186f3028c1d6d9199284f419c5))
 
 ### 💎 Styles
 
