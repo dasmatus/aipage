@@ -72,10 +72,35 @@ jobs:
             cargo run -p xtask -- build-all "${args[@]}"
           '
 
+      - name: Build the hosted sidebar bundle (web) and its hash manifest
+        run: |
+          # Same version stamp as the browser builds; xtask writes
+          # dist-web/aipage-web.json (sha256 + size of every published file,
+          # git sha from GITHUB_SHA). The extension's self-updating sidebar
+          # downloads the listed files from the release and verifies them
+          # against this manifest.
+          # shellcheck disable=SC2016
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            args=()
+            if [ -n "${STAMP_VERSION}" ]; then
+              args+=(--version-stamp "${STAMP_VERSION}")
+            fi
+            cargo run -p xtask -- build --target web "${args[@]}"
+          '
+
       - name: Package artifacts (canonical names)
         run: |
           ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
           ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
+          # Hosted sidebar bundle: the whole dist-web/ as one zip, the hash
+          # manifest, and every listed file on its own (uploaded as individual
+          # release assets so the extension never has to unpack a zip).
+          ( cd dist-web && zip -r "$PWD/../aipage-web.zip" . )
+          cp dist-web/aipage-web.json aipage-web.json
+          rm -rf web-assets && mkdir -p web-assets
+          jq -r '.files | keys[]' aipage-web.json | while read -r f; do cp "dist-web/$f" web-assets/; done
+          ls -la aipage-web.zip aipage-web.json web-assets/
           rm -rf packages && mkdir -p packages
           # bun ships in the flake's devShell, not on the bare runner; this
           # step must enter it for bunx to resolve. web-ext 10 writes a .zip,
@@ -139,4 +164,7 @@ jobs:
             aipage-chrome.zip
             aipage-firefox.xpi
             aipage-safari.zip
+            aipage-web.zip
+            aipage-web.json
+            web-assets/
           if-no-files-found: error

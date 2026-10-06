@@ -17,10 +17,15 @@
 //! The `web` target builds only the sidebar as a static site for Vercel
 //! (`dist-web/`): js/wasm/css get content-hashed filenames (safe to cache
 //! immutably), `sidebar.html` references them, and `assets/vercel.json`
-//! supplies the HTTP headers.
+//! supplies the HTTP headers. It also writes `aipage-web.json`, the hash
+//! manifest the extension's self-updating sidebar verifies release assets
+//! against (see [`write_web_manifest`]).
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+use sha2::{Digest, Sha256};
 
 const TARGETS: &[&str] = &["chrome", "firefox", "safari"];
 const WEB_TARGET: &str = "web";
@@ -183,7 +188,7 @@ fn tool(name: &str) -> String {
 
 fn build(target: &str, stamp: &Stamp) {
     if target == WEB_TARGET {
-        build_web();
+        build_web(stamp);
         return;
     }
     if !TARGETS.contains(&target) {
@@ -289,11 +294,16 @@ fn write_manifest(from: &Path, to: &Path, target: &str, stamp: &Stamp) {
     });
 }
 
-/// Build the hosted sidebar (`dist-web/`): sidebar crate only, hashed assets.
-fn build_web() {
+/// Build the hosted sidebar (`dist-web/`): sidebar crate only, hashed assets,
+/// plus the `aipage-web.json` hash manifest (stamped with `--version-stamp`
+/// when given, else the committed manifest version).
+fn build_web(stamp: &Stamp) {
     let root = root();
     let dist = root.join("dist-web");
     println!("🔨 Building AIPage hosted sidebar (web)");
+    if let Some(v) = &stamp.version {
+        println!("   ↳ stamping aipage-web.json version {v}");
+    }
 
     let _ = std::fs::remove_dir_all(&dist);
     std::fs::create_dir_all(&dist).expect("create dist dir");
@@ -344,7 +354,138 @@ fn build_web() {
     fingerprint_web_assets(&dist);
 
     copy(&assets.join("vercel.json"), &dist.join("vercel.json"));
+    write_web_manifest(&root, &dist, stamp);
     println!("✅ Build complete for web in dist-web/");
+}
+
+/// Name of the hash manifest written next to the web assets.
+const WEB_MANIFEST: &str = "aipage-web.json";
+
+/// Write `dist-web/aipage-web.json`:
+///
+/// ```json
+/// { "version": "1.7.0.20261006", "sha": "<git sha>", "built_at": "2026-10-06T03:20:00Z",
+///   "files": { "sidebar.html": { "sha256": "…", "size": 903 }, "sidebar.<hash>.js": { … }, … } }
+/// ```
+///
+/// `files` lists every published file (sorted by name) except `vercel.json`
+/// (deployment config, never served) and the manifest itself. The sha comes
+/// from `AIPAGE_GIT_SHA`, else `GITHUB_SHA`, else `git rev-parse HEAD`;
+/// `built_at` honours `SOURCE_DATE_EPOCH` for reproducible builds. Hashing
+/// is plain SHA-256 of the file bytes, so the manifest is deterministic for
+/// a given set of files.
+fn write_web_manifest(root: &Path, dist: &Path, stamp: &Stamp) {
+    let version = stamp.version.clone().unwrap_or_else(|| committed_manifest_version(root));
+    let sha = git_sha(root);
+    let built_at = iso8601_utc(build_timestamp());
+    let mut files: BTreeMap<String, (String, u64)> = BTreeMap::new();
+    let entries = std::fs::read_dir(dist).unwrap_or_else(|e| {
+        eprintln!("xtask: cannot list {}: {e}", dist.display());
+        std::process::exit(1);
+    });
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !entry.path().is_file() || name == "vercel.json" || name == WEB_MANIFEST {
+            continue;
+        }
+        let bytes = std::fs::read(entry.path()).unwrap_or_else(|e| {
+            eprintln!("xtask: cannot read {}: {e}", entry.path().display());
+            std::process::exit(1);
+        });
+        files.insert(name, (sha256_hex(&bytes), bytes.len() as u64));
+    }
+    let json = web_manifest_json(&version, &sha, &built_at, &files);
+    std::fs::write(dist.join(WEB_MANIFEST), json).expect("write aipage-web.json");
+    println!("   ↳ wrote {WEB_MANIFEST} ({} files, version {version}, sha {})", files.len(), if sha.is_empty() { "unknown" } else { &sha });
+}
+
+/// Render the manifest document (pretty, trailing newline, sorted files).
+fn web_manifest_json(version: &str, sha: &str, built_at: &str, files: &BTreeMap<String, (String, u64)>) -> String {
+    let mut files_obj = serde_json::Map::new();
+    for (name, (sha256, size)) in files {
+        files_obj.insert(name.clone(), serde_json::json!({ "sha256": sha256, "size": size }));
+    }
+    let doc = serde_json::json!({
+        "version": version,
+        "sha": sha,
+        "built_at": built_at,
+        "files": files_obj,
+    });
+    let mut out = serde_json::to_string_pretty(&doc).expect("serialize aipage-web.json");
+    out.push('\n');
+    out
+}
+
+/// `version` of `assets/manifest.chrome.json` (the committed base version).
+fn committed_manifest_version(root: &Path) -> String {
+    let path = root.join("assets/manifest.chrome.json");
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    serde_json::from_str::<serde_json::Value>(&text)
+        .ok()
+        .and_then(|v| v.get("version")?.as_str().map(str::to_string))
+        .unwrap_or_else(|| {
+            eprintln!("xtask: cannot read the version from {}", path.display());
+            std::process::exit(1);
+        })
+}
+
+/// The commit being built: `AIPAGE_GIT_SHA`, `GITHUB_SHA`, else `git rev-parse HEAD`
+/// (empty when none is available, e.g. a source tarball).
+fn git_sha(root: &Path) -> String {
+    for var in ["AIPAGE_GIT_SHA", "GITHUB_SHA"] {
+        if let Ok(v) = std::env::var(var) {
+            let v = v.trim().to_string();
+            if !v.is_empty() {
+                return v;
+            }
+        }
+    }
+    Command::new("git")
+        .current_dir(root)
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default()
+}
+
+/// Seconds since the Unix epoch for `built_at`: `SOURCE_DATE_EPOCH` or now.
+fn build_timestamp() -> u64 {
+    std::env::var("SOURCE_DATE_EPOCH")
+        .ok()
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0)
+        })
+}
+
+/// `YYYY-MM-DDTHH:MM:SSZ` for a Unix timestamp (proleptic Gregorian, no
+/// leap seconds), dependency-free.
+fn iso8601_utc(secs: u64) -> String {
+    let days = (secs / 86_400) as i64;
+    let rem = secs % 86_400;
+    let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
+    // Howard Hinnant's civil_from_days.
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let mo = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if mo <= 2 { y + 1 } else { y };
+    format!("{y:04}-{mo:02}-{d:02}T{h:02}:{m:02}:{s:02}Z")
+}
+
+/// Lower-case hex SHA-256 of `bytes`.
+fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// Rename the sidebar's js/wasm/css to `<stem>.<hash>.<ext>` and rewrite the
@@ -512,6 +653,39 @@ mod tests {
         let out: serde_json::Value = serde_json::from_str(&stamp_manifest(manifest, &stamp).unwrap()).unwrap();
         assert_eq!(out["version"], "2.0.0");
         assert_eq!(out["version_name"], "old");
+    }
+
+    #[test]
+    fn formats_iso8601_utc() {
+        assert_eq!(iso8601_utc(0), "1970-01-01T00:00:00Z");
+        assert_eq!(iso8601_utc(951_782_400), "2000-02-29T00:00:00Z");
+        assert_eq!(iso8601_utc(1_791_250_800), "2026-10-06T01:40:00Z");
+        assert_eq!(iso8601_utc(4_102_444_799), "2099-12-31T23:59:59Z");
+    }
+
+    #[test]
+    fn sha256_hex_known_vector() {
+        assert_eq!(sha256_hex(b"abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }
+
+    #[test]
+    fn web_manifest_is_sorted_and_stable() {
+        let mut files = BTreeMap::new();
+        files.insert("tailwind.f2170e90e154.css".to_string(), (sha256_hex(b"css"), 3));
+        files.insert("sidebar.html".to_string(), (sha256_hex(b"html"), 4));
+        files.insert("sidebar_bg.3050fca62328.wasm".to_string(), (sha256_hex(b"wasm"), 4));
+        let a = web_manifest_json("1.7.0.20261006", "abc1234", "2026-10-06T03:20:00Z", &files);
+        let b = web_manifest_json("1.7.0.20261006", "abc1234", "2026-10-06T03:20:00Z", &files);
+        assert_eq!(a, b);
+        assert!(a.ends_with('\n'));
+        let doc: serde_json::Value = serde_json::from_str(&a).unwrap();
+        assert_eq!(doc["version"], "1.7.0.20261006");
+        assert_eq!(doc["sha"], "abc1234");
+        assert_eq!(doc["built_at"], "2026-10-06T03:20:00Z");
+        let keys: Vec<&str> = doc["files"].as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(keys, ["sidebar.html", "sidebar_bg.3050fca62328.wasm", "tailwind.f2170e90e154.css"]);
+        assert_eq!(doc["files"]["sidebar.html"]["size"], 4);
+        assert_eq!(doc["files"]["sidebar.html"]["sha256"], sha256_hex(b"html"));
     }
 
     #[test]

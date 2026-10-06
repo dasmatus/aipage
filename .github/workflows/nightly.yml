@@ -178,7 +178,7 @@ jobs:
             --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{sha: $sha, short_sha: $short_sha, version: $version, version_name: $version_name,
               date: $date, previous_sha: $previous_sha, run_url: $run_url,
-              assets: ["aipage-chrome.zip", "aipage-firefox.xpi", "aipage-safari.zip"]}' \
+              assets: ["aipage-chrome.zip", "aipage-firefox.xpi", "aipage-safari.zip", "aipage-web.zip", "aipage-web.json"]}' \
             > nightly.json
           cat nightly.json
 
@@ -219,6 +219,9 @@ jobs:
             aipage-chrome.zip \
             aipage-firefox.xpi \
             aipage-safari.zip \
+            aipage-web.zip \
+            aipage-web.json \
+            web-assets/* \
             nightly.json
 
           echo "Published ${title}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/nightly"

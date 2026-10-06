@@ -50,18 +50,24 @@ jobs:
               --notes-file "$notes_file"
           fi
 
+          # Every asset outside the canonical set is removed first; that also
+          # drops the content-hashed sidebar files of a previous run of the
+          # same tag (their names change with the content).
           existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq '.assets[].name' || true)"
           for asset in $existing_assets; do
             case "$asset" in
-              aipage-chrome.zip|aipage-firefox.xpi|aipage-safari.zip) ;;
+              aipage-chrome.zip|aipage-firefox.xpi|aipage-safari.zip|aipage-web.zip|aipage-web.json) ;;
               *) gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes ;;
             esac
           done
-          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip; do
+          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip aipage-web.zip aipage-web.json; do
             gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes >/dev/null 2>&1 || true
           done
 
           gh release upload "$GITHUB_REF_NAME" \
             aipage-chrome.zip \
             aipage-firefox.xpi \
-            aipage-safari.zip
+            aipage-safari.zip \
+            aipage-web.zip \
+            aipage-web.json \
+            web-assets/*
