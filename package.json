@@ -17,6 +17,8 @@
         "package:chrome": "cd dist-chrome && zip -r ../aipage-chrome.zip .",
         "package:firefox": "bunx web-ext build -s dist-firefox -a packages",
         "package:safari": "cd dist-safari && zip -r ../aipage-safari.zip .",
+        "package:safari:app": "scripts/setup-safari.sh --dist dist-safari --out safari --package aipage-safari-macos.zip",
+        "sign:firefox": "scripts/sign-firefox.sh dist-firefox aipage-firefox.xpi",
         "lint": "cargo clippy --workspace --all-targets",
         "test": "cargo test --workspace",
         "test:e2e": "env -u LD_PRELOAD playwright test",

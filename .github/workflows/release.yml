@@ -18,8 +18,12 @@ jobs:
     uses: ./.github/workflows/build.yml
     permissions:
       contents: read
+    # AMO credentials (WEB_EXT_API_KEY / WEB_EXT_API_SECRET) for signing the
+    # Firefox xpi; without them the release gets aipage-firefox-unsigned.xpi.
+    secrets: inherit
     with:
       install-tests: false
+      sign-firefox: true
       artifact-name: aipage-release
 
   release:
@@ -56,11 +60,39 @@ jobs:
           fi
           cat "$NOTES_FILE"
 
+      # The macOS wrapper job in build.yml is advisory (continue-on-error):
+      # when it failed there is no artifact and the release ships without
+      # aipage-safari-macos.zip.
+      - name: Download the Safari app wrapper (macOS build)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.safari-artifact-name }}
+
       - name: Create or update GitHub release and upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIREFOX_SIGNED: ${{ needs.build.outputs.firefox-signed }}
         run: |
+          set -euo pipefail
           notes_file=release-notes.md
+
+          # Packages present in this run: the Firefox name depends on whether
+          # AMO signed it, the Safari app on the macOS job.
+          assets=()
+          for f in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
+            [ -f "$f" ] && assets+=("$f")
+          done
+          test -f aipage-chrome.zip
+          test -f aipage-safari.zip
+          { [ -f aipage-firefox.xpi ] || [ -f aipage-firefox-unsigned.xpi ]; }
+          printf 'assets: %s\n' "${assets[*]}"
+          if [ "${FIREFOX_SIGNED}" != "true" ]; then
+            echo "::warning title=Unsigned Firefox release asset::aipage-firefox-unsigned.xpi was not signed by AMO (WEB_EXT_API_KEY / WEB_EXT_API_SECRET missing or signing failed); it can only be loaded as a temporary add-on."
+          fi
+          if [ ! -f aipage-safari-macos.zip ]; then
+            echo "::warning title=No Safari app wrapper::the macOS job produced no aipage-safari-macos.zip; the release only carries the bare web extension (aipage-safari.zip)."
+          fi
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" \
@@ -72,18 +104,18 @@ jobs:
               --notes-file "$notes_file"
           fi
 
+          # Drop anything that is not one of ours, then replace ours. Both
+          # Firefox names are removed so a re-run that gains (or loses) AMO
+          # signing never leaves two xpi variants on the same release.
           existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq '.assets[].name' || true)"
           for asset in $existing_assets; do
             case "$asset" in
-              aipage-chrome.zip|aipage-firefox.xpi|aipage-safari.zip) ;;
+              aipage-chrome.zip|aipage-firefox.xpi|aipage-firefox-unsigned.xpi|aipage-safari.zip|aipage-safari-macos.zip) ;;
               *) gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes ;;
             esac
           done
-          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-safari.zip; do
+          for asset in aipage-chrome.zip aipage-firefox.xpi aipage-firefox-unsigned.xpi aipage-safari.zip aipage-safari-macos.zip; do
             gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes >/dev/null 2>&1 || true
           done
 
-          gh release upload "$GITHUB_REF_NAME" \
-            aipage-chrome.zip \
-            aipage-firefox.xpi \
-            aipage-safari.zip
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}"

@@ -72,18 +72,45 @@ from Brave's apt repository (extracted with `dpkg-deb -x`, no install). Then:
    extension origin (remote resource failures such as Google Fonts are
    tolerated, sandboxes may be offline).
 
-### `firefox.spec.ts` — lint + temporary install
+### `firefox.spec.ts` — lint + temporary install that really runs
 
 - `web-ext lint` (addons-linter) on `dist-firefox` must report **zero
-  errors** (warnings are reported as a test annotation).
+  errors** (warnings are reported as a test annotation; the two remaining
+  ones are wasm-bindgen's `innerHTML` setters).
 - The same lint on the packaged xpi: `aipage-firefox.xpi` at the repo root,
   else the newest `packages/*.zip|xpi`, else one is built into a temp dir.
 - If a Firefox binary is available, `web-ext run` installs `dist-firefox` as
   a temporary add-on in headless Firefox through the remote debugging
-  protocol; the promise only resolves after the install succeeded. The test
-  is **skipped with a visible reason** when no binary is found.
+  protocol (RDP). The test then opens a **second RDP connection** to the
+  same debugger port (`tests/install/firefox-rdp.ts`, a ~150-line client:
+  web-ext's own client discards every packet that is not a reply to one of
+  its requests) and drives the modern *watcher* actors:
+  1. `listAddons` must list the add-on as a temporarily installed
+     WebExtension with **no manifest warnings** and a `moz-extension://`
+     origin;
+  2. `getWatcher` + `watchTargets(frame)` on the add-on descriptor yields
+     the real `_generated_background_page.html` target (not the devtools
+     fallback document); `watchResources(console-message, error-message)`
+     replays its console, which must contain `aipage background wasm
+     loaded`;
+  3. `evaluateJSAsync` in the background opens
+     `moz-extension://<uuid>/sidebar.html#initials=CI` via
+     `browser.tabs.create`; the tab is attached the same way, must log
+     `aipage sidebar wasm loaded`, have a `<title>` of `AIPage` and render
+     buttons into `#root` (Leptos mounted);
+  4. from the sidebar page, `browser.runtime.sendMessage({action:
+     "proxy_fetch"})` must be answered by the background's Rust handler with
+     `{ok: false, error: "Missing url"}` (the async `sendResponse` channel
+     works on Firefox);
+  5. neither page may have logged an error (remote-resource load failures
+     such as Google Fonts are tolerated).
 
-### `structure.spec.ts` — all three dists (the only check possible for Safari on Linux)
+  The test is **skipped with a visible reason** when no binary is found.
+  Verified on Firefox 157 (`nix shell nixpkgs#firefox`); CI uses the Firefox
+  on the Ubuntu runner image (`build.yml` prints its version, or a warning
+  when there is none and the runtime test gets skipped).
+
+### `structure.spec.ts` — all three dists (the only Linux-side check for Safari)
 
 For `dist-chrome`, `dist-firefox` and `dist-safari`: the manifest parses and
 is MV2, the `version` matches the shared Chrome/Firefox/Safari format
@@ -93,6 +120,18 @@ magic and have their glue and loader files, `sidebar.html` contains no inline
 script / inline handler / `javascript:` URL (the extension CSP would block
 them) and only references bundled files, Firefox has a gecko id, non-Chrome
 manifests carry no `version_name`, and all dists share one version.
+
+For `dist-safari` additionally (what Apple's
+`safari-web-extension-packager`/`-converter` and `scripts/setup-safari.sh`
+need): a non-persistent `background.scripts` page, string-only
+`permissions`/`web_accessible_resources`, no Firefox/Chrome-only keys
+(`browser_specific_settings`, `version_name`, `update_url`, …), a
+`browser_action` title, `sidebar.html` web-accessible,
+`'wasm-unsafe-eval'` in the CSP, a flat folder of regular files (no dotfiles
+or symlinks, which `--copy-resources` would choke on), and
+`scripts/setup-safari.sh` present, executable, `bash -n`-clean and still
+carrying the flags the macOS CI job relies on. The real conversion and
+`xcodebuild` run only in the macOS job of `.github/workflows/build.yml`.
 
 ## Nightly version stamps
 

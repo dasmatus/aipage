@@ -55,14 +55,19 @@ jobs:
           '
 
   # Builds all three targets, packages them, runs the extension install tests
-  # (hard failure) and uploads `aipage-build`. Shared with release.yml and
-  # nightly.yml.
+  # (hard failure) and uploads `aipage-build` (chrome zip, unsigned firefox
+  # xpi, safari zip) plus `aipage-build-safari-macos` (AIPage.app built on a
+  # macOS runner from the same dist-safari). Shared with release.yml and
+  # nightly.yml. The Firefox xpi is deliberately left unsigned here: AMO
+  # accepts each version string once, and CI builds all carry the committed
+  # version.
   build:
     name: Build all targets
     needs: check
     uses: ./.github/workflows/build.yml
     with:
       install-tests: true
+      sign-firefox: false
       artifact-name: aipage-build
 
   e2e:
