@@ -29,6 +29,10 @@ bun run build                                   # alias for the chrome build
 # Tests
 cargo test --workspace                          # native unit tests (logic)
 bun run test:e2e                                # Playwright UI tests (see below)
+bun run test:install                            # extension install tests against built dist-*/ (tests/install/README.md)
+
+# Nightly-style build (manifest version stamp; version_name is Chrome-only)
+cargo run -p xtask -- build-all --version-stamp 1.7.0.20261006 --version-name "1.7.0-nightly.20261006+abc1234"
 
 # Lint
 cargo clippy --workspace --all-targets

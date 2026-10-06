@@ -9,30 +9,29 @@ permissions:
   contents: write
 
 jobs:
+  # Build + package via the shared workflow (same steps as CI and nightly).
+  # Install tests are left off here to keep tagged releases behaving as
+  # before (CI already gates `main` on them); flip `install-tests: true` to
+  # make a failing install test block a tagged release as well.
+  build:
+    name: Build all targets
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+    with:
+      install-tests: false
+      artifact-name: aipage-release
+
   release:
-    name: Build & publish release
+    name: Publish release
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v7
-      - uses: DeterminateSystems/nix-installer-action@v23
-      - uses: DeterminateSystems/magic-nix-cache-action@v15
 
-      - name: Build all targets (in nix devShell)
-        run: |
-          nix develop --accept-flake-config -c bash -c '
-            set -euo pipefail
-            bun install --frozen-lockfile
-            cargo run -p xtask -- build-all
-          '
-
-      - name: Package artifacts (canonical names)
-        run: |
-          ( cd dist-chrome && zip -r "$PWD/../aipage-chrome.zip" . )
-          ( cd dist-safari  && zip -r "$PWD/../aipage-safari.zip"  . )
-          mkdir -p packages
-          rm -f packages/*.xpi
-          bunx web-ext build -s dist-firefox -a packages
-          cp packages/*.xpi aipage-firefox.xpi
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
 
       - name: Create or update GitHub release and upload assets
         env:

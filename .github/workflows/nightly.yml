@@ -1,0 +1,224 @@
+name: Nightly
+
+# Rolling prerelease of the default branch. Every night (and on demand) the
+# head of the default branch is built for all three targets with the manifest
+# version stamped as `<base>.<YYYYMMDD>` and published to the single
+# prerelease tagged `nightly` (tag force-moved, assets replaced). A run is
+# skipped when the head commit equals the one the last nightly was built from.
+#
+# The built commit is recorded machine-readably in the `nightly.json` asset
+# (and as an HTML comment in the release notes); the `nightly` tag itself is
+# the fallback.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Publish even if the default branch has not changed since the last nightly.
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Changed since last nightly?
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+      previous-sha: ${{ steps.previous.outputs.sha }}
+      version: ${{ steps.stamp.outputs.version }}
+      version-name: ${{ steps.stamp.outputs.version_name }}
+      date: ${{ steps.stamp.outputs.date }}
+      short-sha: ${{ steps.stamp.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the commit the previous nightly was built from
+        id: previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sha=""
+          # Preferred: the machine-readable asset uploaded last by the publish job.
+          if gh release view nightly >/dev/null 2>&1; then
+            if gh release download nightly --pattern nightly.json --output nightly.prev.json 2>/dev/null; then
+              sha="$(jq -r '.sha // empty' nightly.prev.json || true)"
+            fi
+            # Fallback: the commit the `nightly` tag points at.
+            if [ -z "$sha" ]; then
+              sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/nightly" --jq '.object.sha' 2>/dev/null || true)"
+              if [ -n "$sha" ]; then
+                # An annotated tag's object is the tag itself; resolve to the commit.
+                sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha" --jq '.sha' 2>/dev/null || echo "$sha")"
+              fi
+            fi
+          fi
+          echo "previous nightly sha: ${sha:-<none>}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to build
+        id: decide
+        env:
+          PREVIOUS_SHA: ${{ steps.previous.outputs.sha }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          if [ "$PREVIOUS_SHA" = "$GITHUB_SHA" ] && [ "$FORCE" != "true" ]; then
+            echo "Default branch head $GITHUB_SHA already published as nightly; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute the nightly version stamp
+        id: stamp
+        if: steps.decide.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          base="$(jq -r '.version' assets/manifest.chrome.json)"
+          date="$(date -u +%Y%m%d)"
+          short_sha="${GITHUB_SHA:0:7}"
+          # Chrome MV2 / Firefox / Safari all accept up to four dot-separated
+          # integers; Firefox caps each at nine digits (the date is eight).
+          {
+            echo "version=${base}.${date}"
+            echo "version_name=${base}-nightly.${date}+${short_sha}"
+            echo "date=${date}"
+            echo "short_sha=${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+          echo "nightly version: ${base}.${date} (${base}-nightly.${date}+${short_sha})"
+
+  # Build + package + install tests (a failing install test fails this job
+  # and therefore blocks publishing).
+  build:
+    name: Build all targets
+    needs: check
+    if: needs.check.outputs.skip != 'true'
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.check.outputs.version }}
+      version-name: ${{ needs.check.outputs.version-name }}
+      install-tests: true
+      artifact-name: aipage-nightly
+
+  publish:
+    name: Publish rolling prerelease
+    runs-on: ubuntu-latest
+    needs: [check, build]
+    if: needs.check.outputs.skip != 'true'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+
+      - name: Write release notes and nightly.json
+        env:
+          PREVIOUS_SHA: ${{ needs.check.outputs.previous-sha }}
+          VERSION: ${{ needs.check.outputs.version }}
+          VERSION_NAME: ${{ needs.check.outputs.version-name }}
+          DATE: ${{ needs.check.outputs.date }}
+          SHORT_SHA: ${{ needs.check.outputs.short-sha }}
+        run: |
+          set -euo pipefail
+          pretty_date="$(date -u -d "${DATE}" +%Y-%m-%d)"
+          echo "title=Nightly ${pretty_date} (${SHORT_SHA})" >> "$GITHUB_ENV"
+
+          repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          # One markdown bullet per commit, linking to the commit page.
+          log_format="- %s ([\`%h\`](${repo_url}/commit/%H))"
+
+          {
+            echo "<!-- nightly-sha: ${GITHUB_SHA} -->"
+            echo "Automated build of \`${GITHUB_REF_NAME}\` at [\`${SHORT_SHA}\`](${repo_url}/commit/${GITHUB_SHA}) — manifest version \`${VERSION}\` (\`${VERSION_NAME}\`)."
+            echo
+            echo "Unsigned development build: install it unpacked (Chrome), as a temporary add-on (Firefox) or via Xcode (Safari) — see the README's \"Nightly builds\" section."
+            echo
+            if [ -n "${PREVIOUS_SHA}" ] && git cat-file -e "${PREVIOUS_SHA}^{commit}" 2>/dev/null \
+               && git merge-base --is-ancestor "${PREVIOUS_SHA}" "${GITHUB_SHA}"; then
+              echo "## Changes since the previous nightly ([\`${PREVIOUS_SHA:0:7}\`](${repo_url}/compare/${PREVIOUS_SHA}...${GITHUB_SHA}))"
+              echo
+              if [ "${PREVIOUS_SHA}" = "${GITHUB_SHA}" ]; then
+                echo "_No new commits (forced rebuild)._"
+              else
+                git log --no-merges --format="${log_format}" "${PREVIOUS_SHA}..${GITHUB_SHA}"
+              fi
+            else
+              echo "## Recent changes"
+              echo
+              echo "_Previous nightly commit unknown or not an ancestor of this build; showing the last 30 commits._"
+              echo
+              git log --no-merges -n 30 --format="${log_format}" "${GITHUB_SHA}"
+            fi
+          } > notes.md
+          cat notes.md
+
+          jq -n \
+            --arg sha "${GITHUB_SHA}" \
+            --arg short_sha "${SHORT_SHA}" \
+            --arg version "${VERSION}" \
+            --arg version_name "${VERSION_NAME}" \
+            --arg date "${DATE}" \
+            --arg previous_sha "${PREVIOUS_SHA}" \
+            --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{sha: $sha, short_sha: $short_sha, version: $version, version_name: $version_name,
+              date: $date, previous_sha: $previous_sha, run_url: $run_url,
+              assets: ["aipage-chrome.zip", "aipage-firefox.xpi", "aipage-safari.zip"]}' \
+            > nightly.json
+          cat nightly.json
+
+      - name: Move the `nightly` tag to this commit
+        run: |
+          set -euo pipefail
+          git tag -f nightly "${GITHUB_SHA}"
+          git push --force origin refs/tags/nightly
+
+      - name: Create or update the `nightly` prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view nightly >/dev/null 2>&1; then
+            gh release edit nightly \
+              --target "${GITHUB_SHA}" \
+              --prerelease \
+              --latest=false \
+              --title "${title}" \
+              --notes-file notes.md
+          else
+            gh release create nightly \
+              --target "${GITHUB_SHA}" \
+              --prerelease \
+              --latest=false \
+              --title "${title}" \
+              --notes-file notes.md
+          fi
+
+          # Replace the assets. nightly.json goes last so the skip check in the
+          # next run only sees this commit once every package uploaded.
+          existing_assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/nightly" --jq '.assets[].name' || true)"
+          for asset in $existing_assets; do
+            gh release delete-asset nightly "$asset" --yes || true
+          done
+          gh release upload nightly --clobber \
+            aipage-chrome.zip \
+            aipage-firefox.xpi \
+            aipage-safari.zip \
+            nightly.json
+
+          echo "Published ${title}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/nightly"

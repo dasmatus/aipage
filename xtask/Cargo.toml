@@ -10,3 +10,6 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+# `preserve_order` keeps the manifest's key order intact when xtask rewrites
+# `version` / `version_name` for stamped (nightly) builds.
+serde_json = { workspace = true, features = ["preserve_order"] }

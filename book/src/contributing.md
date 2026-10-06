@@ -54,6 +54,15 @@ We use **Playwright** for End-to-End (E2E) testing.
   bunx playwright test tests/sidebar.spec.ts
   ```
 
+- **Extension install tests** (`tests/install/`, see its README): load the *built* dists the way a browser does — a real unpacked MV2 install in headless Chromium, `web-ext lint` plus a temporary install in headless Firefox (when a `firefox` binary is available), and a structural check of `dist-safari`. CI runs them as a hard gate and the nightly build will not publish if they fail.
+
+  ```bash
+  bun run build:all            # or cargo run -p xtask -- build-all
+  bun run test:install         # all; or test:install:chromium / :firefox / :structure
+  ```
+
+- **Nightly-style version stamp:** `cargo run -p xtask -- build-all --version-stamp 1.7.0.20261006 --version-name "1.7.0-nightly.20261006+abc1234"` writes the given manifest `version` (1–4 dot-separated integers, no leading zeros, ≤ 9 digits each) and, for Chrome only, `version_name`.
+
 ### Documentation
 
 We use **MDBook** for documentation.
