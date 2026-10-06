@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **providers:** add ChatGPT/OpenAI provider ([afdeba2](https://github.com/dasmatus/aipage/commit/afdeba2476d6263e74702b4939c6f807f804fcad))
 * **providers:** add Claude via the Anthropic Messages API ([3bc6111](https://github.com/dasmatus/aipage/commit/3bc6111e57afec647e0f5a59715427c44e3f15cb))
 * **web:** host sidebar UI on Vercel with bundled fallback ([55da34f](https://github.com/dasmatus/aipage/commit/55da34f2754e4be0ae3d14b613eacf4f6395594e))
+* **chrome:** experimental MV3 manifest and service-worker loader ([62d416c](https://github.com/dasmatus/aipage/commit/62d416c2d46d137de7fbbb6a3521af22f4ff408e))
 
 ### 🐛 Bug Fixes
 
@@ -128,6 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * add glassmorphism redesign implementation plan ([26988f0](https://github.com/dasmatus/aipage/commit/26988f06677f28093a22eeeeda8ab0a178a9b544))
 * describe the hosted UI, its fallback and security model ([9a3fd72](https://github.com/dasmatus/aipage/commit/9a3fd72ccd83084055d937215af4a981c154eb0a))
 * refresh CLAUDE.md and the guides for the current architecture ([f1353aa](https://github.com/dasmatus/aipage/commit/f1353aa6688766264659d06243c13e171fb9422e))
+* MV3 feasibility study skeleton ([3e1d240](https://github.com/dasmatus/aipage/commit/3e1d24063ebcf93a9ded3fef28c4a07a5665c46d))
+* MV3 feasibility study ([7b6140a](https://github.com/dasmatus/aipage/commit/7b6140ab1701a8af419f9e415bdef8b1d9c0db5f))
 * describe the generated changelog, the release flow and the docs site ([073093a](https://github.com/dasmatus/aipage/commit/073093a3a987680086db5d5c155c0d99e1908455))
 
 ### 💎 Styles
