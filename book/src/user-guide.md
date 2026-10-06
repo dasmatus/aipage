@@ -2,6 +2,8 @@
 
 A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powered sidebar to EduPage, featuring a clean interface and integration with multiple AI providers.
 
+**Documentation:** <https://aipage-docs.vercel.app> (this guide, the [contributing guide](contributing.md) and the [changelog](changelog.md), built from `book/` with mdBook and deployed on every push to `main`).
+
 ## Features
 
 - AI chat assistant integrated directly into EduPage
@@ -235,12 +237,17 @@ cargo run -p xtask -- build --target web   # → dist-web/ (hashed js/wasm/css +
 `.github/workflows/deploy-web.yml` runs that build in the Nix devShell on
 every push to `main` that touches the sidebar/core/bindings/assets/xtask (and
 on manual dispatch), then deploys the prebuilt directory to production with
-`vercel deploy dist-web --prod --yes`. The Vercel team/project ids are plain
-`env` values in the workflow; the **repository owner must add one secret**:
+`vercel deploy dist-web --prod --yes`. The documentation book is deployed the
+same way by `.github/workflows/deploy-docs.yml` (`mdbook build` → `book/book/`,
+`vercel deploy book/book --prod --yes`) to <https://aipage-docs.vercel.app>.
+The Vercel team/project ids are plain `env` values in the workflows; the
+**repository owner must add one secret**, shared by both workflows:
 
-| Secret         | Value                                                                 |
-| -------------- | --------------------------------------------------------------------- |
-| `VERCEL_TOKEN` | A Vercel access token (Account Settings → Tokens) with access to the `dasmatus-personal` team |
+| Secret / id         | Value                                                                 |
+| ------------------- | --------------------------------------------------------------------- |
+| `VERCEL_TOKEN`      | Secret: a Vercel access token (Account Settings → Tokens) with access to the `dasmatus-personal` team |
+| `VERCEL_ORG_ID`     | `team_7Z3rZakz7VA0GFsobgGCSMBN` (team `dasmatus-personal`; workflow `env`, not a secret) |
+| `VERCEL_PROJECT_ID` | `prj_ItmdNa5y83DzyeCRFgm9iarKmoDZ` for the hosted UI (project `aipage`, `deploy-web.yml`); `prj_ykFsBQO6a0zZT1EmzkaQ4KXuH0U7` for the docs (project `aipage-docs`, `deploy-docs.yml`) |
 
 `dist-web/vercel.json` (copied from `assets/vercel.json`) sets
 `application/wasm`, immutable caching for the content-hashed files,
