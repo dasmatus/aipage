@@ -5,6 +5,21 @@ All notable changes to the AIPage extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### ✨ Features
+
+* **Hosted UI (Vercel):** the sidebar UI is served from a web origin by default, so UI updates ship without reinstalling the extension. New *Hosted UI* settings card with a "Remote UI (auto-updating)" toggle (default on, key `remote_ui_enabled`) and an advanced URL override (`remote_ui_url`). The content script falls back to the bundled sidebar when the hosted page does not connect within 8 s or errors.
+* **postMessage bridge:** `aipage-bindings` gained a transport abstraction (direct `chrome.*` vs. bridge) and a documented v1 bridge protocol; the content script answers `runtime.sendMessage`, `storage.local.get/set`, `storage.onChanged` and `tabs.query/sendMessage` for the hosted sidebar after verifying the message origin and source, over a private `MessageChannel`.
+
+### 🏗️ Build System
+
+* `cargo run -p xtask -- build --target web` builds `dist-web/` (sidebar only, content-hashed js/wasm/css, `vercel.json` with wasm/caching/CSP headers).
+
+### 👷 CI/CD
+
+* `deploy-web.yml` builds the web target in the Nix devShell and deploys `dist-web` to Vercel production (`VERCEL_TOKEN` secret required).
+
 ## [1.5.0](https://codeberg.org/dasmatus/aipage/compare/v1.4.0...v1.5.0) (2026-02-08)
 
 
