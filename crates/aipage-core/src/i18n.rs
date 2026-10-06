@@ -129,6 +129,11 @@ pub struct Translation {
     pub openai_api_key: String,
     pub openai_api_key_placeholder: String,
     pub openai_api_key_hint: String,
+    // Claude (Anthropic) — `provider_anthropic` is declared above with the
+    // other engine labels.
+    pub anthropic_api_key: String,
+    pub anthropic_api_key_placeholder: String,
+    pub anthropic_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
     pub global_theme_description: String,
@@ -211,6 +216,10 @@ mod tests {
             assert!(!t.openai_api_key.is_empty(), "{code} openaiApiKey empty");
             assert!(!t.openai_api_key_placeholder.is_empty(), "{code} openaiApiKeyPlaceholder empty");
             assert!(t.openai_api_key_hint.contains("platform.openai.com/api-keys"), "{code} openaiApiKeyHint");
+            assert_eq!(t.provider_anthropic, "Claude (Anthropic)", "{code} providerAnthropic");
+            assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
+            assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");
+            assert!(!t.anthropic_api_key_hint.is_empty(), "{code} anthropicApiKeyHint empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
         }
     }

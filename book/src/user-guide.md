@@ -88,6 +88,7 @@ The extension supports multiple AI providers. Choose your preferred provider and
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
 - **Claude (Anthropic)** — chat, native web search, and SVG image generation
+- **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
 - **LM Studio** (Local)
 - **Ollama** (Local)
 
@@ -102,14 +103,15 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 #### Claude (Anthropic)
 
-The cloud provider talks directly to Claude through the official Anthropic API.
+Talks directly to Claude through the official Anthropic Messages API (`https://api.anthropic.com`), billed to your Anthropic account.
 
 1. Go to **[the Anthropic Console](https://console.anthropic.com)** and sign in (or create an account).
 2. Open **Settings → API Keys** (direct link: `https://console.anthropic.com/settings/keys`).
 3. Click **Create Key**, give it a name, and copy it — the key starts with `sk-ant-`.
-4. Paste the key into the AIPage settings and pick a Claude model (e.g. `claude-opus-4-8`).
+4. In the AIPage settings pick **Claude (Anthropic)** as the engine, leave the **Base URL** at `https://api.anthropic.com` (only change it for a gateway that speaks the Messages API) and paste the key.
+5. Click the refresh button next to **Model** to list your available models and pick one; the default is `claude-opus-5-5`.
 
-> The key is stored locally in your browser and is only ever sent to `api.anthropic.com` (through the extension's background proxy). Claude also powers **web search** — its built-in search tool, so no extra key is needed — and **image generation**: Claude draws an SVG that the extension renders to a PNG in-browser with WebAssembly ImageMagick.
+> The key is stored locally in your browser and is only ever sent to `api.anthropic.com` (through the extension's background proxy). Claude runs the **agentic chat** tools (read the page, read / fill the exam question) and powers **web search** with its built-in server-side search tool, so no extra search key is needed. **Image generation** asks Claude for an SVG that the extension rasterizes to a PNG in-browser. If you used the Claude provider in an older AIPage release, your saved key and model are picked up again.
 
 #### OpenRouter
 

@@ -64,10 +64,11 @@ pub struct PageContentResponse {
 }
 
 /// Which AI backend a request targets:
-/// `'ollama-cloud' | 'openrouter' | 'openai' | 'lmstudio' | 'ollama'`.
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'anthropic' | 'lmstudio' | 'ollama'`.
 /// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
 /// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
-/// three are OpenAI-compatible and need an API key. The two local variants
+/// three are OpenAI-compatible and need an API key. `Anthropic` is Claude
+/// over the Anthropic Messages API (API key required); the two local variants
 /// talk to a self-hosted Ollama / LM Studio on the loopback.
 ///
 /// See the "Adding a provider" checklist in [`crate::providers`].
@@ -82,16 +83,18 @@ pub enum ProviderType {
     OpenRouter,
     #[serde(rename = "openai")]
     OpenAi,
+    Anthropic,
     Lmstudio,
     Ollama,
 }
 
 impl ProviderType {
     /// Every provider, in settings-menu order.
-    pub const ALL: [ProviderType; 5] = [
+    pub const ALL: [ProviderType; 6] = [
         ProviderType::OllamaCloud,
         ProviderType::OpenRouter,
         ProviderType::OpenAi,
+        ProviderType::Anthropic,
         ProviderType::Ollama,
         ProviderType::Lmstudio,
     ];
@@ -101,6 +104,7 @@ impl ProviderType {
             ProviderType::OllamaCloud => "ollama-cloud",
             ProviderType::OpenRouter => "openrouter",
             ProviderType::OpenAi => "openai",
+            ProviderType::Anthropic => "anthropic",
             ProviderType::Lmstudio => "lmstudio",
             ProviderType::Ollama => "ollama",
         }
@@ -111,19 +115,22 @@ impl ProviderType {
             ProviderType::OllamaCloud => "Ollama Cloud",
             ProviderType::OpenRouter => "OpenRouter",
             ProviderType::OpenAi => "ChatGPT / OpenAI",
+            ProviderType::Anthropic => "Claude (Anthropic)",
             ProviderType::Lmstudio => "LM Studio",
             ProviderType::Ollama => "Ollama",
         }
     }
 
     /// Parse a stored string, defaulting to Ollama Cloud for unknown values
-    /// (matches `getProviderPreference`). The legacy `"anthropic"` value maps
-    /// to the new default so pre-migration installs land on the cloud backend.
+    /// (matches `getProviderPreference`). `"anthropic"` is the stored value
+    /// of the Claude provider again, so installs that saved it before the
+    /// Ollama Cloud migration come back on Claude with their old key.
     pub fn from_str_or_default(s: &str) -> Self {
         match s {
-            "ollama-cloud" | "anthropic" => ProviderType::OllamaCloud,
+            "ollama-cloud" => ProviderType::OllamaCloud,
             "openrouter" => ProviderType::OpenRouter,
             "openai" => ProviderType::OpenAi,
+            "anthropic" => ProviderType::Anthropic,
             "lmstudio" => ProviderType::Lmstudio,
             "ollama" => ProviderType::Ollama,
             _ => ProviderType::OllamaCloud,
@@ -140,10 +147,14 @@ impl ProviderType {
         !self.is_local()
     }
 
-    /// Whether this backend accepts OpenAI-style function tools, enabling the
+    /// Whether this backend accepts tool definitions (OpenAI-style function
+    /// tools, or Anthropic's `input_schema` tools for Claude), enabling the
     /// agentic chat loop and native web search in [`crate::agent`].
     pub fn supports_native_tools(self) -> bool {
-        matches!(self, ProviderType::OllamaCloud | ProviderType::OpenRouter | ProviderType::OpenAi)
+        matches!(
+            self,
+            ProviderType::OllamaCloud | ProviderType::OpenRouter | ProviderType::OpenAi | ProviderType::Anthropic
+        )
     }
 }
 
@@ -184,14 +195,23 @@ mod tests {
     }
 
     #[test]
+    fn anthropic_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::Anthropic).unwrap(), "\"anthropic\"");
+        assert_eq!(ProviderType::Anthropic.display_name(), "Claude (Anthropic)");
+        assert!(!ProviderType::Anthropic.is_local());
+        assert!(ProviderType::Anthropic.requires_api_key());
+        assert!(ProviderType::Anthropic.supports_native_tools());
+    }
+
+    #[test]
     fn provider_from_str_defaults_to_ollama_cloud() {
         assert_eq!(ProviderType::from_str_or_default("ollama-cloud"), ProviderType::OllamaCloud);
         assert_eq!(ProviderType::from_str_or_default("openrouter"), ProviderType::OpenRouter);
         assert_eq!(ProviderType::from_str_or_default("openai"), ProviderType::OpenAi);
         assert_eq!(ProviderType::from_str_or_default("ollama"), ProviderType::Ollama);
         assert_eq!(ProviderType::from_str_or_default("lmstudio"), ProviderType::Lmstudio);
-        // legacy "anthropic" stored value migrates to the new default
-        assert_eq!(ProviderType::from_str_or_default("anthropic"), ProviderType::OllamaCloud);
+        // "anthropic" is the Claude provider's stored value (old installs come back on Claude)
+        assert_eq!(ProviderType::from_str_or_default("anthropic"), ProviderType::Anthropic);
         assert_eq!(ProviderType::from_str_or_default("bogus"), ProviderType::OllamaCloud);
     }
 
@@ -205,6 +225,7 @@ mod tests {
         assert!(!ProviderType::OllamaCloud.is_local());
         assert!(!ProviderType::OpenRouter.is_local());
         assert!(!ProviderType::OpenAi.is_local());
+        assert!(!ProviderType::Anthropic.is_local());
         assert!(ProviderType::Lmstudio.is_local());
         assert!(ProviderType::Ollama.is_local());
     }

@@ -8,7 +8,8 @@
 //! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, LM Studio,
 //! and local Ollama's `/v1` layer) share one client,
 //! [`openai_compat::OpenAiCompat`]; a concrete provider module is a thin
-//! wrapper over one static config.
+//! wrapper over one static config. Claude ([`anthropic`]) speaks the
+//! Anthropic Messages API and owns its wire format.
 //!
 //! # Adding a provider
 //!
@@ -34,7 +35,8 @@
 //!    * Other wire formats (Anthropic Messages API, OpenAI Responses API):
 //!      implement `send_message(prompt, api_key, opts)` and
 //!      `get_models(api_key, opts)` yourself over [`crate::proxy`]; keep the
-//!      JSON parsing in pure functions with tests. `for_provider` is total,
+//!      JSON parsing in pure functions with tests (`anthropic.rs` +
+//!      `tests/anthropic.rs` is the worked example). `for_provider` is total,
 //!      so either give it the backend's OpenAI-compatible surface or return
 //!      a sensible fallback and gate the callers below.
 //! 4. **`crates/aipage-core/src/providers/mod.rs`** (this file) — `pub mod`,
@@ -43,7 +45,7 @@
 //! 5. **`crates/aipage-core/src/agent.rs`** — nothing for OpenAI-tool backends
 //!    (the loop takes an `OpenAiCompat`). A backend with its own tool
 //!    protocol needs its own loop, dispatched on `ProviderType` in
-//!    `run_agent_turn` / `web_search`.
+//!    `run_agent_turn` / `web_search` (see the Anthropic loop there).
 //! 6. **`crates/aipage-core/src/imagegen.rs`** — SVG image generation posts an
 //!    OpenAI-style chat completion via `OpenAiCompat::for_provider`; add a
 //!    branch if the backend cannot serve that, and extend
@@ -70,6 +72,7 @@
 //!     `cargo check --target wasm32-unknown-unknown -p aipage-sidebar -p aipage-background -p aipage-content`,
 //!     then `cargo run -p xtask -- build --target chrome` and load `dist-chrome/`.
 
+pub mod anthropic;
 pub mod lmstudio;
 pub mod ollama;
 pub mod ollama_cloud;
@@ -107,6 +110,7 @@ pub fn default_base_url(provider: ProviderType) -> &'static str {
         ProviderType::OllamaCloud => ollama_cloud::CONFIG.default_base_url,
         ProviderType::OpenRouter => openrouter::CONFIG.default_base_url,
         ProviderType::OpenAi => openai::CONFIG.default_base_url,
+        ProviderType::Anthropic => anthropic::DEFAULT_BASE_URL,
         ProviderType::Lmstudio => "http://localhost:1234/v1",
         ProviderType::Ollama => ollama::CONFIG.default_base_url,
     }
@@ -123,6 +127,7 @@ pub async fn send_message(
         ProviderType::OllamaCloud => ollama_cloud::send_message(prompt, api_key, opts).await,
         ProviderType::OpenRouter => openrouter::send_message(prompt, api_key, opts).await,
         ProviderType::OpenAi => openai::send_message(prompt, api_key, opts).await,
+        ProviderType::Anthropic => anthropic::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, api_key, opts).await,
         ProviderType::Lmstudio => lmstudio::send_message(prompt, api_key, opts).await,
     }
@@ -138,15 +143,16 @@ pub async fn get_models(
         ProviderType::OllamaCloud => ollama_cloud::get_models(api_key, opts).await,
         ProviderType::OpenRouter => openrouter::get_models(api_key, opts).await,
         ProviderType::OpenAi => openai::get_models(api_key, opts).await,
+        ProviderType::Anthropic => anthropic::get_models(api_key, opts).await,
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
     }
 }
 
 /// Native web search. Providers with OpenAI-style function tools implement it
-/// via a tool-calling round over the background DuckDuckGo searcher; local
-/// providers return an error and the sidebar falls back to its own
-/// DuckDuckGo + summarize path.
+/// via a tool-calling round over the background DuckDuckGo searcher; Claude
+/// uses its server-side `web_search` tool; local providers return an error
+/// and the sidebar falls back to its own DuckDuckGo + summarize path.
 pub async fn web_search(
     provider: ProviderType,
     query: &str,
@@ -157,6 +163,7 @@ pub async fn web_search(
         ProviderType::OllamaCloud => ollama_cloud::web_search(query, api_key, opts).await,
         ProviderType::OpenRouter => openrouter::web_search(query, api_key, opts).await,
         ProviderType::OpenAi => openai::web_search(query, api_key, opts).await,
+        ProviderType::Anthropic => anthropic::web_search(query, api_key, opts).await,
         _ => Err("This provider does not support native web search".to_string()),
     }
 }
@@ -170,6 +177,7 @@ mod tests {
         assert_eq!(default_base_url(ProviderType::OllamaCloud), "https://ollama.com");
         assert_eq!(default_base_url(ProviderType::OpenRouter), "https://openrouter.ai/api");
         assert_eq!(default_base_url(ProviderType::OpenAi), "https://api.openai.com");
+        assert_eq!(default_base_url(ProviderType::Anthropic), "https://api.anthropic.com");
         assert_eq!(default_base_url(ProviderType::Lmstudio), "http://localhost:1234/v1");
         assert_eq!(default_base_url(ProviderType::Ollama), "http://localhost:11434");
     }
