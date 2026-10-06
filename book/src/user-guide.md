@@ -21,8 +21,8 @@ To install the extension, download the latest build directly from our GitHub Rel
 2.  Open the latest release.
 3.  Download the asset for your browser:
     - **Chrome**: `aipage-chrome.zip`
-    - **Firefox**: `aipage-firefox.xpi`
-    - **Safari**: `aipage-safari.zip`
+    - **Firefox**: `aipage-firefox.xpi` (signed by addons.mozilla.org, installs permanently) — a release built without AMO credentials carries `aipage-firefox-unsigned.xpi` instead, which Firefox only loads as a temporary add-on
+    - **Safari**: `aipage-safari-macos.zip` (the `AIPage.app` wrapper Safari needs, unsigned) — `aipage-safari.zip` is the bare web extension for wrapping it yourself with Xcode
 
 ### Chrome
 
@@ -37,18 +37,24 @@ To install the extension, download the latest build directly from our GitHub Rel
 
 ### Firefox
 
+Release builds of Firefox only keep extensions that Mozilla has signed. The release workflow signs `aipage-firefox.xpi` through addons.mozilla.org's *self-distribution* (unlisted) channel — the add-on is not listed on AMO, but the file carries Mozilla's signature.
+
 1.  Download `aipage-firefox.xpi` from the release.
-2.  Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
-3.  Click **"Load Temporary Add-on"**.
-4.  Select the downloaded `.xpi` file.
+2.  Open it in Firefox: drag it onto a Firefox window, or **File → Open File…**, or `about:addons` → gear icon → **Install Add-on From File…**.
+3.  Confirm the **Add** prompt. The extension stays installed across restarts (Firefox 140 or newer; 142 on Android).
+
+If the release only has `aipage-firefox-unsigned.xpi` (built without AMO credentials, e.g. from a fork), Firefox refuses to install it permanently. Load it as a temporary add-on instead: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick the `.xpi`. Temporary add-ons are removed when Firefox exits. (Firefox Developer Edition / Nightly can install unsigned files permanently after setting `xpinstall.signatures.required` to `false` in `about:config`.)
 
 ### Safari (macOS only)
 
-1.  Download `aipage-safari.zip` from the release.
-2.  Unzip the file to get the application.
-3.  Run the application locally.
-4.  Open Safari Preferences → Extensions.
-5.  Enable the **AIPage** extension.
+Safari does not load bare web extensions: they must ship inside a native macOS app. The release's `aipage-safari-macos.zip` contains that app (`AIPage.app`), built by Apple's `safari-web-extension-packager` on a macOS runner from the same files as the other packages. It is **not code-signed or notarized** (that needs an Apple Developer account), so Safari treats it as a developer build:
+
+1.  Download `aipage-safari-macos.zip` from the release and unzip it; move `AIPage.app` to *Applications* (or anywhere permanent — Safari remembers the location).
+2.  Open the app once: right-click (Control-click) `AIPage.app` → **Open** → **Open** again in the Gatekeeper dialog (a plain double-click is refused for unsigned apps). The app window only tells you to enable the extension; you can close it afterwards.
+3.  In Safari, allow unsigned extensions: **Safari → Settings → Advanced** → tick **Show features for web developers** (Safari 16 and earlier: *Show Develop menu in menu bar*), then **Settings → Developer** → tick **Allow unsigned extensions** (Safari 16 and earlier: **Develop → Allow Unsigned Extensions**). Safari resets this switch every time it quits — set it again after a restart or the extension stays disabled.
+4.  **Safari → Settings → Extensions** → enable **AIPage** and grant it access to `edupage.org` when asked.
+
+`aipage-safari.zip` is the bare web-extension folder. Use it to build the wrapper yourself with Xcode (`scripts/setup-safari.sh`, see [Packaging for Distribution](#packaging-for-distribution)), for example to sign it with your own developer certificate.
 
 ## Nightly builds
 
@@ -56,10 +62,10 @@ Every night (and on demand) the head of `main` is built for all three browsers a
 
 **<https://github.com/dasmatus/aipage/releases/tag/nightly>**
 
-- The release is re-created in place: the `nightly` tag moves to the built commit, the assets (`aipage-chrome.zip`, `aipage-firefox.xpi`, `aipage-safari.zip`) are replaced, and the notes list the commits since the previous nightly. `nightly.json` records the exact commit the assets were built from.
+- The release is re-created in place: the `nightly` tag moves to the built commit, the assets (`aipage-chrome.zip`, `aipage-firefox.xpi` or `aipage-firefox-unsigned.xpi`, `aipage-safari.zip`, `aipage-safari-macos.zip`) are replaced, and the notes list the commits since the previous nightly. `nightly.json` records the exact commit the assets were built from, the asset names and whether the Firefox xpi was signed (`firefox_signed`).
 - The manifest version is stamped as `<base>.<YYYYMMDD>` (for example `1.7.0.20261006`), so a nightly sorts above the release it is based on and below the next release. Chrome additionally shows the human-readable `version_name` (`1.7.0-nightly.20261006+<sha>`).
 - Nothing is published when `main` has not changed since the last nightly, and a nightly whose extension install tests fail is never published.
-- Nightlies are unsigned development builds: they cannot be installed from a store, only unpacked / as a temporary add-on, and they carry whatever is on `main` — including half-finished features.
+- Nightlies are development builds of whatever is on `main` — including half-finished features. The Chrome and Safari packages are unsigned (unpacked install / unsigned-extension mode); the Firefox xpi is signed by AMO like a release when the repository has the AMO credentials configured (see [Firefox signing (AMO)](#firefox-signing-amo)), each nightly being its own AMO version.
 
 ### Installing a nightly
 
@@ -71,9 +77,9 @@ Every night (and on demand) the head of `main` is built for all three browsers a
 
 (or enable the `AllowLegacyMV2Extensions` feature, exposed as *Allow legacy extension manifest versions* in `chrome://flags` on builds that still have it). This is exactly what the install tests do in CI, pinned to Chrome 141; Brave keeps MV2 support without any flag.
 
-**Firefox** — open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and pick `aipage-firefox.xpi` (or the `manifest.json` of the unzipped file). Temporary add-ons are removed when Firefox exits; a nightly is not signed by AMO, so it cannot be installed permanently on release builds of Firefox.
+**Firefox** — `aipage-firefox.xpi` is AMO-signed: open it in Firefox and confirm **Add**; it installs permanently and each night's build is a higher version than the last, so opening the next nightly upgrades in place. When the nightly only offers `aipage-firefox-unsigned.xpi`, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and pick the file (removed when Firefox exits).
 
-**Safari (macOS)** — unzip `aipage-safari.zip` and wrap it with Xcode's converter (`xcrun safari-web-extension-converter dist-safari`, see `scripts/setup-safari.sh`), then enable *Allow unsigned extensions* in Safari's Develop menu. Safari cannot run on Linux, so nightlies only receive a structural check for this target.
+**Safari (macOS)** — unzip `aipage-safari-macos.zip`, open `AIPage.app` once (right-click → **Open**, it is unsigned), switch on **Allow unsigned extensions** in Safari's Developer settings and enable AIPage under **Settings → Extensions**, exactly as for a [release](#safari-macos-only). `aipage-safari.zip` is the bare extension for wrapping it yourself with `scripts/setup-safari.sh`. Safari cannot run on Linux: the Linux job checks the Safari dist structurally and the macOS job proves that Apple's packager and `xcodebuild` accept it, but nobody clicks through the extension before it is published.
 
 ## Setting Up Your AI Provider
 
@@ -260,7 +266,9 @@ crates/aipage-background/ # CORS proxy, web search, toolbar toggle, update check
 crates/aipage-content/    # navbar button, sidebar iframe, theming, exam tools, anti-cheat
 xtask/                    # build orchestrator
 assets/                   # manifests, sidebar.html, JS loaders, anti_cheat.js, stylesheets
-scripts/setup-safari.sh   # Safari Xcode project generator (macOS)
+scripts/setup-safari.sh   # Safari: Xcode project generator + unsigned app build/zip (macOS)
+scripts/sign-firefox.sh   # Firefox: AMO signing (web-ext sign) with same-version fallback
+scripts/amo-fetch-signed.mjs  # Firefox: re-download a version AMO already signed
 tests/install, tests/e2e  # Playwright test suites
 ```
 
@@ -284,19 +292,40 @@ bun run test:e2e              # Playwright UI tests (tests/e2e/README.md)
 
 ```bash
 bun run package:chrome        # aipage-chrome.zip
-bun run package:firefox       # packages/*.zip (web-ext; the Firefox xpi)
-bun run package:safari        # aipage-safari.zip, wrapped with Xcode via scripts/setup-safari.sh
+bun run package:firefox       # packages/*.zip (web-ext; the unsigned Firefox xpi)
+bun run sign:firefox          # aipage-firefox.xpi signed by AMO (needs WEB_EXT_API_KEY/SECRET, see below)
+bun run package:safari        # aipage-safari.zip (the bare web extension)
+bun run package:safari:app    # aipage-safari-macos.zip: AIPage.app built unsigned with Xcode (macOS only)
 ```
+
+`scripts/setup-safari.sh` on its own only generates `safari/AIPage/AIPage.xcodeproj` (open it in Xcode to sign with your own certificate or to debug); `--build` adds the unsigned Release build, `--package <zip>` also zips `AIPage.app`. It uses `xcrun safari-web-extension-packager` (Xcode 26+) or `safari-web-extension-converter` (older Xcode), with `--macos-only --copy-resources --no-prompt --force`. The packager prints a warning about manifest keys Safari does not support (`downloads`, `notifications` buttons, …); that is expected and does not stop the build.
 
 ### CI/CD Pipeline
 
 This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
-- **Build workflow** (`build.yml`, reusable): `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), packages `aipage-chrome.zip`, `aipage-safari.zip` and the Firefox `.xpi`, then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium, `web-ext lint` + a temporary install in headless Firefox, a structural check of the Safari dist). A failing install test fails the job. Accepts an optional manifest version stamp.
+- **Build workflow** (`build.yml`, reusable): on Ubuntu, `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari), packages `aipage-chrome.zip`, `aipage-safari.zip` and the Firefox `.xpi`, then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium, `web-ext lint` + a temporary install in headless Firefox that boots the background and sidebar WASM over the remote debugging protocol, a structural check of the Safari dist). A failing install test fails the job. With `sign-firefox: true` the xpi is then signed through AMO (below); otherwise it is uploaded as `aipage-firefox-unsigned.xpi`. A second, **macOS** job downloads the Ubuntu-built `dist-safari`, runs `scripts/setup-safari.sh --package aipage-safari-macos.zip` (Apple's packager + unsigned `xcodebuild`) and uploads the app as its own artifact (`<artifact-name>-safari-macos`); it is marked `continue-on-error`, so a converter/Xcode breakage shows as a red job and a missing asset rather than blocking the other packages. Accepts an optional manifest version stamp.
 - **E2e job** (best-effort): Playwright against the built Chrome dist served over HTTP
-- **Release workflow**: on a pushed `v*` tag, runs the build workflow and publishes a GitHub Release with the packaged assets
-- **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly)
+- **Release workflow**: on a pushed `v*` tag, runs the build workflow (signing on) and publishes a GitHub Release with `aipage-chrome.zip`, `aipage-firefox.xpi` (or `-unsigned`), `aipage-safari.zip` and, when the macOS job succeeded, `aipage-safari-macos.zip`
+- **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests, signs the Firefox xpi and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly)
+
+### Firefox signing (AMO)
+
+Release builds of Firefox install only Mozilla-signed extensions, so `build.yml` runs `scripts/sign-firefox.sh` (`web-ext sign --channel unlisted`) for nightlies and releases: it uploads `dist-firefox` to addons.mozilla.org's **self-distribution** channel, waits for the automatic validation + signing (up to 15 minutes), downloads the signed file and ships it as `aipage-firefox.xpi`. The add-on never appears in the public AMO listing; it is identified by the `browser_specific_settings.gecko.id` in `assets/manifest.firefox.json` (`edupage-ai-sidebar@hesburger.dev`), which is also why that manifest declares `data_collection_permissions` — AMO rejects new submissions without it.
+
+The **repository owner must add two secrets** (Settings → Secrets and variables → Actions):
+
+| Secret               | Value                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `WEB_EXT_API_KEY`    | The *JWT issuer* of an AMO API key, created at <https://addons.mozilla.org/developers/addon/api/key/> (looks like `user:12345678:123`) |
+| `WEB_EXT_API_SECRET` | The *JWT secret* shown together with the issuer (only once, at creation)                                                   |
+
+The account that owns the key becomes the add-on's developer on AMO; the first signed upload creates the (unlisted) add-on there. Without the secrets — forks, pull requests, a fresh clone — the workflow prints a notice and ships the unsigned xpi under the name `aipage-firefox-unsigned.xpi`, so nothing breaks; `ci.yml` never signs because AMO accepts each version string only once and plain CI builds all carry the committed version.
+
+**"Version already exists"**: AMO keeps exactly one immutable file per add-on version. A nightly rebuilt on the same day (same `<base>.<YYYYMMDD>` stamp) or a re-run release workflow would be refused with `Version 1.7.0.20261006 already exists`; `scripts/sign-firefox.sh` recognises that and downloads the file AMO already signed for that version (`scripts/amo-fetch-signed.mjs`, same credentials) instead of failing. To re-sign changed code under the same version you must first delete that version on AMO (Developer Hub → the add-on → *Manage Status & Versions*), or bump the version. If signing fails for any other reason the job fails rather than silently publishing an unsigned file.
+
+Locally the same script works with the two variables exported: `WEB_EXT_API_KEY=… WEB_EXT_API_SECRET=… bun run sign:firefox`.
 
 ## Troubleshooting
 
