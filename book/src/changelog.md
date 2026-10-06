@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **ci:** download Brave's package index before parsing it ([bb5a587](https://github.com/dasmatus/aipage/commit/bb5a5873e4c4332829b3bc8df320b637fe8aecb0))
 * **firefox:** declare data-collection consent and drop 'unsafe-eval' from the CSP ([0c428e9](https://github.com/dasmatus/aipage/commit/0c428e9fc444afa70d4e81068ea7b99892cd5218))
 * **ci:** reinstall Nix in the check job ([dd230a8](https://github.com/dasmatus/aipage/commit/dd230a8bf2c41ca2a7796c053300d2afcc0602d6))
+* **safari:** pin app and extension bundle ids after generating the project ([b41e3b0](https://github.com/dasmatus/aipage/commit/b41e3b0902a478580af8d10c29985cba9c1e2b04))
 
 ### 📦 Dependencies
 
@@ -141,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * describe the generated changelog, the release flow and the docs site ([073093a](https://github.com/dasmatus/aipage/commit/073093a3a987680086db5d5c155c0d99e1908455))
 * **user-guide:** installing the signed Firefox xpi and the Safari app wrapper ([921d78c](https://github.com/dasmatus/aipage/commit/921d78ca63d1e900f3b3ce7566e0ff92fc421b07))
 * describe GitHub updates, channels and the self-updating sidebar ([b297379](https://github.com/dasmatus/aipage/commit/b2973796f25269186f3028c1d6d9199284f419c5))
+* **user-guide:** escape <channel> so mdbook renders it ([fcaa27a](https://github.com/dasmatus/aipage/commit/fcaa27a7d5a6dd7eb3a5c2618c2ff87498c4ffaa))
 
 ### 💎 Styles
 
