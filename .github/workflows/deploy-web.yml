@@ -69,6 +69,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          # shellcheck disable=SC2016 # the quoted script is expanded by the inner bash
           nix develop --accept-flake-config -c bash -c '
             set -euo pipefail
             if [ -z "${VERCEL_TOKEN:-}" ]; then
