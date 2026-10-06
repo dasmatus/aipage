@@ -66,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **firefox:** declare data-collection consent and drop 'unsafe-eval' from the CSP ([0c428e9](https://github.com/dasmatus/aipage/commit/0c428e9fc444afa70d4e81068ea7b99892cd5218))
 * **ci:** reinstall Nix in the check job ([dd230a8](https://github.com/dasmatus/aipage/commit/dd230a8bf2c41ca2a7796c053300d2afcc0602d6))
 * **safari:** pin app and extension bundle ids after generating the project ([b41e3b0](https://github.com/dasmatus/aipage/commit/b41e3b0902a478580af8d10c29985cba9c1e2b04))
+* **pages:** publish the mdBook to GitHub Pages under /aipage/ ([9c72abc](https://github.com/dasmatus/aipage/commit/9c72abc39e25d549d7124be381db03570d2a00fc))
 
 ### 📦 Dependencies
 
