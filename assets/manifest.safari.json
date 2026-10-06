@@ -12,12 +12,13 @@
     "https://codeberg.org/*",
     "https://ollama.com/*",
     "https://openrouter.ai/*",
+    "https://api.openai.com/*",
     "https://api.duckduckgo.com/*",
     "downloads",
     "alarms",
     "notifications"
   ],
-  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://ollama.com https://openrouter.ai https://*.edupage.org https://codeberg.org https://api.duckduckgo.com",
+  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://ollama.com https://openrouter.ai https://api.openai.com https://*.edupage.org https://codeberg.org https://api.duckduckgo.com",
   "background": {
     "scripts": ["background.js", "background_loader.js"],
     "persistent": false

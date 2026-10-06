@@ -5,9 +5,10 @@
 //! CORS proxy via [`crate::proxy`]. Pure helpers (URL normalization, response
 //! parsing) are split out so they can be unit-tested natively.
 //!
-//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, LM Studio, and local
-//! Ollama's `/v1` layer) share one client, [`openai_compat::OpenAiCompat`]; a
-//! concrete provider module is a thin wrapper over one static config.
+//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, LM Studio,
+//! and local Ollama's `/v1` layer) share one client,
+//! [`openai_compat::OpenAiCompat`]; a concrete provider module is a thin
+//! wrapper over one static config.
 //!
 //! # Adding a provider
 //!
@@ -72,6 +73,7 @@
 pub mod lmstudio;
 pub mod ollama;
 pub mod ollama_cloud;
+pub mod openai;
 pub mod openai_compat;
 pub mod openrouter;
 
@@ -104,6 +106,7 @@ pub fn default_base_url(provider: ProviderType) -> &'static str {
     match provider {
         ProviderType::OllamaCloud => ollama_cloud::CONFIG.default_base_url,
         ProviderType::OpenRouter => openrouter::CONFIG.default_base_url,
+        ProviderType::OpenAi => openai::CONFIG.default_base_url,
         ProviderType::Lmstudio => "http://localhost:1234/v1",
         ProviderType::Ollama => ollama::CONFIG.default_base_url,
     }
@@ -119,6 +122,7 @@ pub async fn send_message(
     match provider {
         ProviderType::OllamaCloud => ollama_cloud::send_message(prompt, api_key, opts).await,
         ProviderType::OpenRouter => openrouter::send_message(prompt, api_key, opts).await,
+        ProviderType::OpenAi => openai::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, api_key, opts).await,
         ProviderType::Lmstudio => lmstudio::send_message(prompt, api_key, opts).await,
     }
@@ -133,6 +137,7 @@ pub async fn get_models(
     match provider {
         ProviderType::OllamaCloud => ollama_cloud::get_models(api_key, opts).await,
         ProviderType::OpenRouter => openrouter::get_models(api_key, opts).await,
+        ProviderType::OpenAi => openai::get_models(api_key, opts).await,
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
     }
@@ -151,6 +156,7 @@ pub async fn web_search(
     match provider {
         ProviderType::OllamaCloud => ollama_cloud::web_search(query, api_key, opts).await,
         ProviderType::OpenRouter => openrouter::web_search(query, api_key, opts).await,
+        ProviderType::OpenAi => openai::web_search(query, api_key, opts).await,
         _ => Err("This provider does not support native web search".to_string()),
     }
 }
@@ -163,6 +169,7 @@ mod tests {
     fn default_base_urls_per_provider() {
         assert_eq!(default_base_url(ProviderType::OllamaCloud), "https://ollama.com");
         assert_eq!(default_base_url(ProviderType::OpenRouter), "https://openrouter.ai/api");
+        assert_eq!(default_base_url(ProviderType::OpenAi), "https://api.openai.com");
         assert_eq!(default_base_url(ProviderType::Lmstudio), "http://localhost:1234/v1");
         assert_eq!(default_base_url(ProviderType::Ollama), "http://localhost:11434");
     }

@@ -216,6 +216,8 @@ mod tests {
         // ...or their own default when no chat model is configured...
         assert_eq!(resolve_svg_model(ProviderType::OpenRouter, DEFAULT_SVG_MODEL, ""), "openai/gpt-4.1-mini");
         assert_eq!(resolve_svg_model(ProviderType::Lmstudio, "", ""), "local-model");
+        assert_eq!(resolve_svg_model(ProviderType::OpenAi, DEFAULT_SVG_MODEL, ""), "gpt-4.1-mini");
+        assert_eq!(resolve_svg_model(ProviderType::OpenAi, "", "gpt-4.1"), "gpt-4.1");
         // ...but honour an explicit non-default choice.
         assert_eq!(resolve_svg_model(ProviderType::OpenRouter, "google/gemini-2.5-flash", "x"), "google/gemini-2.5-flash");
     }

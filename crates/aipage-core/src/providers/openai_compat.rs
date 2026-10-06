@@ -1,7 +1,8 @@
 //! Shared client for OpenAI-compatible backends (`/v1/chat/completions` +
 //! `/v1/models` with `Authorization: Bearer <key>`).
 //!
-//! Ollama Cloud, OpenRouter, LM Studio and local Ollama all expose this shape;
+//! Ollama Cloud, OpenRouter, OpenAI, LM Studio and local Ollama all expose
+//! this shape;
 //! they differ only in base URL, default model, display label and any extra
 //! headers. Each concrete provider module declares one [`OpenAiCompat`]
 //! constant and forwards to the methods here, and the tool-calling loop in
@@ -53,6 +54,19 @@ pub const OPENROUTER: OpenAiCompat = OpenAiCompat {
     ],
 };
 
+/// The public OpenAI platform API (`https://api.openai.com/v1`, keys from
+/// platform.openai.com/api-keys). `gpt-4.1-mini` is a non-reasoning model
+/// that OpenAI documents as supporting Chat Completions and function calling
+/// without any `reasoning_effort` caveat, so the shared one-shot client and
+/// the tool loop work unchanged (the GPT-5/GPT-6 families accept Chat
+/// Completions function tools only with `reasoning_effort: "none"`).
+pub const OPENAI: OpenAiCompat = OpenAiCompat {
+    label: "ChatGPT / OpenAI",
+    default_base_url: "https://api.openai.com",
+    default_model: "gpt-4.1-mini",
+    extra_headers: &[],
+};
+
 /// LM Studio's local inference server.
 pub const LMSTUDIO: OpenAiCompat = OpenAiCompat {
     label: "LM Studio",
@@ -79,6 +93,7 @@ impl OpenAiCompat {
         match p {
             ProviderType::OllamaCloud => &OLLAMA_CLOUD,
             ProviderType::OpenRouter => &OPENROUTER,
+            ProviderType::OpenAi => &OPENAI,
             ProviderType::Lmstudio => &LMSTUDIO,
             ProviderType::Ollama => &OLLAMA,
         }
@@ -224,13 +239,14 @@ mod tests {
     fn for_provider_covers_every_provider() {
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OllamaCloud).label, "Ollama Cloud");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenRouter).label, "OpenRouter");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenAi).label, "ChatGPT / OpenAI");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Lmstudio).label, "LM Studio");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Ollama).label, "Ollama");
     }
 
     #[test]
     fn default_base_urls_do_not_end_in_v1() {
-        for cfg in [OLLAMA_CLOUD, OPENROUTER, LMSTUDIO, OLLAMA] {
+        for cfg in [OLLAMA_CLOUD, OPENROUTER, OPENAI, LMSTUDIO, OLLAMA] {
             assert!(!cfg.default_base_url.ends_with("/v1"), "{}", cfg.label);
             assert!(!cfg.default_base_url.ends_with('/'), "{}", cfg.label);
         }

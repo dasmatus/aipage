@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 * **providers:** add an **OpenRouter** provider (`https://openrouter.ai/api`, Bearer key, `HTTP-Referer`/`X-Title` attribution, default model `openai/gpt-4.1-mini`) with chat, model listing, the agentic tool loop, native web search and SVG image generation. Settings keys: `openrouter_api_key`, `openrouter_base_url`, `openrouter_model`.
+* **providers:** add a **ChatGPT / OpenAI** provider over the public OpenAI API (`https://api.openai.com`, Bearer API key, default model `gpt-4.1-mini`) with chat, model listing (filtered to chat-capable `gpt-*` / `o*` / `chatgpt-*` families), the agentic tool loop, native web search and SVG image generation. Settings keys: `openai_api_key`, `openai_base_url`, `openai_model`.
+* **providers:** add a **ChatGPT / OpenAI** provider over the public OpenAI API (`https://api.openai.com`, Bearer API key, default model `gpt-4.1-mini`) with chat, model listing (filtered to chat-capable `gpt-*` / `o*` / `chatgpt-*` families), the agentic tool loop, native web search and SVG image generation. Settings keys: `openai_api_key`, `openai_base_url`, `openai_model`.
 
 ### ♻️ Code Refactoring
 

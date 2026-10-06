@@ -122,6 +122,13 @@ pub struct Translation {
     pub openrouter_api_key: String,
     pub openrouter_api_key_placeholder: String,
     pub openrouter_api_key_hint: String,
+
+    // ChatGPT / OpenAI
+    #[serde(rename = "providerOpenAi")]
+    pub provider_openai: String,
+    pub openai_api_key: String,
+    pub openai_api_key_placeholder: String,
+    pub openai_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
     pub global_theme_description: String,
@@ -200,6 +207,10 @@ mod tests {
             assert!(!t.provider_lmstudio.is_empty(), "{code} providerLMStudio empty");
             assert_eq!(t.provider_openrouter, "OpenRouter", "{code} providerOpenRouter");
             assert!(!t.openrouter_api_key_hint.is_empty(), "{code} openrouterApiKeyHint empty");
+            assert_eq!(t.provider_openai, "ChatGPT / OpenAI", "{code} providerOpenAi");
+            assert!(!t.openai_api_key.is_empty(), "{code} openaiApiKey empty");
+            assert!(!t.openai_api_key_placeholder.is_empty(), "{code} openaiApiKeyPlaceholder empty");
+            assert!(t.openai_api_key_hint.contains("platform.openai.com/api-keys"), "{code} openaiApiKeyHint");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
         }
     }

@@ -64,9 +64,10 @@ pub struct PageContentResponse {
 }
 
 /// Which AI backend a request targets:
-/// `'ollama-cloud' | 'openrouter' | 'lmstudio' | 'ollama'`.
-/// `OllamaCloud` is the hosted Ollama service and `OpenRouter` the OpenRouter
-/// gateway (both OpenAI-compatible, API key required); the two local variants
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'lmstudio' | 'ollama'`.
+/// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
+/// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
+/// three are OpenAI-compatible and need an API key. The two local variants
 /// talk to a self-hosted Ollama / LM Studio on the loopback.
 ///
 /// See the "Adding a provider" checklist in [`crate::providers`].
@@ -79,15 +80,18 @@ pub enum ProviderType {
     OllamaCloud,
     #[serde(rename = "openrouter")]
     OpenRouter,
+    #[serde(rename = "openai")]
+    OpenAi,
     Lmstudio,
     Ollama,
 }
 
 impl ProviderType {
     /// Every provider, in settings-menu order.
-    pub const ALL: [ProviderType; 4] = [
+    pub const ALL: [ProviderType; 5] = [
         ProviderType::OllamaCloud,
         ProviderType::OpenRouter,
+        ProviderType::OpenAi,
         ProviderType::Ollama,
         ProviderType::Lmstudio,
     ];
@@ -96,6 +100,7 @@ impl ProviderType {
         match self {
             ProviderType::OllamaCloud => "ollama-cloud",
             ProviderType::OpenRouter => "openrouter",
+            ProviderType::OpenAi => "openai",
             ProviderType::Lmstudio => "lmstudio",
             ProviderType::Ollama => "ollama",
         }
@@ -105,6 +110,7 @@ impl ProviderType {
         match self {
             ProviderType::OllamaCloud => "Ollama Cloud",
             ProviderType::OpenRouter => "OpenRouter",
+            ProviderType::OpenAi => "ChatGPT / OpenAI",
             ProviderType::Lmstudio => "LM Studio",
             ProviderType::Ollama => "Ollama",
         }
@@ -117,6 +123,7 @@ impl ProviderType {
         match s {
             "ollama-cloud" | "anthropic" => ProviderType::OllamaCloud,
             "openrouter" => ProviderType::OpenRouter,
+            "openai" => ProviderType::OpenAi,
             "lmstudio" => ProviderType::Lmstudio,
             "ollama" => ProviderType::Ollama,
             _ => ProviderType::OllamaCloud,
@@ -136,7 +143,7 @@ impl ProviderType {
     /// Whether this backend accepts OpenAI-style function tools, enabling the
     /// agentic chat loop and native web search in [`crate::agent`].
     pub fn supports_native_tools(self) -> bool {
-        matches!(self, ProviderType::OllamaCloud | ProviderType::OpenRouter)
+        matches!(self, ProviderType::OllamaCloud | ProviderType::OpenRouter | ProviderType::OpenAi)
     }
 }
 
@@ -169,9 +176,18 @@ mod tests {
     }
 
     #[test]
+    fn openai_serializes_lowercase() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenAi).unwrap(), "\"openai\"");
+        assert_eq!(serde_json::from_str::<ProviderType>("\"openai\"").unwrap(), ProviderType::OpenAi);
+        assert_eq!(ProviderType::OpenAi.as_str(), "openai");
+        assert_eq!(ProviderType::OpenAi.display_name(), "ChatGPT / OpenAI");
+    }
+
+    #[test]
     fn provider_from_str_defaults_to_ollama_cloud() {
         assert_eq!(ProviderType::from_str_or_default("ollama-cloud"), ProviderType::OllamaCloud);
         assert_eq!(ProviderType::from_str_or_default("openrouter"), ProviderType::OpenRouter);
+        assert_eq!(ProviderType::from_str_or_default("openai"), ProviderType::OpenAi);
         assert_eq!(ProviderType::from_str_or_default("ollama"), ProviderType::Ollama);
         assert_eq!(ProviderType::from_str_or_default("lmstudio"), ProviderType::Lmstudio);
         // legacy "anthropic" stored value migrates to the new default
@@ -188,6 +204,7 @@ mod tests {
     fn is_local_flag() {
         assert!(!ProviderType::OllamaCloud.is_local());
         assert!(!ProviderType::OpenRouter.is_local());
+        assert!(!ProviderType::OpenAi.is_local());
         assert!(ProviderType::Lmstudio.is_local());
         assert!(ProviderType::Ollama.is_local());
     }

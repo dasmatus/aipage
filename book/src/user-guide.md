@@ -60,6 +60,8 @@ The extension supports multiple AI providers. Choose your preferred provider and
 
 - **Ollama Cloud** — chat, agentic tools, native web search, and SVG image generation
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
+- **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
+- **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
 - **Claude (Anthropic)** — chat, native web search, and SVG image generation
 - **LM Studio** (Local)
 - **Ollama** (Local)
@@ -94,6 +96,28 @@ OpenRouter exposes hundreds of models (OpenAI, Anthropic, Google, Meta, Mistral,
 4. Click the refresh button next to **Model** to list the available models and pick one, e.g. `openai/gpt-4.1-mini` (the default). Models that support function calling also power the agentic chat, native web search and SVG image generation.
 
 > The key is stored locally in your browser and is only ever sent to `openrouter.ai` (through the extension's background proxy). Requests carry the optional `HTTP-Referer`/`X-Title` attribution headers so OpenRouter can show AIPage on its app rankings.
+
+#### ChatGPT / OpenAI
+
+The public OpenAI platform API (the models behind ChatGPT), billed per request to your OpenAI account. This uses an ordinary API key only — there is no "sign in with ChatGPT" flow.
+
+1. Go to **[platform.openai.com](https://platform.openai.com)** and sign in (or create an account and add billing).
+2. Open **[API keys](https://platform.openai.com/api-keys)**, click **Create new secret key** and copy it — the key starts with `sk-`.
+3. In the AIPage settings pick **ChatGPT / OpenAI** as the engine, leave the **Base URL** at `https://api.openai.com` (entering `https://api.openai.com/v1` works too) and paste the key.
+4. Click the refresh button next to **Model** to list your available chat models and pick one, e.g. `gpt-4.1-mini` (the default). The list is filtered to chat-capable families (`gpt-*`, `o*`, `chatgpt-*`); embedding, audio, realtime, image and moderation models are hidden. Function-calling models power the agentic chat, native web search and SVG image generation.
+
+> The key is stored locally in your browser and is only ever sent to `api.openai.com` (through the extension's background proxy).
+
+#### ChatGPT / OpenAI
+
+The public OpenAI platform API (the models behind ChatGPT), billed per request to your OpenAI account. This uses an ordinary API key only — there is no "sign in with ChatGPT" flow.
+
+1. Go to **[platform.openai.com](https://platform.openai.com)** and sign in (or create an account and add billing).
+2. Open **[API keys](https://platform.openai.com/api-keys)**, click **Create new secret key** and copy it — the key starts with `sk-`.
+3. In the AIPage settings pick **ChatGPT / OpenAI** as the engine, leave the **Base URL** at `https://api.openai.com` (entering `https://api.openai.com/v1` works too) and paste the key.
+4. Click the refresh button next to **Model** to list your available chat models and pick one, e.g. `gpt-4.1-mini` (the default). The list is filtered to chat-capable families (`gpt-*`, `o*`, `chatgpt-*`); embedding, audio, realtime, image and moderation models are hidden. Function-calling models power the agentic chat, native web search and SVG image generation.
+
+> The key is stored locally in your browser and is only ever sent to `api.openai.com` (through the extension's background proxy).
 
 #### LM Studio (Local)
 
