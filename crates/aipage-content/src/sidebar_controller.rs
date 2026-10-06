@@ -1,5 +1,12 @@
 //! Manages the sidebar iframe and its drag-to-resize handle. Mirrors
 //! `content-scripts/sidebar-controller.ts`.
+//!
+//! The iframe loads either the **hosted** sidebar (remote UI, default) or the
+//! **bundled** one. With the hosted UI the controller arms a fallback: if the
+//! hosted page has not connected through the bridge within
+//! [`remote_ui::REMOTE_UI_LOAD_TIMEOUT_MS`] (offline, blocked by CSP, host
+//! down, WASM failed to boot…) or the frame errors, the iframe is pointed at
+//! the bundled sidebar so the user is never left with an empty panel.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -9,7 +16,9 @@ use wasm_bindgen::JsCast;
 use web_sys::{HtmlDivElement, HtmlElement, HtmlIFrameElement, MouseEvent};
 
 use aipage_bindings::{runtime, storage};
+use aipage_core::remote_ui;
 
+use crate::bridge::{self, LocalDispatch};
 use crate::utils;
 
 const MIN_WIDTH: f64 = 250.0;
@@ -22,6 +31,10 @@ pub struct SidebarController {
     is_resizing: Rc<Cell<bool>>,
     iframe: Option<HtmlIFrameElement>,
     resizer: Option<HtmlDivElement>,
+    /// Base URL of the hosted UI when the remote UI is enabled.
+    remote_ui: Option<String>,
+    /// Handles `tabs.sendMessage`-style requests from the hosted sidebar.
+    dispatch: Option<LocalDispatch>,
 }
 
 fn document() -> web_sys::Document {
@@ -43,11 +56,33 @@ impl SidebarController {
             is_resizing: Rc::new(Cell::new(false)),
             iframe: None,
             resizer: None,
+            remote_ui: None,
+            dispatch: None,
         }
     }
 
     pub fn set_width(&self, w: f64) {
         self.width.set(w);
+    }
+
+    /// `Some(base_url)` to load the hosted UI, `None` for the bundled one.
+    pub fn set_remote_ui(&mut self, base_url: Option<String>) {
+        self.remote_ui = base_url;
+    }
+
+    pub fn set_dispatch(&mut self, dispatch: LocalDispatch) {
+        self.dispatch = Some(dispatch);
+    }
+
+    /// Re-create the iframe (e.g. after the remote-UI setting changed),
+    /// preserving the open/closed state.
+    pub fn reload(&mut self) {
+        let was_open = self.is_open;
+        self.cleanup();
+        self.is_open = was_open;
+        if was_open {
+            self.open();
+        }
     }
 
     pub fn toggle(&mut self) {
@@ -128,11 +163,14 @@ impl SidebarController {
         // --- iframe ---
         let iframe: HtmlIFrameElement = doc.create_element("iframe").unwrap().unchecked_into();
         iframe.set_id("gemini-sidebar-frame");
-        let mut src = runtime::get_url("sidebar.html");
-        if !initials.is_empty() {
-            src.push_str(&format!("#initials={initials}"));
+        let bundled_src = runtime::get_url(&remote_ui::bundled_sidebar_path(&initials));
+        match (&self.remote_ui, &self.dispatch) {
+            (Some(base), Some(dispatch)) => {
+                arm_remote_with_fallback(&iframe, base, dispatch.clone(), bundled_src);
+                iframe.set_src(&remote_ui::remote_sidebar_url(base, &initials));
+            }
+            _ => iframe.set_src(&bundled_src),
         }
-        iframe.set_src(&src);
         set_styles(
             iframe.unchecked_ref(),
             &[
@@ -274,6 +312,61 @@ impl SidebarController {
                 save_width(width.get());
             });
         }
+    }
+}
+
+/// Install the bridge host for the hosted UI and arm the bundled fallback.
+/// Must run before `src` is set so no `hello` can be missed.
+fn arm_remote_with_fallback(iframe: &HtmlIFrameElement, base: &str, dispatch: LocalDispatch, bundled_src: String) {
+    let connected = Rc::new(Cell::new(false));
+    let fell_back = Rc::new(Cell::new(false));
+
+    let fallback: Rc<dyn Fn(&str)> = {
+        let iframe = iframe.clone();
+        let connected = connected.clone();
+        let fell_back = fell_back.clone();
+        Rc::new(move |reason: &str| {
+            if connected.get() || fell_back.replace(true) {
+                return;
+            }
+            aipage_bindings::console::warn(format!(
+                "[AIPage] hosted sidebar unavailable ({reason}); using the bundled sidebar"
+            ));
+            iframe.set_src(&bundled_src);
+        })
+    };
+
+    // 1. Bridge host: a `hello` from the hosted page cancels the fallback.
+    {
+        let connected = connected.clone();
+        let fell_back = fell_back.clone();
+        bridge::install(
+            iframe,
+            base,
+            dispatch,
+            Rc::new(move || {
+                if !fell_back.get() {
+                    connected.set(true);
+                }
+            }),
+        );
+    }
+
+    // 2. Frame-level error (rare; most failures render an error page instead).
+    {
+        let fallback = fallback.clone();
+        let cb = Closure::wrap(Box::new(move |_e: web_sys::Event| fallback("frame error")) as Box<dyn Fn(web_sys::Event)>);
+        let _ = iframe.add_event_listener_with_callback("error", cb.as_ref().unchecked_ref());
+        cb.forget();
+    }
+
+    // 3. No connection within the timeout.
+    let timeout = Closure::once_into_js(move || fallback("no bridge connection before timeout"));
+    if let Some(w) = web_sys::window() {
+        let _ = w.set_timeout_with_callback_and_timeout_and_arguments_0(
+            timeout.unchecked_ref(),
+            remote_ui::REMOTE_UI_LOAD_TIMEOUT_MS,
+        );
     }
 }
 

@@ -44,4 +44,7 @@ features = [
     "MutationObserverInit",
     "Location",
     "DomTokenList",
+    "MessageChannel",
+    "MessageEvent",
+    "MessagePort",
 ]

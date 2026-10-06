@@ -6,7 +6,7 @@ use leptos::task::spawn_local;
 
 use aipage_core::providers::{self, ModelInfo, SendOptions};
 use aipage_core::types::ProviderType;
-use aipage_core::storage;
+use aipage_core::{remote_ui, storage};
 
 use crate::icons::{self, icon};
 use crate::state::AppState;
@@ -46,6 +46,8 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let image_gen_provider = RwSignal::new("ollama-svg".to_string());
     let image_gen_sd_url = RwSignal::new("http://localhost:7860".to_string());
     let image_gen_size = RwSignal::new("1024x1024".to_string());
+    let remote_ui_enabled = RwSignal::new(true);
+    let remote_ui_url = RwSignal::new(String::new());
 
     // Current backend == current provider.
     let backend = move || app.provider.get();
@@ -81,6 +83,8 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
             image_gen_provider.set(storage::get_image_gen_provider().await);
             image_gen_sd_url.set(storage::get_image_gen_sd_url().await);
             image_gen_size.set(storage::get_image_gen_size().await);
+            remote_ui_enabled.set(storage::get_remote_ui_enabled().await);
+            remote_ui_url.set(storage::get_remote_ui_url().await);
 
             match provider {
                 ProviderType::OllamaCloud => {
@@ -299,6 +303,9 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                     </div>
                 </Card>
 
+                // Hosted (remote) UI
+                <RemoteUiSection enabled=remote_ui_enabled url=remote_ui_url/>
+
                 // Exam tools
                 <Card>
                     <CardHeader gradient="linear-gradient(135deg, #7c3aed, #a78bfa)" icon_svg=icons::WAND2 title=Signal::derive(|| "Exam Tools".to_string())/>
@@ -317,6 +324,52 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                 </footer>
             </div>
         </div>
+    }
+}
+
+/// Self-contained "Hosted UI" card: the auto-updating remote UI toggle and
+/// the advanced URL override. Both persist immediately; the content script
+/// reloads the sidebar iframe when either key changes.
+#[component]
+fn RemoteUiSection(enabled: RwSignal<bool>, url: RwSignal<String>) -> impl IntoView {
+    let app = use_context::<AppState>().unwrap();
+    let input_style = "background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color);";
+    let url_invalid = move || {
+        let u = url.get();
+        !u.trim().is_empty() && remote_ui::normalize_remote_ui_url(&u).is_none()
+    };
+    let commit_url = move |_| {
+        let raw = url.get_untracked();
+        let normalized = remote_ui::normalize_remote_ui_url(&raw).unwrap_or_default();
+        url.set(normalized.clone());
+        spawn_local(async move { storage::save_remote_ui_url(&normalized).await });
+    };
+
+    view! {
+        <Card>
+            <CardHeader gradient="linear-gradient(135deg, #0f766e, #2dd4bf)" icon_svg=icons::CLOUD title=Signal::derive(move || app.tr().remote_ui)/>
+            <div class="p-4 space-y-4">
+                <Toggle label=Signal::derive(move || app.tr().remote_ui_enabled) checked=enabled on_toggle=Callback::new(move |v: bool| {
+                    enabled.set(v);
+                    spawn_local(async move { storage::save_remote_ui_enabled(v).await });
+                })/>
+                <p class="text-[11px] text-muted-foreground">{move || app.tr().remote_ui_description}</p>
+                <Show when=move || enabled.get()>
+                    <div class="space-y-2">
+                        <label class="text-xs uppercase font-bold tracking-wider opacity-70">{move || app.tr().remote_ui_url}</label>
+                        <input id="remote-ui-url" class="w-full h-9 rounded-lg px-2 outline-none" style=input_style
+                            prop:value=move || url.get()
+                            on:input=move |ev| url.set(event_target_value(&ev))
+                            on:change=commit_url
+                            placeholder=remote_ui::DEFAULT_REMOTE_UI_URL/>
+                        <p class="text-[10px] text-muted-foreground opacity-70">{move || app.tr().remote_ui_url_hint}</p>
+                        <Show when=url_invalid>
+                            <p class="text-[10px] text-destructive flex items-center gap-1">{icon(icons::ALERT_CIRCLE, "w-3 h-3")}{remote_ui::DEFAULT_REMOTE_UI_URL}</p>
+                        </Show>
+                    </div>
+                </Show>
+            </div>
+        </Card>
     }
 }
 

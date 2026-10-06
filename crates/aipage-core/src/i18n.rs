@@ -155,6 +155,13 @@ pub struct Translation {
 
     // Navigation
     pub widgets: String,
+
+    // Hosted (remote) UI
+    pub remote_ui: String,
+    pub remote_ui_enabled: String,
+    pub remote_ui_description: String,
+    pub remote_ui_url: String,
+    pub remote_ui_url_hint: String,
 }
 
 const SK: &str = include_str!("locales/sk.json");
@@ -192,6 +199,7 @@ mod tests {
             assert!(!t.widgets.is_empty(), "{code} widgets empty");
             assert!(!t.provider_lmstudio.is_empty(), "{code} providerLMStudio empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
+            assert!(!t.remote_ui_enabled.is_empty(), "{code} remoteUiEnabled empty");
         }
     }
 

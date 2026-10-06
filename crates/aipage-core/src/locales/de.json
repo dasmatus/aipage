@@ -100,5 +100,10 @@
   "imageGenSize": "Größe",
   "imageGenGenerating": "Bild wird generiert...",
   "imageGenFailed": "Bildgenerierung fehlgeschlagen",
-  "widgets": "Widgets"
+  "widgets": "Widgets",
+  "remoteUi": "Gehostete Oberfläche",
+  "remoteUiEnabled": "Remote-Oberfläche (automatisch aktualisiert)",
+  "remoteUiDescription": "Lädt die Seitenleiste aus dem Web, sodass Updates der Oberfläche ohne Neuinstallation der Erweiterung ankommen. Ist die gehostete Version nicht erreichbar, wird automatisch die eingebaute Seitenleiste verwendet.",
+  "remoteUiUrl": "Eigene UI-URL (erweitert)",
+  "remoteUiUrlHint": "Leer lassen für die Standardadresse. Nur https://-Adressen werden akzeptiert; die Seitenleiste wird nach einer Änderung neu geladen."
 }

@@ -1,17 +1,23 @@
 //! Build orchestrator for the AIPage WASM extension. Replaces `build.ts`.
 //!
 //! Usage:
-//!   cargo xtask build [--target chrome|firefox|safari]   (default: chrome)
-//!   cargo xtask build-all
+//!   cargo xtask build [--target chrome|firefox|safari|web]   (default: chrome)
+//!   cargo xtask build-all                                     (the 3 browsers)
 //!
 //! Pipeline: compile the three wasm crates → run `wasm-bindgen` → `wasm-opt`
 //! (if present) → build CSS via Tailwind/Sass (if present) → copy the static
 //! assets and the target manifest into `dist-<target>/`.
+//!
+//! The `web` target builds only the sidebar as a static site for Vercel
+//! (`dist-web/`): js/wasm/css get content-hashed filenames (safe to cache
+//! immutably), `sidebar.html` references them, and `assets/vercel.json`
+//! supplies the HTTP headers.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const TARGETS: &[&str] = &["chrome", "firefox", "safari"];
+const WEB_TARGET: &str = "web";
 
 struct Crate {
     /// cargo package name
@@ -73,8 +79,12 @@ fn tool(name: &str) -> String {
 }
 
 fn build(target: &str) {
+    if target == WEB_TARGET {
+        build_web();
+        return;
+    }
     if !TARGETS.contains(&target) {
-        eprintln!("xtask: invalid target `{target}` (chrome | firefox | safari)");
+        eprintln!("xtask: invalid target `{target}` (chrome | firefox | safari | web)");
         std::process::exit(1);
     }
     let root = root();
@@ -140,6 +150,123 @@ fn build(target: &str) {
     copy(&assets.join(format!("manifest.{target}.json")), &dist.join("manifest.json"));
 
     println!("✅ Build complete for {target} in dist-{target}/");
+}
+
+/// Build the hosted sidebar (`dist-web/`): sidebar crate only, hashed assets.
+fn build_web() {
+    let root = root();
+    let dist = root.join("dist-web");
+    println!("🔨 Building AIPage hosted sidebar (web)");
+
+    let _ = std::fs::remove_dir_all(&dist);
+    std::fs::create_dir_all(&dist).expect("create dist dir");
+
+    let sidebar = &CRATES[0];
+    assert_eq!(sidebar.pkg, "aipage-sidebar");
+
+    run(
+        Command::new("cargo")
+            .current_dir(&root)
+            .args(["build", "--release", "--target", "wasm32-unknown-unknown", "-p", sidebar.pkg]),
+        "cargo build (wasm, sidebar)",
+    );
+
+    let wasm = root.join("target/wasm32-unknown-unknown/release").join(format!("{}.wasm", sidebar.artifact));
+    run(
+        Command::new(tool("wasm-bindgen")).args([
+            wasm.to_str().unwrap(),
+            "--out-dir", dist.to_str().unwrap(),
+            "--out-name", sidebar.out_name,
+            "--target", sidebar.bindgen_target,
+            "--no-typescript",
+        ]),
+        "wasm-bindgen sidebar",
+    );
+    let bg_wasm = dist.join("sidebar_bg.wasm");
+    if has_tool(&tool("wasm-opt")) {
+        run_optional(
+            Command::new(tool("wasm-opt")).args(["-Oz", "-all", bg_wasm.to_str().unwrap(), "-o", bg_wasm.to_str().unwrap()]),
+            "wasm-opt sidebar",
+        );
+    } else {
+        println!("   ↳ wasm-opt not found; skipping size optimisation");
+    }
+
+    build_css(&root, &dist);
+
+    let assets = root.join("assets");
+    for f in ["sidebar.html", "sidebar_loader.js"] {
+        copy(&assets.join(f), &dist.join(f));
+    }
+
+    fingerprint_web_assets(&dist);
+
+    copy(&assets.join("vercel.json"), &dist.join("vercel.json"));
+    println!("✅ Build complete for web in dist-web/");
+}
+
+/// Rename the sidebar's js/wasm/css to `<stem>.<hash>.<ext>` and rewrite the
+/// references between them (html → css/loader, loader → js, js → wasm).
+/// Hashing goes leaf-first so every hash covers the final file content.
+fn fingerprint_web_assets(dist: &Path) {
+    // 1. wasm (leaf)
+    let wasm_name = hash_rename(dist, "sidebar_bg.wasm");
+    // 2. glue js references the wasm by name (`new URL('sidebar_bg.wasm', import.meta.url)`)
+    rewrite(dist, "sidebar.js", &[("sidebar_bg.wasm", &wasm_name)]);
+    let js_name = hash_rename(dist, "sidebar.js");
+    // 3. loader imports the glue
+    rewrite(dist, "sidebar_loader.js", &[("./sidebar.js", &format!("./{js_name}"))]);
+    let loader_name = hash_rename(dist, "sidebar_loader.js");
+    // 4. css (may be absent when bun is missing)
+    let mut html_subs: Vec<(String, String)> = vec![("./sidebar_loader.js".into(), format!("./{loader_name}"))];
+    for css in ["sidebar.css", "tailwind.css"] {
+        if dist.join(css).exists() {
+            let hashed = hash_rename(dist, css);
+            html_subs.push((format!("href=\"{css}\""), format!("href=\"{hashed}\"")));
+        }
+    }
+    let subs: Vec<(&str, &str)> = html_subs.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    rewrite(dist, "sidebar.html", &subs);
+    println!("   ↳ fingerprinted: {wasm_name}, {js_name}, {loader_name}");
+}
+
+/// Rename `dist/<name>` to `dist/<stem>.<hash>.<ext>` and return the new name.
+fn hash_rename(dist: &Path, name: &str) -> String {
+    let path = dist.join(name);
+    let bytes = std::fs::read(&path).unwrap_or_else(|e| {
+        eprintln!("xtask: cannot read {}: {e}", path.display());
+        std::process::exit(1);
+    });
+    let hash = content_hash(&bytes);
+    let (stem, ext) = name.rsplit_once('.').unwrap_or((name, ""));
+    let new_name = if ext.is_empty() { format!("{stem}.{hash}") } else { format!("{stem}.{hash}.{ext}") };
+    std::fs::rename(&path, dist.join(&new_name)).expect("rename hashed asset");
+    new_name
+}
+
+/// Replace every occurrence of each `(from, to)` pair in `dist/<name>`.
+fn rewrite(dist: &Path, name: &str, subs: &[(&str, &str)]) {
+    let path = dist.join(name);
+    let Ok(mut text) = std::fs::read_to_string(&path) else { return };
+    for (from, to) in subs {
+        if !text.contains(from) {
+            eprintln!("xtask: expected `{from}` in {name} (wasm-bindgen output changed?)");
+            std::process::exit(1);
+        }
+        text = text.replace(from, to);
+    }
+    std::fs::write(&path, text).expect("write rewritten asset");
+}
+
+/// 64-bit FNV-1a, rendered as 12 hex chars. Dependency-free; only needs to
+/// change whenever the content changes (cache busting, not security).
+fn content_hash(bytes: &[u8]) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in bytes {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{h:016x}")[..12].to_string()
 }
 
 fn build_css(root: &Path, dist: &Path) {
