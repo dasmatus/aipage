@@ -2,10 +2,9 @@
 //! `/v1/models` with `Authorization: Bearer <key>`).
 //!
 //! Ollama Cloud, OpenRouter, OpenAI, LM Studio and local Ollama all expose
-//! this shape;
-//! they differ only in base URL, default model, display label and any extra
-//! headers. Each concrete provider module declares one [`OpenAiCompat`]
-//! constant and forwards to the methods here, and the tool-calling loop in
+//! this shape; they differ only in base URL, default model, display label and
+//! any extra headers, captured in one [`OpenAiCompat`] constant each. The
+//! provider dispatchers in [`super`], the tool-calling loop in
 //! [`crate::agent`] and the SVG image generator in [`crate::imagegen`] are
 //! written against this config so they work for every compatible provider.
 //!
@@ -68,11 +67,12 @@ pub const OPENAI: OpenAiCompat = OpenAiCompat {
 };
 
 /// Claude. The extension talks to Claude over the Anthropic Messages API
-/// (see [`super::anthropic`]), not this client; this config only exists so
-/// that [`OpenAiCompat::for_provider`] stays total — it supplies the label
-/// and default model for model resolution (e.g. the SVG model picker).
-/// Callers that would POST `/v1/chat/completions` must branch on
-/// [`ProviderType::Anthropic`] first (the agent loop and image generator do).
+/// (see [`super::anthropic`]), not this client; this config keeps
+/// [`OpenAiCompat::for_provider`] total and supplies the label, base-URL
+/// normalisation, default model and model-list parsing that
+/// [`super::anthropic`] shares with the other providers. Callers that would
+/// POST `/v1/chat/completions` must branch on [`ProviderType::Anthropic`]
+/// first (the provider dispatchers, agent loop and image generator do).
 pub const ANTHROPIC: OpenAiCompat = OpenAiCompat {
     label: super::anthropic::LABEL,
     default_base_url: super::anthropic::DEFAULT_BASE_URL,
@@ -183,7 +183,7 @@ impl OpenAiCompat {
     }
 
     /// `GET /v1/models`, mapped to [`ModelInfo`]s labelled with this provider.
-    /// Empty on error (matching the old TS behaviour).
+    /// Empty on error.
     pub async fn get_models(&self, api_key: &str, opts: &SendOptions) -> Vec<ModelInfo> {
         self.fetch_models(&self.models_url(opts), api_key).await
     }

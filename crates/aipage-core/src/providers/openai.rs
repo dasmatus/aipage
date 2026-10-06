@@ -4,19 +4,15 @@
 //! `/models`) and are authenticated with `Authorization: Bearer <key>` (keys
 //! from `https://platform.openai.com/api-keys`). This is plain API-key access
 //! to the documented public API; there is deliberately no OAuth / "sign in
-//! with ChatGPT" flow. OpenAI accepts OpenAI-style function tools, so the
-//! agentic chat + native web search loop in [`crate::agent`] works as-is.
-//! Chat and model listing are delegated to [`super::openai_compat`] via
-//! [`CONFIG`].
-//!
-//! `GET /v1/models` returns every model on the account, including embeddings,
-//! speech, transcription, image, realtime and moderation models that cannot
-//! serve `/v1/chat/completions`. [`get_models`] keeps only chat-capable
-//! families (see [`is_chat_model`]) so the settings picker stays usable.
+//! with ChatGPT" flow. Chat goes through [`super::openai_compat`] via
+//! [`CONFIG`]; this module only exists because `GET /v1/models` returns every
+//! model on the account, including embeddings, speech, transcription, image,
+//! realtime and moderation models that cannot serve `/v1/chat/completions`.
+//! [`get_models`] keeps only chat-capable families (see [`is_chat_model`]) so
+//! the settings picker stays usable.
 
 use super::openai_compat::{OpenAiCompat, OPENAI};
 use super::{ModelInfo, SendOptions};
-use crate::types::ProviderType;
 
 /// The static config this module forwards to.
 pub const CONFIG: &OpenAiCompat = &OPENAI;
@@ -63,19 +59,9 @@ pub fn filter_chat_models(models: Vec<ModelInfo>) -> Vec<ModelInfo> {
     models
 }
 
-pub async fn send_message(prompt: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
-    CONFIG.send_message(prompt, api_key, opts).await
-}
-
 /// `GET /v1/models` narrowed to chat-capable families.
 pub async fn get_models(api_key: &str, opts: &SendOptions) -> Vec<ModelInfo> {
     filter_chat_models(CONFIG.get_models(api_key, opts).await)
-}
-
-/// Native web search via the shared tool-calling loop (see
-/// [`super::ollama_cloud::web_search`]).
-pub async fn web_search(query: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
-    crate::agent::web_search(ProviderType::OpenAi, api_key, query, opts).await
 }
 
 #[cfg(test)]

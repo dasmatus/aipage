@@ -71,14 +71,11 @@ impl ChatState {
         });
     }
 
-    pub fn update_last_image(&self, image: impl Into<String>, content: Option<String>) {
-        let image = image.into();
+    pub fn update_last_image(&self, image: String, content: String) {
         self.messages.update(|m| {
             if let Some(last) = m.last_mut() {
                 last.image_url = Some(image);
-                if let Some(c) = content {
-                    last.content = c;
-                }
+                last.content = content;
             }
         });
     }
@@ -388,7 +385,7 @@ pub async fn generate_image(app: AppState, chat: ChatState, prompt: String) {
     };
 
     match imagegen::generate_image(&prompt, &options).await {
-        Ok(result) => chat.update_last_image(result.data_url, Some(result.revised_prompt.unwrap_or(prompt))),
+        Ok(data_url) => chat.update_last_image(data_url, prompt),
         Err(e) => chat.update_last(format!("{}: {e}", app.tr().image_gen_failed)),
     }
     chat.is_typing.set(false);

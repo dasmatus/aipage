@@ -1,19 +1,16 @@
-//! Image generation (Ollama-SVG + SD WebUI). Mirrors `providers/imagegen.ts`.
+//! Image generation: SVG drawn by the chat model, or Stable Diffusion WebUI.
 //!
-//! The Ollama-SVG path asks the selected chat model (Ollama Cloud by default;
-//! also works against OpenRouter, local Ollama / LM Studio, and Claude over
-//! the Anthropic Messages API) for a self-contained SVG and rasterizes it to
-//! PNG with the pure-Rust `resvg`/`tiny-skia` stack (replacing the WASM
-//! ImageMagick dependency). SD WebUI returns base64 PNG directly.
-
-use std::collections::HashMap;
+//! The SVG path asks the selected chat model (Ollama Cloud by default; any
+//! OpenAI-compatible provider, or Claude over the Anthropic Messages API) for
+//! a self-contained SVG and rasterizes it to PNG with the pure-Rust
+//! `resvg`/`tiny-skia` stack. SD WebUI returns base64 PNG directly.
 
 use serde_json::{json, Value};
 
 use crate::providers::anthropic;
-use crate::providers::openai_compat::OpenAiCompat;
+use crate::providers::openai_compat::{chat_messages, json_headers, parse_completion_text, OpenAiCompat};
 use crate::providers::SendOptions;
-use crate::proxy::{perform_request, post_json};
+use crate::proxy::post_json;
 use crate::types::ProviderType;
 
 /// The stored default for the SVG model (`image_gen_model`). It is an Ollama
@@ -47,24 +44,18 @@ pub struct ImageGenOptions {
     pub size: String,
 }
 
-/// A generated image plus an optional revised prompt.
-#[derive(Clone, Debug)]
-pub struct ImageResult {
-    pub data_url: String,
-    pub revised_prompt: Option<String>,
-}
-
-pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<ImageResult, String> {
+/// Generate an image and return it as a `data:image/png;base64,...` URL.
+pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<String, String> {
     if options.provider == "sdwebui" {
-        // `options.baseUrl || 'http://localhost:7860'`: an empty string is falsy.
+        // An empty base URL counts as unset.
         let base = options
             .base_url
-            .clone()
+            .as_deref()
             .filter(|s| !s.is_empty())
-            .unwrap_or_else(|| "http://localhost:7860".to_string());
-        generate_sdwebui(prompt, &base).await
+            .unwrap_or("http://localhost:7860");
+        generate_sdwebui(prompt, base).await
     } else {
-        generate_ollama_svg(
+        generate_svg(
             prompt,
             options.chat_provider,
             &options.api_key,
@@ -76,14 +67,14 @@ pub async fn generate_image(prompt: &str, options: &ImageGenOptions) -> Result<I
     }
 }
 
-async fn generate_ollama_svg(
+async fn generate_svg(
     prompt: &str,
     provider: ProviderType,
     api_key: &str,
     base_url: &str,
     model: &str,
     size: &str,
-) -> Result<ImageResult, String> {
+) -> Result<String, String> {
     let opts = SendOptions { base_url: (!base_url.is_empty()).then_some(base_url.to_string()), model_name: Some(model.to_string()) };
     let user_prompt = format!("Create an SVG illustration of: {prompt}");
 
@@ -97,42 +88,33 @@ async fn generate_ollama_svg(
         let cfg = OpenAiCompat::for_provider(provider);
         let body = json!({
             "model": cfg.model_of(&opts),
-            "messages": [
-                { "role": "system", "content": SVG_SYSTEM_PROMPT },
-                { "role": "user", "content": user_prompt }
-            ],
+            "messages": chat_messages(SVG_SYSTEM_PROMPT, &user_prompt),
             "stream": false,
         });
         let resp = post_json(&cfg.chat_url(&opts), &cfg.headers(api_key), &body).await?;
-        resp.pointer("/choices/0/message/content")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string()
+        parse_completion_text(&resp)
     };
 
     let svg = extract_svg(&text).ok_or("The model did not return a valid SVG document")?;
     let (width, height) = parse_size(size);
-    let data_url = svg_to_png(&svg, width, height)?;
-    Ok(ImageResult { data_url, revised_prompt: None })
+    svg_to_png(&svg, width, height)
 }
 
-async fn generate_sdwebui(prompt: &str, base_url: &str) -> Result<ImageResult, String> {
+async fn generate_sdwebui(prompt: &str, base_url: &str) -> Result<String, String> {
     let url = format!("{}/sdapi/v1/txt2img", base_url.trim_end_matches('/'));
-    let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), "application/json".to_string());
     let body = json!({ "prompt": prompt, "width": 512, "height": 512, "steps": 20, "cfg_scale": 7 });
-    let data = perform_request(&url, "POST", &headers, Some(&body.to_string())).await?;
+    let data = post_json(&url, &json_headers(), &body).await?;
     let b64 = data
         .get("images")
         .and_then(Value::as_array)
         .and_then(|a| a.first())
         .and_then(Value::as_str)
         .ok_or("No image data from SD WebUI")?;
-    Ok(ImageResult { data_url: format!("data:image/png;base64,{b64}"), revised_prompt: None })
+    Ok(format!("data:image/png;base64,{b64}"))
 }
 
 /// Pull the first `<svg>…</svg>` block out of the model response, tolerating
-/// markdown code fences. Mirrors `extractSvg`.
+/// markdown code fences.
 pub(crate) fn extract_svg(text: &str) -> Option<String> {
     let cleaned = text.replace("```svg", "").replace("```xml", "").replace("```html", "").replace("```", "");
     let lower = cleaned.to_lowercase();
@@ -142,7 +124,7 @@ pub(crate) fn extract_svg(text: &str) -> Option<String> {
     Some(cleaned[start..end].to_string())
 }
 
-/// Parse a `WxH` size string, defaulting to 1024×1024. Mirrors `parseSize`.
+/// Parse a `WxH` size string, defaulting to 1024×1024.
 pub(crate) fn parse_size(size: &str) -> (u32, u32) {
     let s = if size.is_empty() { "1024x1024" } else { size };
     let normalized = s.replace('×', "x");
@@ -176,8 +158,9 @@ fn svg_to_png(svg: &str, width: u32, height: u32) -> Result<String, String> {
     Ok(format!("data:image/png;base64,{}", base64_encode(&png)))
 }
 
-/// Standard padded base64 encoder.
-fn base64_encode(input: &[u8]) -> String {
+/// Standard padded base64 encoder (also used by the background proxy for
+/// image responses).
+pub fn base64_encode(input: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
     for chunk in input.chunks(3) {
@@ -202,6 +185,7 @@ mod tests {
         assert!(svg.starts_with("<svg"));
         assert!(svg.ends_with("</svg>"));
         assert!(!svg.contains("```"));
+        assert_eq!(extract_svg("No response"), None);
     }
 
     #[test]
@@ -239,5 +223,14 @@ mod tests {
         let url = svg_to_png(svg, 20, 20).unwrap();
         assert!(url.starts_with("data:image/png;base64,"));
         assert!(url.len() > 50);
+    }
+
+    #[test]
+    fn base64_matches_known_vectors() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
     }
 }

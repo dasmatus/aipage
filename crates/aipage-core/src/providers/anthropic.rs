@@ -11,16 +11,12 @@
 //!
 //! Nothing here that does not touch the network depends on wasm, and every
 //! such helper is `pub` and exercised natively in `tests/anthropic.rs`.
-//!
-//! Storage keys (`anthropic_api_key`, `anthropic_base_url`, `anthropic_model`)
-//! are the ones the pre-Ollama builds used, so a returning user's saved key is
-//! picked up again.
 
 use std::collections::HashMap;
 
 use serde_json::{json, Value};
 
-use super::openai_compat::parse_model_ids;
+use super::openai_compat::ANTHROPIC;
 use super::{ModelInfo, SendOptions};
 use crate::proxy::{perform_request, post_json};
 use crate::types::SYSTEM_PROMPT;
@@ -42,19 +38,11 @@ const MODELS_PAGE_SIZE: u32 = 100;
 /// Normalise a user-entered base URL: empty → [`DEFAULT_BASE_URL`], and a
 /// trailing `/` or `/v1` stripped so callers can append `/v1/...`.
 pub fn normalize_base_url(raw: &str) -> String {
-    let raw = raw.trim();
-    let mut base = if raw.is_empty() { DEFAULT_BASE_URL.to_string() } else { raw.to_string() };
-    if let Some(stripped) = base.strip_suffix('/') {
-        base = stripped.to_string();
-    }
-    if let Some(stripped) = base.strip_suffix("/v1") {
-        base = stripped.to_string();
-    }
-    base
+    ANTHROPIC.normalize_base_url(raw)
 }
 
 fn base_url(opts: &SendOptions) -> String {
-    normalize_base_url(opts.base_url.as_deref().unwrap_or(""))
+    ANTHROPIC.base_url(opts)
 }
 
 pub fn messages_url(opts: &SendOptions) -> String {
@@ -72,11 +60,7 @@ pub fn models_url(opts: &SendOptions, after: Option<&str>) -> String {
 
 /// The model to request: the user's choice, else [`DEFAULT_MODEL`].
 pub fn model_of(opts: &SendOptions) -> String {
-    opts.model_name
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .unwrap_or(DEFAULT_MODEL)
-        .to_string()
+    ANTHROPIC.model_of(opts)
 }
 
 /// `content-type`, `x-api-key` and `anthropic-version`. Claude authenticates
@@ -262,10 +246,7 @@ pub fn next_page_cursor(resp: &Value) -> Option<String> {
 
 /// Map one `/v1/models` page to [`ModelInfo`]s (`data[].id`).
 pub fn models_from(resp: &Value) -> Vec<ModelInfo> {
-    parse_model_ids(resp)
-        .into_iter()
-        .map(|id| ModelInfo { id, provider: LABEL.to_string() })
-        .collect()
+    ANTHROPIC.models_from(resp)
 }
 
 /// POST a Messages API body and surface a refusal as an error.

@@ -1,11 +1,10 @@
-//! Ollama provider (local, native `/api/chat` + `/api/tags`). Mirrors `ollama.ts`.
+//! Ollama provider (local, native `/api/chat` + `/api/tags`).
 //!
-//! Local Ollama is addressed through its *native* API, not the OpenAI layer,
-//! to keep the exact behaviour of the TS build (`/api/tags` lists models,
-//! `/api/chat` returns `message.content`). The shared [`super::openai_compat`]
-//! config [`CONFIG`] still describes this backend (default URL / model /
-//! label) and is what provider-agnostic OpenAI-shaped paths such as SVG image
-//! generation use for it.
+//! Local Ollama is addressed through its *native* API, not the OpenAI layer
+//! (`/api/tags` lists models, `/api/chat` returns `message.content`). The
+//! shared [`super::openai_compat`] config [`CONFIG`] still describes this
+//! backend (default URL / model / label) and is what provider-agnostic
+//! OpenAI-shaped paths such as SVG image generation use for it.
 
 use serde_json::{json, Value};
 
@@ -25,7 +24,7 @@ fn base_url(opts: &SendOptions) -> String {
         .to_string()
 }
 
-pub async fn send_message(prompt: &str, _api_key: &str, opts: &SendOptions) -> Result<String, String> {
+pub async fn send_message(prompt: &str, opts: &SendOptions) -> Result<String, String> {
     let url = format!("{}/api/chat", base_url(opts));
     let body = json!({
         "model": CONFIG.model_of(opts),
