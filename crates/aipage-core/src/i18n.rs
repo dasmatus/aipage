@@ -174,6 +174,13 @@ pub struct Translation {
 
     // Navigation
     pub widgets: String,
+
+    // Hosted (remote) UI
+    pub remote_ui: String,
+    pub remote_ui_enabled: String,
+    pub remote_ui_description: String,
+    pub remote_ui_url: String,
+    pub remote_ui_url_hint: String,
 }
 
 const SK: &str = include_str!("locales/sk.json");
@@ -221,6 +228,7 @@ mod tests {
             assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");
             assert!(!t.anthropic_api_key_hint.is_empty(), "{code} anthropicApiKeyHint empty");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
+            assert!(!t.remote_ui_enabled.is_empty(), "{code} remoteUiEnabled empty");
         }
     }
 

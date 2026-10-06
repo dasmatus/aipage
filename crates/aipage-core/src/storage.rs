@@ -7,6 +7,7 @@ use aipage_bindings::storage;
 use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::JsValue;
 
+use crate::remote_ui::{KEY_REMOTE_UI_ENABLED, KEY_REMOTE_UI_URL};
 use crate::types::ProviderType;
 
 // --- key constants (must match the old STORAGE_KEYS) ---
@@ -207,6 +208,26 @@ pub async fn get_auto_answer_enabled() -> bool {
 
 pub async fn save_auto_answer_enabled(enabled: bool) {
     set_value(KEY_AUTO_ANSWER_ENABLED, JsValue::from_bool(enabled)).await;
+}
+
+// --- hosted (remote) UI ---
+
+/// Whether the auto-updating hosted UI is used. Defaults to `true`.
+pub async fn get_remote_ui_enabled() -> bool {
+    get_raw(KEY_REMOTE_UI_ENABLED).await.as_bool().unwrap_or(true)
+}
+
+pub async fn save_remote_ui_enabled(enabled: bool) {
+    set_value(KEY_REMOTE_UI_ENABLED, JsValue::from_bool(enabled)).await;
+}
+
+/// Raw stored URL override (may be empty); see `remote_ui::effective_remote_ui_url`.
+pub async fn get_remote_ui_url() -> String {
+    get_string(KEY_REMOTE_UI_URL).await.unwrap_or_default()
+}
+
+pub async fn save_remote_ui_url(url: &str) {
+    set_string(KEY_REMOTE_UI_URL, url.trim()).await;
 }
 
 pub async fn get_widget_notes() -> String {

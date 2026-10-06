@@ -111,5 +111,10 @@
   "imageGenSize": "Méret",
   "imageGenGenerating": "Kép generálása...",
   "imageGenFailed": "Képgenerálás sikertelen",
-  "widgets": "Widgetek"
+  "widgets": "Widgetek",
+  "remoteUi": "Hosztolt felület",
+  "remoteUiEnabled": "Távoli felület (automatikusan frissül)",
+  "remoteUiDescription": "Az oldalsávot a webről tölti be, így a felület frissítései a bővítmény újratelepítése nélkül érkeznek. Ha a hosztolt verzió nem érhető el, automatikusan a beépített oldalsáv töltődik be.",
+  "remoteUiUrl": "Egyéni felület-URL (haladó)",
+  "remoteUiUrlHint": "Hagyja üresen az alapértelmezett címhez. Csak https:// címek fogadhatók el; az oldalsáv a módosítás után újratöltődik."
 }

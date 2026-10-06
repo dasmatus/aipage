@@ -111,5 +111,10 @@
   "imageGenSize": "Size",
   "imageGenGenerating": "Generating image...",
   "imageGenFailed": "Image generation failed",
-  "widgets": "Widgets"
+  "widgets": "Widgets",
+  "remoteUi": "Hosted UI",
+  "remoteUiEnabled": "Remote UI (auto-updating)",
+  "remoteUiDescription": "Load the sidebar from the web so UI updates arrive without reinstalling the extension. Falls back to the built-in sidebar automatically when the hosted version cannot be reached.",
+  "remoteUiUrl": "Custom UI URL (advanced)",
+  "remoteUiUrlHint": "Leave empty to use the default. Only https:// origins are accepted; the sidebar reloads when this changes."
 }

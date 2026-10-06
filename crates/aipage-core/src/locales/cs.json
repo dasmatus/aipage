@@ -111,5 +111,10 @@
   "imageGenSize": "Velikost",
   "imageGenGenerating": "Generuji obrázek...",
   "imageGenFailed": "Generování obrázku selhalo",
-  "widgets": "Widgety"
+  "widgets": "Widgety",
+  "remoteUi": "Hostované rozhraní",
+  "remoteUiEnabled": "Vzdálené rozhraní (automaticky aktualizované)",
+  "remoteUiDescription": "Načte postranní panel z webu, takže aktualizace rozhraní dorazí bez přeinstalování rozšíření. Pokud hostovaná verze není dostupná, automaticky se použije vestavěný panel.",
+  "remoteUiUrl": "Vlastní URL rozhraní (pokročilé)",
+  "remoteUiUrlHint": "Nechte prázdné pro výchozí adresu. Přijímají se pouze https:// adresy; panel se po změně znovu načte."
 }

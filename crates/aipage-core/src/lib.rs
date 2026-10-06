@@ -12,6 +12,7 @@ pub mod imagegen;
 pub mod markdown;
 pub mod providers;
 pub mod proxy;
+pub mod remote_ui;
 pub mod storage;
 pub mod types;
 

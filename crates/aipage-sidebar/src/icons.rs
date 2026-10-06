@@ -49,4 +49,5 @@ pub const NOTEBOOK_PEN: &str = r#"<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 
 pub const CALCULATOR: &str = r#"<rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/>"#;
 pub const PLAY: &str = r#"<polygon points="6 3 20 12 6 21 6 3"/>"#;
 pub const PAUSE: &str = r#"<rect width="4" height="16" x="6" y="4"/><rect width="4" height="16" x="14" y="4"/>"#;
+pub const CLOUD: &str = r#"<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>"#;
 pub const ROTATE_CCW: &str = r#"<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>"#;

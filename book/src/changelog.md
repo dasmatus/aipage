@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **providers:** add a **Claude (Anthropic)** provider over the Anthropic Messages API (`https://api.anthropic.com/v1/messages`, `x-api-key` + `anthropic-version: 2023-06-01`, default model `claude-opus-5-5`) with chat, model listing (`/v1/models`, paginated), an Anthropic-format agentic tool loop (`input_schema` tools, `tool_use` → `tool_result`), native web search via Claude's server-side `web_search` tool (resumed on `pause_turn`) and SVG image generation. Reuses the settings keys of the original Claude builds (`anthropic_api_key`, `anthropic_base_url`, `anthropic_model`), and a stored `"anthropic"` engine selects Claude again instead of Ollama Cloud.
 * **providers:** add an **OpenRouter** provider (`https://openrouter.ai/api`, Bearer key, `HTTP-Referer`/`X-Title` attribution, default model `openai/gpt-4.1-mini`) with chat, model listing, the agentic tool loop, native web search and SVG image generation. Settings keys: `openrouter_api_key`, `openrouter_base_url`, `openrouter_model`.
 * **providers:** add a **ChatGPT / OpenAI** provider over the public OpenAI API (`https://api.openai.com`, Bearer API key, default model `gpt-4.1-mini`) with chat, model listing (filtered to chat-capable `gpt-*` / `o*` / `chatgpt-*` families), the agentic tool loop, native web search and SVG image generation. Settings keys: `openai_api_key`, `openai_base_url`, `openai_model`.
+* **Hosted UI (Vercel):** the sidebar UI is served from a web origin by default, so UI updates ship without reinstalling the extension. New *Hosted UI* settings card with a "Remote UI (auto-updating)" toggle (default on, key `remote_ui_enabled`) and an advanced URL override (`remote_ui_url`). The content script falls back to the bundled sidebar when the hosted page does not connect within 8 s or errors.
+* **postMessage bridge:** `aipage-bindings` gained a transport abstraction (direct `chrome.*` vs. bridge) and a documented v1 bridge protocol; the content script answers `runtime.sendMessage`, `storage.local.get/set`, `storage.onChanged` and `tabs.query/sendMessage` for the hosted sidebar after verifying the message origin and source, over a private `MessageChannel`.
 
 ### ♻️ Code Refactoring
 
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Factor the "build all targets + package" steps shared by CI and releases into a reusable `build.yml` workflow (optional manifest version stamp, install tests, artifact upload).
 * Add a nightly workflow publishing the head of `main` to a rolling `nightly` GitHub pre-release (tag force-moved, assets replaced, notes = commits since the previous nightly, built commit recorded in `nightly.json`); skips when nothing changed, and never publishes when the install tests fail.
 * CI now runs the extension install tests as a hard gate.
+* `deploy-web.yml` builds the web target in the Nix devShell and deploys `dist-web` to Vercel production (`VERCEL_TOKEN` secret required).
 
 ### ✅ Tests
 
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `xtask build`/`build-all` accept `--version-stamp <version>` and `--version-name <text>` (Chrome-only `version_name`) for date-stamped nightly manifests.
 * Fix `wasm-opt` producing modules current engines refuse to instantiate (`unknown import kind 0x7f`): pass rustc's default wasm32 feature set instead of `-all`, which with binaryen ≥ 132 enabled post-MVP encodings.
+* `cargo run -p xtask -- build --target web` builds `dist-web/` (sidebar only, content-hashed js/wasm/css, `vercel.json` with wasm/caching/CSP headers).
 
 ### 📚 Documentation
 

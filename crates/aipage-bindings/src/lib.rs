@@ -4,6 +4,20 @@
 //! namespace**, which Chrome, Firefox and Safari all expose, and wrap the
 //! callbacks into Rust futures. This gives one uniform, promise-like API across
 //! every target without shipping any JavaScript polyfill.
+//!
+//! # Transports
+//!
+//! The sidebar can also run as a plain web page (the hosted, auto-updating
+//! UI) where `chrome.*` does not exist. [`transport`] detects that once at
+//! startup and the API wrappers below route the five calls the sidebar needs
+//! (`runtime.sendMessage`, `storage.local.get/set`, `storage.onChanged`,
+//! `tabs.query/sendMessage`) through the [`bridge`] instead; callers are
+//! unaffected. Everything else (`runtime.getURL`, `onMessage`, `alarms`, …) is
+//! only ever used from extension contexts and stays direct.
+
+pub mod bridge;
+
+use std::cell::Cell;
 
 use js_sys::{Function, Object, Promise, Reflect};
 use wasm_bindgen::prelude::*;
@@ -65,6 +79,56 @@ extern "C" {
     fn chrome_alarms_on_alarm_add(cb: &Function);
 }
 
+/// How the extension API is reached from the current context.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Transport {
+    /// `chrome.*` is available: extension pages, background, content scripts.
+    Direct,
+    /// No `chrome.*`: the sidebar is a hosted web page framed by the content
+    /// script, which proxies calls over [`bridge`].
+    Bridge,
+}
+
+thread_local! {
+    static TRANSPORT: Cell<Option<Transport>> = const { Cell::new(None) };
+}
+
+fn detect_transport() -> Transport {
+    fn is_function(obj: &JsValue, key: &str) -> bool {
+        Reflect::get(obj, &JsValue::from_str(key))
+            .map(|v| v.is_function())
+            .unwrap_or(false)
+    }
+    fn get(obj: &JsValue, key: &str) -> JsValue {
+        Reflect::get(obj, &JsValue::from_str(key)).unwrap_or(JsValue::UNDEFINED)
+    }
+    let chrome = get(&js_sys::global(), "chrome");
+    if !chrome.is_object() {
+        return Transport::Bridge;
+    }
+    // Web pages may see a partial `chrome.runtime` (externally_connectable);
+    // `chrome.storage` only ever exists in extension contexts, so require both.
+    let runtime = get(&chrome, "runtime");
+    let local = get(&get(&chrome, "storage"), "local");
+    if runtime.is_object() && is_function(&runtime, "sendMessage") && local.is_object() && is_function(&local, "get") {
+        Transport::Direct
+    } else {
+        Transport::Bridge
+    }
+}
+
+/// The transport in use, detected once on first call.
+pub fn transport() -> Transport {
+    TRANSPORT.with(|t| match t.get() {
+        Some(tr) => tr,
+        None => {
+            let tr = detect_transport();
+            t.set(Some(tr));
+            tr
+        }
+    })
+}
+
 /// Wrap a callback-style chrome API call into an awaitable future.
 ///
 /// `invoke` receives the JS callback to hand to the chrome function. The
@@ -108,7 +172,10 @@ pub mod runtime {
 
     /// `chrome.runtime.sendMessage(msg)` awaited for its response.
     pub async fn send_message(msg: &JsValue) -> JsResult {
-        promisify(|cb| chrome_runtime_send_message(msg, cb)).await
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_runtime_send_message(msg, cb)).await,
+            Transport::Bridge => bridge::call(bridge::Method::RuntimeSendMessage, &[msg]).await,
+        }
     }
 
     /// Register a `chrome.runtime.onMessage` listener.
@@ -143,12 +210,18 @@ pub mod storage {
     /// `chrome.storage.local.get(keys)`. Pass an array of key strings (or null
     /// for everything). Resolves to an object map of stored values.
     pub async fn local_get(keys: &JsValue) -> JsResult {
-        promisify(|cb| chrome_storage_local_get(keys, cb)).await
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_storage_local_get(keys, cb)).await,
+            Transport::Bridge => bridge::call(bridge::Method::StorageLocalGet, &[keys]).await,
+        }
     }
 
     /// `chrome.storage.local.set(items)` where `items` is an object map.
     pub async fn local_set(items: &JsValue) -> JsResult {
-        promisify(|cb| chrome_storage_local_set(items, cb)).await
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_storage_local_set(items, cb)).await,
+            Transport::Bridge => bridge::call(bridge::Method::StorageLocalSet, &[items]).await,
+        }
     }
 
     /// Register a `chrome.storage.onChanged` listener `(changes, areaName)`.
@@ -156,11 +229,16 @@ pub mod storage {
     where
         F: Fn(JsValue, JsValue) + 'static,
     {
-        let cb = Closure::wrap(Box::new(move |changes: JsValue, area: JsValue| {
-            handler(changes, area);
-        }) as Box<dyn Fn(JsValue, JsValue)>);
-        chrome_storage_on_changed_add(cb.as_ref().unchecked_ref());
-        cb.forget();
+        match transport() {
+            Transport::Direct => {
+                let cb = Closure::wrap(Box::new(move |changes: JsValue, area: JsValue| {
+                    handler(changes, area);
+                }) as Box<dyn Fn(JsValue, JsValue)>);
+                chrome_storage_on_changed_add(cb.as_ref().unchecked_ref());
+                cb.forget();
+            }
+            Transport::Bridge => bridge::on_storage_changed(std::rc::Rc::new(handler)),
+        }
     }
 }
 
@@ -169,12 +247,20 @@ pub mod tabs {
 
     /// `chrome.tabs.sendMessage(tabId, msg)` awaited for its response.
     pub async fn send_message(tab_id: i32, msg: &JsValue) -> JsResult {
-        promisify(|cb| chrome_tabs_send_message(tab_id, msg, cb)).await
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_tabs_send_message(tab_id, msg, cb)).await,
+            Transport::Bridge => {
+                bridge::call(bridge::Method::TabsSendMessage, &[&JsValue::from_f64(tab_id as f64), msg]).await
+            }
+        }
     }
 
     /// `chrome.tabs.query(queryInfo)` resolving to an array of tab objects.
     pub async fn query(query_info: &JsValue) -> JsResult {
-        promisify(|cb| chrome_tabs_query(query_info, cb)).await
+        match transport() {
+            Transport::Direct => promisify(|cb| chrome_tabs_query(query_info, cb)).await,
+            Transport::Bridge => bridge::call(bridge::Method::TabsQuery, &[query_info]).await,
+        }
     }
 
     /// Convenience: id of the first tab matching `{active:true,currentWindow:true}`.

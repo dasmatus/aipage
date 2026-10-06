@@ -6,6 +6,7 @@ dist/
 dist-chrome/
 dist-firefox/
 dist-safari/
+dist-web/
 packages/
 *.zip
 *.xpi
