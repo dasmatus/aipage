@@ -1,0 +1,72 @@
+name: Changelog
+
+# Regenerates book/src/changelog.md (CHANGELOG.md is a symlink to it) from the
+# git history with git-cliff (cliff.toml, scripts/changelog.sh) on every push
+# to main and commits the result back as github-actions[bot]. The file is
+# never edited by hand: ci.yml rejects pull requests that touch it.
+#
+# Loop guard: pushes made with GITHUB_TOKEN do not trigger workflows, the bot
+# commit carries `[skip ci]` and the job additionally skips when the actor is
+# the bot or the head commit carries that marker. deploy-docs.yml is
+# dispatched explicitly after a bot commit (a workflow_dispatch made with
+# GITHUB_TOKEN does run), so the published book picks up the new changelog.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  regenerate:
+    name: Regenerate changelog
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          # git-cliff needs the whole history (and the release tags).
+          fetch-depth: 0
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Regenerate book/src/changelog.md (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            git cliff --version
+            bash scripts/changelog.sh
+          '
+
+      - name: Commit and push the regenerated changelog
+        id: commit
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- book/src/changelog.md; then
+            echo "book/src/changelog.md is up to date."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --stat -- book/src/changelog.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add book/src/changelog.md
+          git commit -m "docs(changelog): regenerate [skip ci]"
+          # main may have moved while this job ran; replay the commit on top.
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Redeploy the documentation with the new changelog
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy-docs.yml --ref main

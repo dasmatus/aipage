@@ -28,17 +28,39 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
+        with:
+          # git-cliff needs the history and the previous release tag.
+          fetch-depth: 0
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
 
       - uses: actions/download-artifact@v7
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
+      # The release body is this tag's changelog section, generated from the
+      # conventional commits since the previous `v*` tag by git-cliff
+      # (cliff.toml, scripts/changelog.sh) — the same generator that rebuilds
+      # book/src/changelog.md on main.
+      - name: Generate release notes (git-cliff, in nix devShell)
+        env:
+          NOTES_FILE: release-notes.md
+        run: |
+          # shellcheck disable=SC2016 # the quoted script is expanded by the inner bash
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            bash scripts/changelog.sh --release "$GITHUB_REF_NAME" > "$NOTES_FILE"
+          '
+          if [ ! -s "$NOTES_FILE" ]; then
+            echo "Release $GITHUB_REF_NAME" > "$NOTES_FILE"
+          fi
+          cat "$NOTES_FILE"
+
       - name: Create or update GitHub release and upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          notes_file="$(mktemp)"
-          node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" > "$notes_file"
+          notes_file=release-notes.md
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" \
