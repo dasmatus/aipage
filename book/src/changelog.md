@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **chrome:** experimental MV3 manifest and service-worker loader ([62d416c](https://github.com/dasmatus/aipage/commit/62d416c2d46d137de7fbbb6a3521af22f4ff408e))
 * **update:** check GitHub releases with a stable/nightly channel and self-update the sidebar bundle ([61be9ef](https://github.com/dasmatus/aipage/commit/61be9efd71b56c7ad30fe06569294b95d6c71d75))
 * **web:** publish the sidebar bundle with a hash manifest ([b155acd](https://github.com/dasmatus/aipage/commit/b155acd514e9b8521752afb70c33f3c52b20a6ab))
+* **openai:** sign in with ChatGPT via OAuth PKCE ([56b7725](https://github.com/dasmatus/aipage/commit/56b77250bf9352e1dae706ac582be3a7a463a931))
 
 ### 🐛 Bug Fixes
 
@@ -128,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * trim unused crate dependencies and web-sys features ([81cf48f](https://github.com/dasmatus/aipage/commit/81cf48f1bf4b66935f606e84f9a258799dca7f2d))
 * **nix:** add git-cliff and mdbook to the devShell ([201133b](https://github.com/dasmatus/aipage/commit/201133b75ddcb88ed35512f0b583f29633716bdd))
 * **changelog:** generate the changelog with git-cliff ([dce6318](https://github.com/dasmatus/aipage/commit/dce631853b7b34235779cd3174124db4455dfe8b))
+* **manifest:** identity permission and auth.openai.com for Sign in with ChatGPT ([92c6fa9](https://github.com/dasmatus/aipage/commit/92c6fa9cc789ab5450116c6fc4c6dde81a060e5a))
 
 ### 📚 Documentation
 
@@ -141,6 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * describe the generated changelog, the release flow and the docs site ([073093a](https://github.com/dasmatus/aipage/commit/073093a3a987680086db5d5c155c0d99e1908455))
 * **user-guide:** installing the signed Firefox xpi and the Safari app wrapper ([921d78c](https://github.com/dasmatus/aipage/commit/921d78ca63d1e900f3b3ce7566e0ff92fc421b07))
 * describe GitHub updates, channels and the self-updating sidebar ([b297379](https://github.com/dasmatus/aipage/commit/b2973796f25269186f3028c1d6d9199284f419c5))
+* **openai:** describe Sign in with ChatGPT setup ([00c3506](https://github.com/dasmatus/aipage/commit/00c35062750f67b52a2184f3b4525e8c22c517c9))
 
 ### 💎 Styles
 
