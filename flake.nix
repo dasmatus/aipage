@@ -51,7 +51,9 @@
 
         # Everything the xtask build (`cargo run -p xtask -- build`) shells out
         # to: cargo + rustc (rustToolchain), wasm-bindgen, wasm-opt (binaryen),
-        # bun (sass/postcss/tailwind via bunx) and zip for packaging.
+        # bun (sass/postcss/tailwind via bunx) and zip for packaging, plus the
+        # documentation tooling CI runs in this shell: git-cliff (changelog
+        # generation, see cliff.toml) and mdbook (the book under book/).
         buildInputs = [
           rustToolchain
           wasm-bindgen-cli
@@ -61,6 +63,8 @@
           pkgs.web-ext # Firefox packaging/lint
           pkgs.zip
           pkgs.cacert
+          pkgs.git-cliff # changelog generation (`git cliff`, cliff.toml)
+          pkgs.mdbook # documentation book (`bun run docs:build`)
         ];
       in
       {
