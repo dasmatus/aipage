@@ -107,6 +107,18 @@ jobs:
             export CHROMIUM_EXECUTABLE
             "$CHROMIUM_EXECUTABLE" --version
             env -u LD_PRELOAD bun run test:install
+            # Brave (current Chromium base) still loads MV2 extensions and is
+            # the browser the Chrome build actually targets today: run the
+            # real-install spec on the latest stable Brave from its apt repo.
+            brave_repo="https://brave-browser-apt-release.s3.brave.com"
+            brave_deb="$(curl -fsSL "$brave_repo/dists/stable/main/binary-amd64/Packages" \
+              | awk "/^Package: brave-browser\$/{p=1} p&&/^Filename:/{print \$2; exit}")"
+            echo "Brave package: $brave_deb"
+            curl -fsSL -o "$RUNNER_TEMP/brave.deb" "$brave_repo/$brave_deb"
+            dpkg-deb -x "$RUNNER_TEMP/brave.deb" "$RUNNER_TEMP/brave"
+            CHROMIUM_EXECUTABLE="$RUNNER_TEMP/brave/opt/brave.com/brave/brave"
+            "$CHROMIUM_EXECUTABLE" --version
+            env -u LD_PRELOAD bun run test:install:chromium
           '
 
       - name: Upload install-test report

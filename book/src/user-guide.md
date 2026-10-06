@@ -33,7 +33,7 @@ To install the extension, download the latest build directly from our GitHub Rel
 5.  Click **"Load unpacked"**.
 6.  Select the unzipped folder.
 
-> **Note on Manifest V2**: the extension is a Manifest V2 extension. Current Chrome/Chromium (153 and later) no longer loads MV2 extensions at all, not even unpacked: the `ExtensionManifestV2Disabled`/`ExtensionManifestV2Unsupported` features, `AllowLegacyMV2Extensions` and the `ExtensionManifestV2Availability` enterprise policy no longer exist in those builds. The Chrome build is only installable on Chromium builds up to the 141 era (started with `--disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported`) or on browsers that still allow MV2, such as **[Brave](https://brave.com/)**. An MV3 manifest for Chrome is the pending fix.
+> **Note on Manifest V2**: the extension is a Manifest V2 extension. Current Chrome/Chromium (153 and later) no longer loads MV2 extensions at all, not even unpacked: the `ExtensionManifestV2Disabled`/`ExtensionManifestV2Unsupported` features, `AllowLegacyMV2Extensions` and the `ExtensionManifestV2Availability` enterprise policy no longer exist in those builds. **Brave** (1.96, Chromium 154 base) still loads it: the real-install test passes there, and CI runs that test on both the latest stable Brave and Chromium 141. The Chrome build is only installable on Chromium builds up to the 141 era (started with `--disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported`) or on browsers that still allow MV2, such as **[Brave](https://brave.com/)**. An MV3 manifest for Chrome is the pending fix.
 
 ### Firefox
 

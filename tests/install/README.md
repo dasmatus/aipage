@@ -50,7 +50,10 @@ with Playwright 1.63) refuses to load MV2 extensions entirely, even unpacked
 with `--load-extension`: those features, `AllowLegacyMV2Extensions` and the
 `ExtensionManifestV2Availability` policy no longer exist in that binary (MV3
 extensions load fine), so CI pins this spec to Chrome 141 and the Chrome
-build only installs on browsers that still allow MV2. Then:
+build only installs on browsers that still allow MV2. Brave 1.96 (Chromium
+154 base) still does: the spec passes there unchanged, and CI runs it a second
+time with `CHROMIUM_EXECUTABLE` pointing at the latest stable Brave `.deb`
+from Brave's apt repository (extracted with `dpkg-deb -x`, no install). Then:
 
 1. finds the extension's `_generated_background_page.html` target through CDP
    `Target.getTargets` (Playwright ≥ 1.5x no longer attaches to MV2
