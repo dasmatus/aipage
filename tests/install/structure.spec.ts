@@ -38,7 +38,7 @@ for (const target of TARGETS) {
       // manager talks to GitHub (API, release pages, asset redirects).
       expect(m.content_security_policy).toMatch(/script-src [^;]*\bblob:/);
       for (const host of ['https://api.github.com', 'https://github.com', 'https://objects.githubusercontent.com']) {
-        expect(m.content_security_policy).toMatch(new RegExp(`connect-src [^;]*${host.replace(/[.]/g, '\\.')}`));
+        expect(m.content_security_policy).toMatch(new RegExp(`connect-src [^;]*${host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
         expect(m.permissions as string[]).toContain(`${host}/*`);
       }
       expect(m.permissions as string[]).not.toContain('https://codeberg.org/*');
