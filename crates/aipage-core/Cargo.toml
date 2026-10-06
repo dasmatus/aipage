@@ -17,4 +17,4 @@ serde-wasm-bindgen = { workspace = true }
 pulldown-cmark = { workspace = true }
 # SVG → PNG rasterization. default-features off drops the text / system-font /
 # mmap features that do not fit wasm.
-resvg = { version = "0.44", default-features = false }
+resvg = { version = "0.48", default-features = false }
