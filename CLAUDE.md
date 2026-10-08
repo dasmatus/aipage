@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A cross-browser extension (Chrome, Firefox, Safari) that injects an AI-powered sidebar into [EduPage](https://edupage.org). Students chat with an AI backend (with page-reading / exam tools on the cloud providers), scan page content for context, run web searches and generate images without leaving EduPage.
 
-The extension is written in **Rust, compiled to WebAssembly** (`wasm32-unknown-unknown`) via `wasm-bindgen`, with a **Leptos** UI. The only non-Rust pieces are the `manifest.json` files, `sidebar.html`, two ~5-line JS bootstrap loaders that instantiate the background/content WASM, `anti_cheat.js` (which must run in the host page's JS context), the stylesheets and `vercel.json`. All of these live in `assets/`.
+The extension is written in **Rust, compiled to WebAssembly** (`wasm32-unknown-unknown`) via `wasm-bindgen`, with a **Leptos** UI. The only non-Rust pieces are the `manifest.json` files, `sidebar.html`, two ~5-line JS bootstrap loaders that instantiate the background/content WASM, `anti_cheat.js` (which must run in the host page's JS context), the stylesheets and `vercel.json`. All of these live in `assets/`. The optional Claude Code backend, `agent-server/`, is a separate Bun/TypeScript server over the Claude Agent SDK (it cannot run in WASM).
 
 ## Branching
 
@@ -42,6 +42,10 @@ cargo clippy --workspace --all-targets -- -D warnings
 bun run package:chrome     # zip dist-chrome
 bun run package:firefox    # web-ext xpi
 
+# Claude Code agent server (Claude Agent SDK)
+cd agent-server && bun install && bun test && bun run typecheck
+cd agent-server && bun run start                # http://127.0.0.1:8787, see agent-server/README.md
+
 # Docs / changelog
 bun run docs:build         # mdbook build → book/book/ (deployed to https://aipage-docs.vercel.app)
 bun run changelog          # regenerate book/src/changelog.md with git-cliff (CI does this on main)
@@ -66,6 +70,7 @@ crates/
   aipage-sidebar/    # cdylib → wasm: the Leptos CSR sidebar UI
   aipage-background/ # cdylib → wasm: CORS proxy, DuckDuckGo search, toolbar toggle, GitHub update check, sidebar-bundle download (IndexedDB)
   aipage-content/    # cdylib → wasm: navbar button, sidebar iframe + hosted-UI bridge host, theming, exam tools, anti-cheat
+agent-server/        # Bun/TypeScript: Claude Code over the Claude Agent SDK as a local HTTP server (the `claude-code` provider)
 xtask/               # Rust build orchestrator (browser targets, the web target + aipage-web.json, version stamping)
 assets/              # manifests (×3), sidebar.html, JS loaders (sidebar_loader.js also boots the downloaded bundle), anti_cheat.js, sidebar.scss, tailwind.css, vercel.json
 tests/install/       # Playwright: real unpacked install in Chromium, web-ext lint / temporary install in Firefox, dist structure
@@ -77,8 +82,8 @@ tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome
 
 - **`aipage-bindings`** — binds the callback-based `chrome.*` namespace (which Chrome, Firefox and Safari all expose) and wraps callbacks into Rust futures; no JS polyfill is shipped. `transport()` detects whether `chrome.*` exists; without it (the hosted sidebar) the five calls the sidebar needs go over the postMessage `bridge` (protocol documented in `bridge.rs`). `to_js`/`from_js`/`js_object` and `tabs::send_json*` are the shared JSON interop helpers.
 - **`aipage-core`**:
-  - `types.rs` — `ProviderType` (`ollama-cloud` default, `openrouter`, `openai`, `anthropic`, `lmstudio`, `ollama`; the serialized strings are persisted) and the predicates the UI dispatches on (`is_local`, `requires_api_key`, `supports_native_tools`).
-  - `providers/` — `openai_compat::OpenAiCompat` is one static config per OpenAI-compatible backend (chat completions + `/v1/models`, Bearer auth); `anthropic.rs` speaks the Messages API, `ollama.rs` the native local API, `openai.rs` only filters the model list and `lmstudio.rs` only derives its models URL. `providers/mod.rs` carries the "Adding a provider" checklist.
+  - `types.rs` — `ProviderType` (`ollama-cloud` default, `openrouter`, `openai`, `anthropic`, `claude-code`, `lmstudio`, `ollama`; the serialized strings are persisted) and the predicates the UI dispatches on (`is_local`, `requires_api_key`, `supports_native_tools`).
+  - `providers/` — `openai_compat::OpenAiCompat` is one static config per OpenAI-compatible backend (chat completions + `/v1/models`, Bearer auth); `anthropic.rs` speaks the Messages API, `claude_code.rs` is the client of `agent-server` (`POST /v1/agent`), `ollama.rs` the native local API, `openai.rs` only filters the model list and `lmstudio.rs` only derives its models URL. `providers/mod.rs` carries the "Adding a provider" checklist.
   - `agent.rs` — client-side tool-calling loops (OpenAI function tools and Anthropic `tool_use`) over the browser tools (page content, exam question, fill answer, DuckDuckGo search) for every provider with `supports_native_tools`; the sidebar falls back to a plain reply on error.
   - `proxy.rs` — `perform_request`/`post_json` route every external request through the background CORS proxy (`runtime.sendMessage({ action: 'proxy_fetch' })`).
   - `imagegen.rs` — an SVG drawn by the chat model and rasterized with `resvg`/`tiny-skia`, or SD WebUI.
@@ -90,6 +95,8 @@ tests/e2e/           # Playwright: sidebar served over HTTP with a mocked chrome
 - **`aipage-background`** — `update.rs` polls the channel's GitHub release hourly (`alarms`) and on demand (`check_updates` message from settings): notifies + downloads the matching browser package via `downloads` (Auto-update), and with `ui_bundle_update_enabled` on runs `ui_bundle.rs`, which downloads the glue/wasm/css listed in the release's `aipage-web.json` as individual assets, verifies each sha256 and writes them to IndexedDB (`aipage-ui-bundle`/`ui-bundle`, records per file + `meta`; helpers in `aipage-bindings::idb`). `ui_bundle_status` / `ui_bundle_clear` serve the settings card. The nightly tag is `nightly`, so its version/commit come from the `nightly.json` asset.
 - **`assets/sidebar_loader.js`** — before importing the bundled `sidebar.js`, checks `ui_bundle_update_enabled` + the IndexedDB `meta`; if a bundle not older than the extension is installed it imports the downloaded glue as a `blob:` module (`script-src … blob:` in the MV2 manifests), instantiates the wasm from bytes and attaches the css as `blob:` links; any failure logs once, clears the bundle and boots the bundled files. MV2-only: MV3 forbids remotely sourced code.
 - **`aipage-content`** — `sidebar_controller.rs` loads the hosted sidebar by default and falls back to the bundled one when the bridge does not connect within 8 s; `bridge.rs` is the privileged bridge end (origin + source checks, private `MessageChannel`).
+
+- **`agent-server/`** — the one non-WASM runtime piece: the Claude Agent SDK spawns the Claude Code process and needs Node/Bun, so it runs as a local server (`bun run start`, `127.0.0.1:8787`) holding the Anthropic credentials. `GET /v1/models` (OpenAI-shaped) and `POST /v1/agent` (`{ prompt, model?, session_id? }` → `{ text, session_id, is_error, … }`, one JSON reply per run). Tools default to `WebSearch`/`WebFetch` with `permissionMode: 'dontAsk'` and `settingSources: []`; web-page `Origin`s are refused. Its own `package.json`/`bun.lock`, tested with `bun test` + `tsc` (CI `agent-server` job); the sidebar's key field is its optional `AIPAGE_AGENT_TOKEN`.
 
 ### Key constraints
 

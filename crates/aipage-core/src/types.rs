@@ -52,12 +52,14 @@ impl Message {
 }
 
 /// Which AI backend a request targets:
-/// `'ollama-cloud' | 'openrouter' | 'openai' | 'anthropic' | 'lmstudio' | 'ollama'`.
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'anthropic' | 'claude-code' | 'lmstudio' | 'ollama'`.
 /// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
 /// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
 /// three are OpenAI-compatible and need an API key. `Anthropic` is Claude
-/// over the Anthropic Messages API (API key required); the two local variants
-/// talk to a self-hosted Ollama / LM Studio on the loopback.
+/// over the Anthropic Messages API (API key required). The local variants
+/// talk to a self-hosted server on the loopback: Ollama, LM Studio, or
+/// `ClaudeCode`, the repository's `agent-server` running Claude Code through
+/// the Claude Agent SDK (it holds the Anthropic credentials itself).
 ///
 /// See the "Adding a provider" checklist in [`crate::providers`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,17 +74,20 @@ pub enum ProviderType {
     #[serde(rename = "openai")]
     OpenAi,
     Anthropic,
+    #[serde(rename = "claude-code")]
+    ClaudeCode,
     Lmstudio,
     Ollama,
 }
 
 impl ProviderType {
     /// Every provider, in settings-menu order.
-    pub const ALL: [ProviderType; 6] = [
+    pub const ALL: [ProviderType; 7] = [
         ProviderType::OllamaCloud,
         ProviderType::OpenRouter,
         ProviderType::OpenAi,
         ProviderType::Anthropic,
+        ProviderType::ClaudeCode,
         ProviderType::Ollama,
         ProviderType::Lmstudio,
     ];
@@ -93,6 +98,7 @@ impl ProviderType {
             ProviderType::OpenRouter => "openrouter",
             ProviderType::OpenAi => "openai",
             ProviderType::Anthropic => "anthropic",
+            ProviderType::ClaudeCode => "claude-code",
             ProviderType::Lmstudio => "lmstudio",
             ProviderType::Ollama => "ollama",
         }
@@ -104,6 +110,7 @@ impl ProviderType {
             ProviderType::OpenRouter => "OpenRouter",
             ProviderType::OpenAi => "ChatGPT / OpenAI",
             ProviderType::Anthropic => "Claude (Anthropic)",
+            ProviderType::ClaudeCode => "Claude Code (Agent SDK)",
             ProviderType::Lmstudio => "LM Studio",
             ProviderType::Ollama => "Ollama",
         }
@@ -119,6 +126,7 @@ impl ProviderType {
             "openrouter" => ProviderType::OpenRouter,
             "openai" => ProviderType::OpenAi,
             "anthropic" => ProviderType::Anthropic,
+            "claude-code" => ProviderType::ClaudeCode,
             "lmstudio" => ProviderType::Lmstudio,
             "ollama" => ProviderType::Ollama,
             _ => ProviderType::OllamaCloud,
@@ -126,8 +134,10 @@ impl ProviderType {
     }
 
     /// Whether this backend runs on the user's own machine (no API key needed).
+    /// Claude Code counts: its `agent-server` holds the credentials, and the
+    /// sidebar's key field is only the server's optional access token.
     pub fn is_local(self) -> bool {
-        matches!(self, ProviderType::Lmstudio | ProviderType::Ollama)
+        matches!(self, ProviderType::Lmstudio | ProviderType::Ollama | ProviderType::ClaudeCode)
     }
 
     /// Whether this backend requires an API key (every cloud backend).
@@ -191,6 +201,17 @@ mod tests {
     }
 
     #[test]
+    fn claude_code_is_a_local_server_with_its_own_tools() {
+        assert_eq!(serde_json::to_string(&ProviderType::ClaudeCode).unwrap(), "\"claude-code\"");
+        assert_eq!(ProviderType::from_str_or_default("claude-code"), ProviderType::ClaudeCode);
+        assert_eq!(ProviderType::ClaudeCode.display_name(), "Claude Code (Agent SDK)");
+        assert!(ProviderType::ClaudeCode.is_local());
+        assert!(!ProviderType::ClaudeCode.requires_api_key());
+        // Claude Code runs its own tool loop server-side, not the sidebar's.
+        assert!(!ProviderType::ClaudeCode.supports_native_tools());
+    }
+
+    #[test]
     fn provider_from_str_defaults_to_ollama_cloud() {
         assert_eq!(ProviderType::from_str_or_default("ollama-cloud"), ProviderType::OllamaCloud);
         assert_eq!(ProviderType::from_str_or_default("openrouter"), ProviderType::OpenRouter);
@@ -215,6 +236,7 @@ mod tests {
         assert!(!ProviderType::Anthropic.is_local());
         assert!(ProviderType::Lmstudio.is_local());
         assert!(ProviderType::Ollama.is_local());
+        assert!(ProviderType::ClaudeCode.is_local());
     }
 
     #[test]

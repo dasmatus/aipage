@@ -56,6 +56,26 @@ jobs:
             cargo test --workspace
           '
 
+  # agent-server/: the Claude Code backend (Claude Agent SDK), a Bun/TypeScript
+  # package with its own lockfile. `--omit=optional` skips the per-platform
+  # Claude Code binaries; the tests use a fake SDK query.
+  agent-server:
+    name: Agent server (bun test + tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
+      - name: test + typecheck (in nix devShell)
+        run: |
+          nix develop --accept-flake-config -c bash -c '
+            set -euo pipefail
+            cd agent-server
+            bun install --frozen-lockfile --omit=optional
+            bun test
+            bun run typecheck
+          '
+
   # Builds all three targets, packages them, runs the extension install tests
   # (hard failure) and uploads `aipage-build` (chrome zip, unsigned firefox
   # xpi, safari zip) plus `aipage-build-safari-macos` (AIPage.app built on a

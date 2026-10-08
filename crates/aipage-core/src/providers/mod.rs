@@ -10,7 +10,9 @@
 //! [`openai_compat::OpenAiCompat`], selected per provider by
 //! [`OpenAiCompat::for_provider`]. Claude ([`anthropic`]) speaks the Anthropic
 //! Messages API and owns its wire format; local Ollama ([`ollama`]) uses its
-//! native `/api/*` endpoints for chat and model listing.
+//! native `/api/*` endpoints for chat and model listing. Claude Code
+//! ([`claude_code`]) is a client of the repository's `agent-server`, which
+//! runs Claude Code through the Claude Agent SDK.
 //!
 //! # Adding a provider
 //!
@@ -40,10 +42,11 @@
 //! 6. **`assets/manifest.{chrome,firefox,safari}.json`** — add the API host to
 //!    `permissions` and to the CSP `connect-src`; the background proxy has no
 //!    allow-list of its own, the browser enforces the manifest.
-//! 7. **Docs** — README "Supported Providers" plus a setup subsection, and
-//!    `CHANGELOG.md` under "Unreleased".
+//! 7. **Docs** — README "Supported Providers" plus a setup subsection. The
+//!    changelog is generated from commit messages; never edit it.
 
 pub mod anthropic;
+pub mod claude_code;
 pub mod lmstudio;
 pub mod ollama;
 pub mod openai;
@@ -91,6 +94,8 @@ pub async fn send_message(
 ) -> Result<String, String> {
     match provider {
         ProviderType::Anthropic => anthropic::send_message(prompt, api_key, opts).await,
+        // The key is agent-server's optional access token.
+        ProviderType::ClaudeCode => claude_code::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, opts).await,
         // Local backends never send an auth header, even with a stored key.
         ProviderType::Lmstudio => lmstudio::CONFIG.send_message(prompt, "", opts).await,
@@ -106,6 +111,7 @@ pub async fn get_models(
 ) -> Vec<ModelInfo> {
     match provider {
         ProviderType::Anthropic => anthropic::get_models(api_key, opts).await,
+        ProviderType::ClaudeCode => claude_code::get_models(api_key, opts).await,
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
         ProviderType::OpenAi => openai::get_models(api_key, opts).await,
@@ -140,6 +146,7 @@ mod tests {
         assert_eq!(default_base_url(ProviderType::OpenRouter), "https://openrouter.ai/api");
         assert_eq!(default_base_url(ProviderType::OpenAi), "https://api.openai.com");
         assert_eq!(default_base_url(ProviderType::Anthropic), "https://api.anthropic.com");
+        assert_eq!(default_base_url(ProviderType::ClaudeCode), "http://localhost:8787");
         assert_eq!(default_base_url(ProviderType::Lmstudio), "http://localhost:1234/v1");
         assert_eq!(default_base_url(ProviderType::Ollama), "http://localhost:11434");
     }

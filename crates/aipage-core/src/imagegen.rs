@@ -1,13 +1,13 @@
 //! Image generation: SVG drawn by the chat model, or Stable Diffusion WebUI.
 //!
 //! The SVG path asks the selected chat model (Ollama Cloud by default; any
-//! OpenAI-compatible provider, or Claude over the Anthropic Messages API) for
-//! a self-contained SVG and rasterizes it to PNG with the pure-Rust
-//! `resvg`/`tiny-skia` stack. SD WebUI returns base64 PNG directly.
+//! OpenAI-compatible provider, Claude over the Anthropic Messages API, or
+//! Claude Code over the local `agent-server`) for a self-contained SVG and
+//! rasterizes it to PNG with the pure-Rust `resvg`/`tiny-skia` stack. SD WebUI returns base64 PNG directly.
 
 use serde_json::{json, Value};
 
-use crate::providers::anthropic;
+use crate::providers::{anthropic, claude_code};
 use crate::providers::openai_compat::{chat_messages, json_headers, parse_completion_text, OpenAiCompat};
 use crate::providers::SendOptions;
 use crate::proxy::post_json;
@@ -84,6 +84,9 @@ async fn generate_svg(
         let body = anthropic::message_body(&anthropic::model_of(&opts), SVG_SYSTEM_PROMPT, &messages, None);
         let resp = anthropic::post_messages(api_key, &opts, &body).await?;
         anthropic::text_blocks(&resp)
+    } else if provider == ProviderType::ClaudeCode {
+        // agent-server takes one prompt and keeps its own system prompt.
+        claude_code::send_message(&format!("{SVG_SYSTEM_PROMPT}\n\n{user_prompt}"), api_key, &opts).await?
     } else {
         let cfg = OpenAiCompat::for_provider(provider);
         let body = json!({

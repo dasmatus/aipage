@@ -183,6 +183,7 @@ The extension supports multiple AI providers. Choose your preferred provider and
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
 - **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
+- **Claude Code (Agent SDK)** — Claude Code itself, run on your computer by the bundled `agent-server` through the Claude Agent SDK; it searches and reads the web with its own tools
 - **LM Studio** (Local)
 - **Ollama** (Local)
 
@@ -206,6 +207,23 @@ Talks directly to Claude through the official Anthropic Messages API (`https://a
 5. Click the refresh button next to **Model** to list your available models and pick one; the default is `claude-opus-5-5`.
 
 > The key is stored locally in your browser and is only ever sent to `api.anthropic.com` (through the extension's background proxy). Claude runs the **agentic chat** tools (read the page, read / fill the exam question) and powers **web search** with its built-in server-side search tool, so no extra search key is needed. **Image generation** asks Claude for an SVG that the extension rasterizes to a PNG in-browser. If you used the Claude provider in an older AIPage release, your saved key and model are picked up again.
+
+#### Claude Code (Agent SDK)
+
+Embeds **Claude Code** in the sidebar. The [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript) runs the Claude Code process and needs Node or Bun, so it runs in a small local server from this repository, [`agent-server/`](https://github.com/dasmatus/aipage/tree/main/agent-server), and the extension talks to it like it talks to a local Ollama.
+
+1. Install [Bun](https://bun.sh), clone the repository and start the server:
+   ```bash
+   cd agent-server
+   bun install
+   ANTHROPIC_API_KEY=sk-ant-... bun run start
+   ```
+   Instead of `ANTHROPIC_API_KEY` you can rely on the login of an installed `claude` CLI. The server listens on `http://127.0.0.1:8787`.
+2. In the AIPage settings pick **Claude Code (Agent SDK)** as the engine and keep the **Base URL** at `http://localhost:8787`.
+3. Click the refresh button next to **Model** and pick one of the models the server offers (default `claude-opus-5-5`).
+4. Leave **Claude Code Access Token** empty, unless you started the server with `AIPAGE_AGENT_TOKEN`; then enter that token.
+
+> Every message is one Claude Code run: Claude Code reads the message (including page content you scanned into the chat), uses its tools and answers once it is done, so expect a few seconds more than a plain chat reply. By default it may only use `WebSearch` and `WebFetch`, and every other tool is denied; your `~/.claude` settings are not loaded. The tools, models, token, timeout and working directory are environment variables, listed in the [`agent-server` README](https://github.com/dasmatus/aipage/blob/main/agent-server/README.md). Your Anthropic credentials stay in the server and never reach the browser. **Image generation** asks Claude Code for the SVG, as with the other providers.
 
 #### OpenRouter
 
@@ -367,6 +385,7 @@ scripts/setup-safari.sh   # Safari: Xcode project generator + unsigned app build
 scripts/sign-firefox.sh   # Firefox: AMO signing (web-ext sign) with same-version fallback
 scripts/amo-fetch-signed.mjs  # Firefox: re-download a version AMO already signed
 tests/install, tests/e2e  # Playwright test suites
+agent-server/             # Bun/TypeScript server running Claude Code through the Claude Agent SDK
 ```
 
 ### Building
@@ -402,6 +421,7 @@ bun run package:safari:app    # aipage-safari-macos.zip: AIPage.app built unsign
 This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/.github/workflows) (see `.github/workflows/`) with build/test steps running inside the pinned [Nix flake](https://github.com/dasmatus/aipage/blob/main/flake.nix) devShell:
 
 - **Check job**: `cargo clippy` (with `-D warnings`) + `cargo test --workspace`
+- **Agent server job**: `bun test` + `tsc --noEmit` for `agent-server/`
 - **Build workflow** (`build.yml`, reusable): on Ubuntu, `cargo run -p xtask -- build-all` (Chrome, Firefox, Safari) and `build --target web`, packages `aipage-chrome.zip`, `aipage-safari.zip`, the Firefox `.xpi`, `aipage-web.zip` and `aipage-web.json` (plus the individual web files), then runs the **extension install tests** (`bun run test:install`: a real unpacked MV2 install in headless Chromium — including booting the `dist-web` bundle from IndexedDB through `blob:` imports —, `web-ext lint` + a temporary install in headless Firefox that boots the background and sidebar WASM over the remote debugging protocol, a structural check of the Safari dist and of `aipage-web.json` against `dist-web`). A failing install test fails the job. With `sign-firefox: true` the xpi is then signed through AMO (below); otherwise it is uploaded as `aipage-firefox-unsigned.xpi`. A second, **macOS** job downloads the Ubuntu-built `dist-safari`, runs `scripts/setup-safari.sh --package aipage-safari-macos.zip` (Apple's packager + unsigned `xcodebuild`) and uploads the app as its own artifact (`<artifact-name>-safari-macos`); it is marked `continue-on-error`, so a converter/Xcode breakage shows as a red job and a missing asset rather than blocking the other packages. Accepts an optional manifest version stamp.
 - **E2e job** (best-effort): Playwright against the built Chrome dist served over HTTP
 - **Release workflow**: on a pushed `v*` tag, runs the build workflow (signing on) and publishes a GitHub Release with `aipage-chrome.zip`, `aipage-firefox.xpi` (or `-unsigned`), `aipage-safari.zip` and, when the macOS job succeeded, `aipage-safari-macos.zip`, plus the sidebar bundle (`aipage-web.zip`, `aipage-web.json` and its files); the extension's update check reads these releases
