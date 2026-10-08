@@ -81,8 +81,9 @@ export function createHandler(config: ServerConfig, query: QueryFn): (req: Reque
         return json(200, reply);
       } catch (e) {
         if (e instanceof RequestError) return error(e.status, e.message);
+        // The details (paths, SDK internals) stay in the server log.
         console.error("[aipage-agent-server] run failed:", e instanceof Error ? e.message : e);
-        return error(502, e instanceof Error ? e.message : String(e));
+        return error(502, "Claude Code failed to run; see the agent-server log for details");
       }
     }
 

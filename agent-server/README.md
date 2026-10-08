@@ -65,7 +65,7 @@ files on your computer. Only add them deliberately, with a dedicated
 with `Content-Type: application/json`; `session_id` from an earlier reply
 resumes that Claude Code session. A run is one request and one JSON reply
 (the extension proxy does not stream). Errors are `{ "error": { "message" } }`
-with 400/401/403/413/415 for bad requests, 502 when Claude Code fails to run and
+with 400/401/403/413/415 for bad requests, 502 when Claude Code fails to run (the cause is in the server log) and
 504 on timeout; a run that Claude Code itself ends in an error is a 200 with
 `is_error: true`.
 

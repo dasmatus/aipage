@@ -212,14 +212,16 @@ describe("HTTP handler", () => {
     expect((await handler(new Request("http://x/nope"))).status).toBe(404);
   });
 
-  test("a failing run becomes a 502 with the message", async () => {
+  test("a failing run becomes a 502 that keeps the details in the log", async () => {
     const failing: QueryFn = () =>
       (async function* () {
         throw new Error("Claude Code executable not found");
       })();
     const res = await createHandler(config(), failing)(post({ prompt: "hi" }));
     expect(res.status).toBe(502);
-    expect(((await res.json()) as { error: { message: string } }).error.message).toContain("not found");
+    const message = ((await res.json()) as { error: { message: string } }).error.message;
+    expect(message).toContain("agent-server log");
+    expect(message).not.toContain("executable not found");
   });
 
   test("a run past the timeout is aborted with a 504", async () => {
