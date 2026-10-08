@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **chrome:** experimental MV3 manifest and service-worker loader ([62d416c](https://github.com/dasmatus/aipage/commit/62d416c2d46d137de7fbbb6a3521af22f4ff408e))
 * **update:** check GitHub releases with a stable/nightly channel and self-update the sidebar bundle ([61be9ef](https://github.com/dasmatus/aipage/commit/61be9efd71b56c7ad30fe06569294b95d6c71d75))
 * **web:** publish the sidebar bundle with a hash manifest ([b155acd](https://github.com/dasmatus/aipage/commit/b155acd514e9b8521752afb70c33f3c52b20a6ab))
+* **claude-code:** embed Claude Code through the Claude Agent SDK ([c9a8d9b](https://github.com/dasmatus/aipage/commit/c9a8d9bd9ffc89cc112f234cce3a590cd5103013))
 
 ### 🐛 Bug Fixes
 
@@ -67,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **ci:** reinstall Nix in the check job ([dd230a8](https://github.com/dasmatus/aipage/commit/dd230a8bf2c41ca2a7796c053300d2afcc0602d6))
 * **safari:** pin app and extension bundle ids after generating the project ([b41e3b0](https://github.com/dasmatus/aipage/commit/b41e3b0902a478580af8d10c29985cba9c1e2b04))
 * **pages:** publish the mdBook to GitHub Pages under /aipage/ ([9c72abc](https://github.com/dasmatus/aipage/commit/9c72abc39e25d549d7124be381db03570d2a00fc))
+* **agent-server:** keep run-failure details out of the HTTP reply ([5537a42](https://github.com/dasmatus/aipage/commit/5537a420977ddcb78aefe401ed3f52a7917cfbe2))
 
 ### 📦 Dependencies
 
