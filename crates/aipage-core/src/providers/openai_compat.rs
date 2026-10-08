@@ -80,6 +80,17 @@ pub const ANTHROPIC: OpenAiCompat = OpenAiCompat {
     extra_headers: &[],
 };
 
+/// Claude Code over the local `agent-server` (see [`super::claude_code`]).
+/// Chat goes to its `/v1/agent` route, not `/v1/chat/completions`; this
+/// config supplies the label, base-URL normalisation, default model, the
+/// optional Bearer token header and the OpenAI-shaped `/v1/models` listing.
+pub const CLAUDE_CODE: OpenAiCompat = OpenAiCompat {
+    label: super::claude_code::LABEL,
+    default_base_url: super::claude_code::DEFAULT_BASE_URL,
+    default_model: super::claude_code::DEFAULT_MODEL,
+    extra_headers: &[],
+};
+
 /// LM Studio's local inference server.
 pub const LMSTUDIO: OpenAiCompat = OpenAiCompat {
     label: "LM Studio",
@@ -109,6 +120,7 @@ impl OpenAiCompat {
             ProviderType::OpenRouter => &OPENROUTER,
             ProviderType::OpenAi => &OPENAI,
             ProviderType::Anthropic => &ANTHROPIC,
+            ProviderType::ClaudeCode => &CLAUDE_CODE,
             ProviderType::Lmstudio => &LMSTUDIO,
             ProviderType::Ollama => &OLLAMA,
         }
@@ -257,6 +269,7 @@ mod tests {
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenAi).label, "ChatGPT / OpenAI");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).label, "Claude (Anthropic)");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).default_model, "claude-opus-5-5");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::ClaudeCode).label, "Claude Code");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Lmstudio).label, "LM Studio");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Ollama).label, "Ollama");
     }

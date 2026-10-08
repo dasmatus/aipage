@@ -103,6 +103,11 @@ pub struct Translation {
     pub anthropic_api_key: String,
     pub anthropic_api_key_placeholder: String,
     pub anthropic_api_key_hint: String,
+    // Claude Code (Agent SDK, via agent-server)
+    pub provider_claude_code: String,
+    pub claude_code_api_key: String,
+    pub claude_code_api_key_placeholder: String,
+    pub claude_code_api_key_hint: String,
     pub appearance_and_app: String,
     pub theme_description: String,
     pub user: String,
@@ -202,6 +207,10 @@ mod tests {
             assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
             assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");
             assert!(!t.anthropic_api_key_hint.is_empty(), "{code} anthropicApiKeyHint empty");
+            assert_eq!(t.provider_claude_code, "Claude Code (Agent SDK)", "{code} providerClaudeCode");
+            assert!(!t.claude_code_api_key.is_empty(), "{code} claudeCodeApiKey empty");
+            assert!(t.claude_code_api_key_placeholder.contains("AIPAGE_AGENT_TOKEN"), "{code} claudeCodeApiKeyPlaceholder");
+            assert!(t.claude_code_api_key_hint.contains("agent-server"), "{code} claudeCodeApiKeyHint");
             assert!(!t.image_gen_sd_webui.is_empty(), "{code} imageGenSDWebUI empty");
             assert!(!t.remote_ui_enabled.is_empty(), "{code} remoteUiEnabled empty");
             assert!(t.auto_update.contains("GitHub"), "{code} autoUpdate should name GitHub");

@@ -41,6 +41,12 @@ for (const target of TARGETS) {
         expect(m.content_security_policy).toMatch(new RegExp(`connect-src [^;]*${host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
         expect(m.permissions as string[]).toContain(`${host}/*`);
       }
+      // Local backends (Ollama, LM Studio, the Claude Code agent-server) are
+      // reached by the background proxy on the loopback, on any port.
+      for (const host of ['http://localhost', 'http://127.0.0.1']) {
+        expect(m.content_security_policy).toMatch(new RegExp(`connect-src [^;]*${host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\*`));
+        expect(m.permissions as string[]).toContain(`${host}/*`);
+      }
       expect(m.permissions as string[]).not.toContain('https://codeberg.org/*');
       if (target === 'firefox') expect(m.browser_specific_settings?.gecko?.id).toBeTruthy();
       // `version_name` is Chrome-only; xtask drops it for the other targets.

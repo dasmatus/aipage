@@ -33,6 +33,7 @@ fn api_key_key(p: ProviderType) -> &'static str {
         ProviderType::OpenRouter => "openrouter_api_key",
         ProviderType::OpenAi => "openai_api_key",
         ProviderType::Anthropic => "anthropic_api_key",
+        ProviderType::ClaudeCode => "claude_code_api_key",
     }
 }
 
@@ -45,6 +46,7 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
         ProviderType::OpenRouter => ("openrouter_base_url", "openrouter_model"),
         ProviderType::OpenAi => ("openai_base_url", "openai_model"),
         ProviderType::Anthropic => ("anthropic_base_url", "anthropic_model"),
+        ProviderType::ClaudeCode => ("claude_code_base_url", "claude_code_model"),
     }
 }
 
