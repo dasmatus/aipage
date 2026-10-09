@@ -146,6 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **user-guide:** installing the signed Firefox xpi and the Safari app wrapper ([921d78c](https://github.com/dasmatus/aipage/commit/921d78ca63d1e900f3b3ce7566e0ff92fc421b07))
 * describe GitHub updates, channels and the self-updating sidebar ([b297379](https://github.com/dasmatus/aipage/commit/b2973796f25269186f3028c1d6d9199284f419c5))
 * **user-guide:** escape <channel> so mdbook renders it ([fcaa27a](https://github.com/dasmatus/aipage/commit/fcaa27a7d5a6dd7eb3a5c2618c2ff87498c4ffaa))
+* split the README into separate book pages ([16e9b48](https://github.com/dasmatus/aipage/commit/16e9b4889f9a40ee918d917b0d5a89a4ace43eea))
 
 ### 💎 Styles
 
