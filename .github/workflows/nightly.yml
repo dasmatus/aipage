@@ -190,7 +190,7 @@ jobs:
             echo "<!-- nightly-sha: ${GITHUB_SHA} -->"
             echo "Automated build of \`${GITHUB_REF_NAME}\` at [\`${SHORT_SHA}\`](${repo_url}/commit/${GITHUB_SHA}) — manifest version \`${VERSION}\` (\`${VERSION_NAME}\`)."
             echo
-            echo "Development build of whatever is on \`${GITHUB_REF_NAME}\`. **Chrome**: unpacked install of \`aipage-chrome.zip\` (Brave or an MV2-capable Chromium). ${firefox_note} ${safari_note} See the README's \"Nightly builds\" section."
+            echo "Development build of whatever is on \`${GITHUB_REF_NAME}\`. **Chrome**: unpacked install of \`aipage-chrome.zip\` (Brave or an MV2-capable Chromium). ${firefox_note} ${safari_note} See [Installing a nightly](https://aipage-docs.vercel.app/installation.html#installing-a-nightly)."
             echo
             if [ -n "${PREVIOUS_SHA}" ] && git cat-file -e "${PREVIOUS_SHA}^{commit}" 2>/dev/null \
                && git merge-base --is-ancestor "${PREVIOUS_SHA}" "${GITHUB_SHA}"; then

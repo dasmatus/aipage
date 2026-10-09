@@ -14,6 +14,18 @@ AIPage is a cross-browser extension (Chrome, Firefox, Safari) that adds an AI si
 
 ## Quick Links
 
-- **[User Guide](user-guide.md)**: Installation and usage instructions
+- **[Installation](installation.md)**: Install a release or a nightly
+- **[AI Providers](providers.md)**: Set up an AI backend and start chatting
+- **[User Guide](user-guide.md)**: Everything else about using the extension
 - **[Contributing Guide](contributing.md)**: Developer documentation
+- **[Packaging, CI & Deployment](packaging.md)**: Release packages, workflows and hosting
 - **[Changelog](changelog.md)**: Version history
+
+## Credits
+
+Built with:
+
+- [Rust](https://www.rust-lang.org/), [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/) and [Leptos](https://leptos.dev/)
+- [resvg](https://github.com/linebender/resvg) for SVG → PNG rasterization
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Playwright](https://playwright.dev/) for testing
