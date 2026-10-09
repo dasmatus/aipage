@@ -42,7 +42,8 @@
 //! 6. **`assets/manifest.{chrome,firefox,safari}.json`** — add the API host to
 //!    `permissions` and to the CSP `connect-src`; the background proxy has no
 //!    allow-list of its own, the browser enforces the manifest.
-//! 7. **Docs** — README "Supported Providers" plus a setup subsection. The
+//! 7. **Docs** — `book/src/providers.md`: "Supported Providers" plus a setup
+//!    subsection (and the provider list in `README.md`). The
 //!    changelog is generated from commit messages; never edit it.
 
 pub mod anthropic;

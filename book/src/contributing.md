@@ -28,9 +28,11 @@ crates/
   aipage-content/    # navbar button, sidebar iframe, hosted-UI bridge, theming, exam tools (wasm)
 xtask/               # build orchestrator: cargo → wasm-bindgen → wasm-opt → CSS → dist-<target>/
 assets/              # manifests, sidebar.html, JS loaders, anti_cheat.js, stylesheets, vercel.json
+agent-server/        # Bun/TypeScript server running Claude Code through the Claude Agent SDK
+scripts/             # Safari Xcode wrapper (setup-safari.sh), AMO signing (sign-firefox.sh), changelog, e2e server
 tests/install/       # Playwright install tests against the built dists
 tests/e2e/           # Playwright UI tests against dist-chrome served over HTTP
-book/src/            # this documentation (mdBook); README.md, CONTRIBUTING.md and CHANGELOG.md are symlinks into it
+book/src/            # this documentation (mdBook); CONTRIBUTING.md and CHANGELOG.md are symlinks into it
 ```
 
 ## Building
@@ -62,7 +64,7 @@ See `tests/install/README.md` and `tests/e2e/README.md` for details. The Playwri
 
 ## Documentation
 
-The book is built with [mdBook](https://rust-lang.github.io/mdBook/) (in the Nix devShell): `bun run docs:build` (`mdbook build` → `book/book/`, plus the `vercel.json` for hosting) or `bun run docs:serve`. It is published at **<https://aipage-docs.vercel.app>** by `.github/workflows/deploy-docs.yml` on every push to `main` that touches `book/**` or `book.toml` (and after each changelog regeneration).
+The book is built with [mdBook](https://rust-lang.github.io/mdBook/) (in the Nix devShell): `bun run docs:build` (`mdbook build` → `book/book/`, plus the `vercel.json` for hosting) or `bun run docs:serve`. It is published at **<https://aipage-docs.vercel.app>** by `.github/workflows/deploy-docs.yml` on every push to `main` that touches `book/**` or `book.toml` (and after each changelog regeneration). New pages go into `book/src/SUMMARY.md`. `README.md` is only a short landing page that links into the book; keep the details in the book pages.
 
 ## Submitting changes
 
