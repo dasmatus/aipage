@@ -38,7 +38,7 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v23
       - uses: DeterminateSystems/magic-nix-cache-action@v15
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
@@ -65,7 +65,7 @@ jobs:
       # aipage-safari-macos.zip.
       - name: Download the Safari app wrapper (macOS build)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.safari-artifact-name }}
 
