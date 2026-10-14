@@ -69,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **safari:** pin app and extension bundle ids after generating the project ([b41e3b0](https://github.com/dasmatus/aipage/commit/b41e3b0902a478580af8d10c29985cba9c1e2b04))
 * **pages:** publish the mdBook to GitHub Pages under /aipage/ ([9c72abc](https://github.com/dasmatus/aipage/commit/9c72abc39e25d549d7124be381db03570d2a00fc))
 * **agent-server:** keep run-failure details out of the HTTP reply ([5537a42](https://github.com/dasmatus/aipage/commit/5537a420977ddcb78aefe401ed3f52a7917cfbe2))
+* **deps:** bump leptos to 0.8.22 with server_fn_macro_default 0.8.6 ([b274313](https://github.com/dasmatus/aipage/commit/b2743130f4b2ab545cd97ef42c86572540eb9544))
 
 ### 📦 Dependencies
 
@@ -87,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **github-actions:** bump the githubactions-major group across 1 directory with 4 updates ([#18](https://github.com/dasmatus/aipage/issues/18)) ([0eff09b](https://github.com/dasmatus/aipage/commit/0eff09b34900eb6fbad549069a9bc8f592ec8f10))
 * **cargo:** bump xxhash-rust ([#20](https://github.com/dasmatus/aipage/issues/20)) ([9e2394b](https://github.com/dasmatus/aipage/commit/9e2394b4b5b6c4375a3f04f8febbd2c8cf32c30f))
 * **cargo:** bump the cargo-major group across 1 directory with 4 updates ([#21](https://github.com/dasmatus/aipage/issues/21)) ([e2c49c7](https://github.com/dasmatus/aipage/commit/e2c49c706f459b786c30ca2f92c8cf66c0e8c344))
+* **cargo:** bump leptos ([d32011f](https://github.com/dasmatus/aipage/commit/d32011fed9bc70f62b8b6e002dbb49b305999633))
 
 ### 🔧 Chores
 
