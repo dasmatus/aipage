@@ -89,6 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **cargo:** bump xxhash-rust ([#20](https://github.com/dasmatus/aipage/issues/20)) ([9e2394b](https://github.com/dasmatus/aipage/commit/9e2394b4b5b6c4375a3f04f8febbd2c8cf32c30f))
 * **cargo:** bump the cargo-major group across 1 directory with 4 updates ([#21](https://github.com/dasmatus/aipage/issues/21)) ([e2c49c7](https://github.com/dasmatus/aipage/commit/e2c49c706f459b786c30ca2f92c8cf66c0e8c344))
 * **cargo:** bump leptos ([d32011f](https://github.com/dasmatus/aipage/commit/d32011fed9bc70f62b8b6e002dbb49b305999633))
+* **bun:** bump the bun-minor-patch group across 1 directory with 2 updates ([#27](https://github.com/dasmatus/aipage/issues/27)) ([de47986](https://github.com/dasmatus/aipage/commit/de479869711e36c8d9815bbd1096e3bac2a88e56))
 
 ### 🔧 Chores
 
