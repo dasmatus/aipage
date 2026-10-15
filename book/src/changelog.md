@@ -90,6 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **cargo:** bump the cargo-major group across 1 directory with 4 updates ([#21](https://github.com/dasmatus/aipage/issues/21)) ([e2c49c7](https://github.com/dasmatus/aipage/commit/e2c49c706f459b786c30ca2f92c8cf66c0e8c344))
 * **cargo:** bump leptos ([d32011f](https://github.com/dasmatus/aipage/commit/d32011fed9bc70f62b8b6e002dbb49b305999633))
 * **bun:** bump the bun-minor-patch group across 1 directory with 2 updates ([#27](https://github.com/dasmatus/aipage/issues/27)) ([de47986](https://github.com/dasmatus/aipage/commit/de479869711e36c8d9815bbd1096e3bac2a88e56))
+* **cargo:** bump sha2 ([#28](https://github.com/dasmatus/aipage/issues/28)) ([bad46eb](https://github.com/dasmatus/aipage/commit/bad46ebdae197b5f065eca8c355349a0945417f8))
+* **github-actions:** bump actions/download-artifact ([#29](https://github.com/dasmatus/aipage/issues/29)) ([9c60c36](https://github.com/dasmatus/aipage/commit/9c60c363195746a0e720e532facd7bac583bb8cb))
 
 ### 🔧 Chores
 
