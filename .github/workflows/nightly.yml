@@ -129,7 +129,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
@@ -139,7 +139,7 @@ jobs:
       - name: Download the Safari app wrapper (macOS build)
         id: safari-app
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.safari-artifact-name }}
 
