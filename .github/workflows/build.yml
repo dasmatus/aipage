@@ -81,7 +81,10 @@ on:
 jobs:
   build:
     name: Build & package
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which the Playwright 1.56.1 used
+    # for the Chromium 141 MV2 install test cannot install deps for
+    # ("Playwright does not support chromium on ubuntu26.04-x64").
+    runs-on: ubuntu-24.04
     outputs:
       firefox-signed: ${{ steps.sign-firefox.outputs.signed }}
     env:
