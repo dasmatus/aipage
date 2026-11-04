@@ -13,6 +13,10 @@
 //! * OpenAI responses (`/v1/responses`): GPT. Goes through
 //!   [`super::responses`] with [`responses_endpoint`].
 //!
+//! Every request carries the `x-opencode-session` header (Go refuses
+//! requests without one) with this sidebar's [`super::session::id`], and an
+//! `aipage/<version>` user agent, both via [`CONFIG`]'s headers.
+//!
 //! [`protocol_of`] picks the format from the model id, so the whole plan
 //! (including the premium models) works for chat, the agentic tools, web
 //! search and image generation. The tool loops live in [`crate::agent`].
@@ -54,11 +58,13 @@ pub fn protocol_for(opts: &SendOptions) -> Protocol {
     protocol_of(&CONFIG.model_of(opts))
 }
 
-/// Go's `/v1/messages` with Anthropic headers. The key goes in both
-/// `x-api-key` (what Anthropic SDKs send) and the Bearer header.
+/// Go's `/v1/messages` with Anthropic headers plus Go's own (session id,
+/// user agent, Bearer key). The key goes in both `x-api-key` (what Anthropic
+/// SDKs send) and the Bearer header.
 pub fn messages_endpoint(api_key: &str, opts: &SendOptions) -> anthropic::Endpoint {
     let mut headers = anthropic::headers(api_key);
-    headers.insert("Authorization".to_string(), format!("Bearer {api_key}"));
+    headers.extend(CONFIG.headers(api_key));
+    headers.remove("Content-Type"); // `content-type` is already set
     anthropic::Endpoint {
         url: format!("{}/v1/messages", CONFIG.base_url(opts)),
         headers,
@@ -103,6 +109,7 @@ pub async fn get_models(api_key: &str, opts: &SendOptions) -> Vec<ModelInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::providers::session;
     use serde_json::json;
 
     #[test]
@@ -123,10 +130,15 @@ mod tests {
     }
 
     #[test]
-    fn sends_bearer_and_no_extra_headers() {
+    fn sends_bearer_session_and_user_agent() {
         let h = CONFIG.headers("sk-go-abc");
         assert_eq!(h.get("Authorization").map(String::as_str), Some("Bearer sk-go-abc"));
-        assert_eq!(h.len(), 2);
+        assert_eq!(h.get("x-opencode-session"), Some(&session::id()));
+        assert_eq!(h.get("User-Agent").map(String::as_str), Some(session::USER_AGENT));
+        assert_eq!(h.get("Content-Type").map(String::as_str), Some("application/json"));
+        assert_eq!(h.len(), 4);
+        // the same session on every request of this sidebar
+        assert_eq!(CONFIG.headers("sk-go-abc").get("x-opencode-session"), h.get("x-opencode-session"));
     }
 
     #[test]
@@ -151,6 +163,10 @@ mod tests {
         assert_eq!(ep.headers.get("x-api-key").map(String::as_str), Some("sk-go"));
         assert_eq!(ep.headers.get("Authorization").map(String::as_str), Some("Bearer sk-go"));
         assert_eq!(ep.headers.get("anthropic-version").map(String::as_str), Some(anthropic::API_VERSION));
+        assert_eq!(ep.headers.get("x-opencode-session"), Some(&session::id()));
+        assert_eq!(ep.headers.get("User-Agent").map(String::as_str), Some(session::USER_AGENT));
+        assert_eq!(ep.headers.get("content-type").map(String::as_str), Some("application/json"));
+        assert!(!ep.headers.contains_key("Content-Type"), "one content-type header only");
     }
 
     #[test]
@@ -159,6 +175,7 @@ mod tests {
         assert_eq!(ep.url, "https://opencode.ai/zen/go/v1/responses");
         assert_eq!(ep.model, "gpt-6-luna");
         assert_eq!(ep.headers.get("Authorization").map(String::as_str), Some("Bearer sk-go"));
+        assert_eq!(ep.headers.get("x-opencode-session"), Some(&session::id()));
     }
 
     #[test]

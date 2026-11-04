@@ -199,7 +199,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
     let image_gen_provider = RwSignal::new("ollama-svg".to_string());
     let image_gen_sd_url = RwSignal::new("http://localhost:7860".to_string());
     let image_gen_size = RwSignal::new("1024x1024".to_string());
-    let remote_ui_enabled = RwSignal::new(true);
+    let remote_ui_enabled = RwSignal::new(remote_ui::REMOTE_UI_ENABLED_DEFAULT);
     let remote_ui_url = RwSignal::new(String::new());
 
     // Current backend == current provider.

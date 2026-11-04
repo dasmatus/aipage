@@ -31,6 +31,10 @@ pub struct OpenAiCompat {
     pub default_model: &'static str,
     /// Extra request headers (e.g. OpenRouter's attribution headers).
     pub extra_headers: &'static [(&'static str, &'static str)],
+    /// A header that carries this sidebar's session id (see
+    /// [`super::session`]), for backends that route or cache by session
+    /// (OpenCode Go's `x-opencode-session`).
+    pub session_header: Option<&'static str>,
 }
 
 /// Hosted Ollama (`https://ollama.com/v1`, keys from ollama.com/settings/keys).
@@ -39,6 +43,7 @@ pub const OLLAMA_CLOUD: OpenAiCompat = OpenAiCompat {
     default_base_url: "https://ollama.com",
     default_model: "gpt-oss:120b-cloud",
     extra_headers: &[],
+    session_header: None,
 };
 
 /// OpenRouter (`https://openrouter.ai/api/v1`). The attribution headers are
@@ -51,6 +56,7 @@ pub const OPENROUTER: OpenAiCompat = OpenAiCompat {
         ("HTTP-Referer", "https://github.com/dasmatus/aipage"),
         ("X-Title", "AIPage"),
     ],
+    session_header: None,
 };
 
 /// The public OpenAI platform API (`https://api.openai.com/v1`, keys from
@@ -64,6 +70,7 @@ pub const OPENAI: OpenAiCompat = OpenAiCompat {
     default_base_url: "https://api.openai.com",
     default_model: "gpt-4.1-mini",
     extra_headers: &[],
+    session_header: None,
 };
 
 /// OpenCode Go (`https://opencode.ai/zen/go/v1`, see [`super::opencode_go`]).
@@ -75,7 +82,11 @@ pub const OPENCODE_GO: OpenAiCompat = OpenAiCompat {
     label: "OpenCode Go",
     default_base_url: "https://opencode.ai/zen/go",
     default_model: "deepseek-v4.1-flash",
-    extra_headers: &[],
+    // Go asks third-party clients to name themselves instead of sending a
+    // generic HTTP-library user agent.
+    extra_headers: &[("User-Agent", super::session::USER_AGENT)],
+    // Go refuses requests without a stable per-conversation session id.
+    session_header: Some("x-opencode-session"),
 };
 
 /// Claude. The extension talks to Claude over the Anthropic Messages API
@@ -90,6 +101,7 @@ pub const ANTHROPIC: OpenAiCompat = OpenAiCompat {
     default_base_url: super::anthropic::DEFAULT_BASE_URL,
     default_model: super::anthropic::DEFAULT_MODEL,
     extra_headers: &[],
+    session_header: None,
 };
 
 /// Claude Code over the local `agent-server` (see [`super::claude_code`]).
@@ -101,6 +113,7 @@ pub const CLAUDE_CODE: OpenAiCompat = OpenAiCompat {
     default_base_url: super::claude_code::DEFAULT_BASE_URL,
     default_model: super::claude_code::DEFAULT_MODEL,
     extra_headers: &[],
+    session_header: None,
 };
 
 /// LM Studio's local inference server.
@@ -109,6 +122,7 @@ pub const LMSTUDIO: OpenAiCompat = OpenAiCompat {
     default_base_url: "http://localhost:1234",
     default_model: "local-model",
     extra_headers: &[],
+    session_header: None,
 };
 
 /// Local Ollama's OpenAI-compatible layer (`http://localhost:11434/v1`). Chat
@@ -120,6 +134,7 @@ pub const OLLAMA: OpenAiCompat = OpenAiCompat {
     default_base_url: "http://localhost:11434",
     default_model: "llama3",
     extra_headers: &[],
+    session_header: None,
 };
 
 impl OpenAiCompat {
@@ -181,13 +196,17 @@ impl OpenAiCompat {
             .to_string()
     }
 
-    /// `Content-Type: application/json`, the provider's extra headers, and
-    /// `Authorization: Bearer <api_key>` when a key is present. Local backends
+    /// `Content-Type: application/json`, the provider's extra headers, its
+    /// session header (when it has one), and `Authorization: Bearer
+    /// <api_key>` when a key is present. Local backends
     /// pass an empty key and get no auth header.
     pub fn headers(&self, api_key: &str) -> HashMap<String, String> {
         let mut h = json_headers();
         for (k, v) in self.extra_headers {
             h.insert((*k).to_string(), (*v).to_string());
+        }
+        if let Some(name) = self.session_header {
+            h.insert(name.to_string(), super::session::id());
         }
         if !api_key.is_empty() {
             h.insert("Authorization".to_string(), format!("Bearer {api_key}"));
