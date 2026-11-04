@@ -5,14 +5,17 @@
 //! proxy via [`crate::proxy`]. Pure helpers (URL normalisation, response
 //! parsing) are kept separate so they can be unit-tested natively.
 //!
-//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, LM Studio
+//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, OpenCode Go, LM Studio
 //! and local Ollama's `/v1` layer) share one client,
 //! [`openai_compat::OpenAiCompat`], selected per provider by
 //! [`OpenAiCompat::for_provider`]. Claude ([`anthropic`]) speaks the Anthropic
 //! Messages API and owns its wire format; local Ollama ([`ollama`]) uses its
 //! native `/api/*` endpoints for chat and model listing. Claude Code
 //! ([`claude_code`]) is a client of the repository's `agent-server`, which
-//! runs Claude Code through the Claude Agent SDK.
+//! runs Claude Code through the Claude Agent SDK. OpenCode Go
+//! ([`opencode_go`]) serves each model family over one of three formats and
+//! routes per model: chat completions, Anthropic messages, or the OpenAI
+//! Responses API ([`responses`]).
 //!
 //! # Adding a provider
 //!
@@ -52,6 +55,8 @@ pub mod lmstudio;
 pub mod ollama;
 pub mod openai;
 pub mod openai_compat;
+pub mod opencode_go;
+pub mod responses;
 
 use crate::types::ProviderType;
 use openai_compat::OpenAiCompat;
@@ -98,6 +103,8 @@ pub async fn send_message(
         // The key is agent-server's optional access token.
         ProviderType::ClaudeCode => claude_code::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, opts).await,
+        // Picks chat completions, Anthropic messages or Responses per model.
+        ProviderType::OpenCodeGo => opencode_go::send_message(prompt, api_key, opts).await,
         // Local backends never send an auth header, even with a stored key.
         ProviderType::Lmstudio => lmstudio::CONFIG.send_message(prompt, "", opts).await,
         p => OpenAiCompat::for_provider(p).send_message(prompt, api_key, opts).await,
@@ -116,6 +123,7 @@ pub async fn get_models(
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
         ProviderType::OpenAi => openai::get_models(api_key, opts).await,
+        ProviderType::OpenCodeGo => opencode_go::get_models(api_key, opts).await,
         p => OpenAiCompat::for_provider(p).get_models(api_key, opts).await,
     }
 }
@@ -146,6 +154,7 @@ mod tests {
         assert_eq!(default_base_url(ProviderType::OllamaCloud), "https://ollama.com");
         assert_eq!(default_base_url(ProviderType::OpenRouter), "https://openrouter.ai/api");
         assert_eq!(default_base_url(ProviderType::OpenAi), "https://api.openai.com");
+        assert_eq!(default_base_url(ProviderType::OpenCodeGo), "https://opencode.ai/zen/go");
         assert_eq!(default_base_url(ProviderType::Anthropic), "https://api.anthropic.com");
         assert_eq!(default_base_url(ProviderType::ClaudeCode), "http://localhost:8787");
         assert_eq!(default_base_url(ProviderType::Lmstudio), "http://localhost:1234/v1");

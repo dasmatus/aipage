@@ -52,10 +52,11 @@ impl Message {
 }
 
 /// Which AI backend a request targets:
-/// `'ollama-cloud' | 'openrouter' | 'openai' | 'anthropic' | 'claude-code' | 'lmstudio' | 'ollama'`.
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'opencode-go' | 'anthropic' | 'claude-code' | 'lmstudio' | 'ollama'`.
 /// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
 /// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
-/// three are OpenAI-compatible and need an API key. `Anthropic` is Claude
+/// three are OpenAI-compatible and need an API key, as does `OpenCodeGo`, the
+/// OpenCode Go subscription. `Anthropic` is Claude
 /// over the Anthropic Messages API (API key required). The local variants
 /// talk to a self-hosted server on the loopback: Ollama, LM Studio, or
 /// `ClaudeCode`, the repository's `agent-server` running Claude Code through
@@ -73,6 +74,8 @@ pub enum ProviderType {
     OpenRouter,
     #[serde(rename = "openai")]
     OpenAi,
+    #[serde(rename = "opencode-go")]
+    OpenCodeGo,
     Anthropic,
     #[serde(rename = "claude-code")]
     ClaudeCode,
@@ -82,10 +85,11 @@ pub enum ProviderType {
 
 impl ProviderType {
     /// Every provider, in settings-menu order.
-    pub const ALL: [ProviderType; 7] = [
+    pub const ALL: [ProviderType; 8] = [
         ProviderType::OllamaCloud,
         ProviderType::OpenRouter,
         ProviderType::OpenAi,
+        ProviderType::OpenCodeGo,
         ProviderType::Anthropic,
         ProviderType::ClaudeCode,
         ProviderType::Ollama,
@@ -97,6 +101,7 @@ impl ProviderType {
             ProviderType::OllamaCloud => "ollama-cloud",
             ProviderType::OpenRouter => "openrouter",
             ProviderType::OpenAi => "openai",
+            ProviderType::OpenCodeGo => "opencode-go",
             ProviderType::Anthropic => "anthropic",
             ProviderType::ClaudeCode => "claude-code",
             ProviderType::Lmstudio => "lmstudio",
@@ -109,6 +114,7 @@ impl ProviderType {
             ProviderType::OllamaCloud => "Ollama Cloud",
             ProviderType::OpenRouter => "OpenRouter",
             ProviderType::OpenAi => "ChatGPT / OpenAI",
+            ProviderType::OpenCodeGo => "OpenCode Go",
             ProviderType::Anthropic => "Claude (Anthropic)",
             ProviderType::ClaudeCode => "Claude Code (Agent SDK)",
             ProviderType::Lmstudio => "LM Studio",
@@ -125,6 +131,7 @@ impl ProviderType {
             "ollama-cloud" => ProviderType::OllamaCloud,
             "openrouter" => ProviderType::OpenRouter,
             "openai" => ProviderType::OpenAi,
+            "opencode-go" => ProviderType::OpenCodeGo,
             "anthropic" => ProviderType::Anthropic,
             "claude-code" => ProviderType::ClaudeCode,
             "lmstudio" => ProviderType::Lmstudio,
@@ -151,7 +158,11 @@ impl ProviderType {
     pub fn supports_native_tools(self) -> bool {
         matches!(
             self,
-            ProviderType::OllamaCloud | ProviderType::OpenRouter | ProviderType::OpenAi | ProviderType::Anthropic
+            ProviderType::OllamaCloud
+                | ProviderType::OpenRouter
+                | ProviderType::OpenAi
+                | ProviderType::OpenCodeGo
+                | ProviderType::Anthropic
         )
     }
 }
@@ -189,6 +200,16 @@ mod tests {
         assert_eq!(serde_json::from_str::<ProviderType>("\"openai\"").unwrap(), ProviderType::OpenAi);
         assert_eq!(ProviderType::OpenAi.as_str(), "openai");
         assert_eq!(ProviderType::OpenAi.display_name(), "ChatGPT / OpenAI");
+    }
+
+    #[test]
+    fn opencode_go_is_a_cloud_provider_with_tools() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenCodeGo).unwrap(), "\"opencode-go\"");
+        assert_eq!(ProviderType::from_str_or_default("opencode-go"), ProviderType::OpenCodeGo);
+        assert_eq!(ProviderType::OpenCodeGo.display_name(), "OpenCode Go");
+        assert!(!ProviderType::OpenCodeGo.is_local());
+        assert!(ProviderType::OpenCodeGo.requires_api_key());
+        assert!(ProviderType::OpenCodeGo.supports_native_tools());
     }
 
     #[test]

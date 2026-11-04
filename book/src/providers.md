@@ -7,6 +7,7 @@ The extension supports multiple AI providers. Choose your preferred provider and
 - **Ollama Cloud** — chat, agentic tools, native web search, and SVG image generation
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
+- **OpenCode Go** — the same feature set over every model of an [OpenCode Go](https://opencode.ai/docs/go) subscription (GLM, Kimi, DeepSeek, MiMo, MiniMax, Qwen, and the premium GPT / Claude models)
 - **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
 - **Claude Code (Agent SDK)** — Claude Code itself, run on your computer by the bundled `agent-server` through the Claude Agent SDK; it searches and reads the web with its own tools
 - **LM Studio** (Local)
@@ -71,6 +72,16 @@ The public OpenAI platform API (the models behind ChatGPT), billed per request t
 4. Click the refresh button next to **Model** to list your available chat models and pick one, e.g. `gpt-4.1-mini` (the default). The list is filtered to chat-capable families (`gpt-*`, `o*`, `chatgpt-*`); embedding, audio, realtime, image and moderation models are hidden. Function-calling models power the agentic chat, native web search and SVG image generation.
 
 > The key is stored locally in your browser and is only ever sent to `api.openai.com` (through the extension's background proxy).
+
+### OpenCode Go
+
+[OpenCode Go](https://opencode.ai/docs/go) is OpenCode's flat-rate subscription for open coding models, with a monthly usage allowance per model. AIPage uses the subscription's API key against Go's endpoint, `https://opencode.ai/zen/go/v1`.
+
+1. Sign in to **[OpenCode](https://opencode.ai/auth)**, subscribe to **Go** and copy your API key from the console.
+2. In the AIPage settings pick **OpenCode Go** as the engine, leave the **Base URL** at `https://opencode.ai/zen/go` (entering `https://opencode.ai/zen/go/v1` works too) and paste the key.
+3. Click the refresh button next to **Model** to list every model on your plan and pick one; the default is `deepseek-v4.1-flash`, which has the largest monthly allowance. Every model powers the agentic chat, web search (over DuckDuckGo) and SVG image generation.
+
+> Go serves each model family over its own API format, and AIPage picks it from the model id: OpenAI chat completions for most models, the Anthropic messages API for `minimax-*`, `qwen*` and `claude-*`, and the OpenAI Responses API for `gpt-*`. The key is stored locally in your browser and is only ever sent to `opencode.ai` (through the extension's background proxy). Requests count against your Go allowance; once a limit is hit, Go refuses requests until it resets (unless you enabled pay-as-you-go balance in the OpenCode console).
 
 ### LM Studio (Local)
 
