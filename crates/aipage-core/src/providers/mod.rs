@@ -57,6 +57,7 @@ pub mod openai;
 pub mod openai_compat;
 pub mod opencode_go;
 pub mod responses;
+pub mod session;
 
 use crate::types::ProviderType;
 use openai_compat::OpenAiCompat;
