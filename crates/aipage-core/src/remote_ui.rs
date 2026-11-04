@@ -15,8 +15,21 @@
 pub const DEFAULT_REMOTE_UI_URL: &str = "https://aipage-sooty.vercel.app";
 
 /// `storage.local` key: `bool`, whether the auto-updating hosted UI is used.
-/// Absent means **enabled** (the default).
+/// Absent means [`REMOTE_UI_ENABLED_DEFAULT`].
 pub const KEY_REMOTE_UI_ENABLED: &str = "remote_ui_enabled";
+
+/// Whether the hosted UI is used when [`KEY_REMOTE_UI_ENABLED`] was never set.
+///
+/// Off: the Vercel deployment is no longer served, so the bundled sidebar is
+/// the default and the hosted UI is opt-in (Settings → Hosted UI). With it on
+/// and the host unreachable, every open would wait
+/// [`REMOTE_UI_LOAD_TIMEOUT_MS`] before falling back.
+pub const REMOTE_UI_ENABLED_DEFAULT: bool = false;
+
+/// The stored `remote_ui_enabled` value (if any) → whether the hosted UI is used.
+pub fn remote_ui_enabled(stored: Option<bool>) -> bool {
+    stored.unwrap_or(REMOTE_UI_ENABLED_DEFAULT)
+}
 
 /// `storage.local` key: optional `String` override of the hosted UI base URL
 /// (advanced). Empty/absent means [`DEFAULT_REMOTE_UI_URL`].
@@ -138,6 +151,13 @@ mod tests {
         assert_eq!(effective_remote_ui_url(Some("")), DEFAULT_REMOTE_UI_URL);
         assert_eq!(effective_remote_ui_url(Some("http://evil.example")), DEFAULT_REMOTE_UI_URL);
         assert_eq!(effective_remote_ui_url(Some("https://my.host/")), "https://my.host");
+    }
+
+    #[test]
+    fn hosted_ui_is_opt_in() {
+        assert!(!remote_ui_enabled(None));
+        assert!(!remote_ui_enabled(Some(false)));
+        assert!(remote_ui_enabled(Some(true)));
     }
 
     #[test]

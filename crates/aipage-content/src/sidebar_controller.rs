@@ -1,7 +1,7 @@
 //! Manages the sidebar iframe and its drag-to-resize handle.
 //!
-//! The iframe loads either the **hosted** sidebar (remote UI, default) or the
-//! **bundled** one. With the hosted UI the controller arms a fallback: if the
+//! The iframe loads either the **bundled** sidebar (default) or the opt-in
+//! **hosted** one. With the hosted UI the controller arms a fallback: if the
 //! hosted page has not connected through the bridge within
 //! [`remote_ui::REMOTE_UI_LOAD_TIMEOUT_MS`] (offline, blocked by CSP, host
 //! down, WASM failed to boot…) or the frame errors, the iframe is pointed at
