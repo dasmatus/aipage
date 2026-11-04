@@ -249,25 +249,52 @@ pub fn models_from(resp: &Value) -> Vec<ModelInfo> {
     ANTHROPIC.models_from(resp)
 }
 
-/// POST a Messages API body and surface a refusal as an error.
+/// Where a Messages API request goes: Claude itself ([`Endpoint::claude`]),
+/// or a gateway that speaks the same format, such as OpenCode Go's
+/// `/v1/messages` (see [`super::opencode_go::messages_endpoint`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Endpoint {
+    pub url: String,
+    pub headers: HashMap<String, String>,
+    pub model: String,
+}
+
+impl Endpoint {
+    /// The Anthropic API at the user's base URL with their model.
+    pub fn claude(api_key: &str, opts: &SendOptions) -> Self {
+        Self { url: messages_url(opts), headers: headers(api_key), model: model_of(opts) }
+    }
+
+    /// POST a Messages API body and surface a refusal as an error.
+    pub(crate) async fn post(&self, body: &Value) -> Result<Value, String> {
+        let resp = post_json(&self.url, &self.headers, body).await?;
+        match refusal_message(&resp) {
+            Some(msg) => Err(msg),
+            None => Ok(resp),
+        }
+    }
+
+    /// One-shot request: `system` + one user message, no tools; the text
+    /// blocks of the answer ("No response" when empty).
+    pub(crate) async fn complete(&self, system: &str, user: &str) -> Result<String, String> {
+        let messages = [json!({ "role": "user", "content": user })];
+        let resp = self.post(&message_body(&self.model, system, &messages, None)).await?;
+        Ok(extract_text(&resp))
+    }
+}
+
+/// POST a Messages API body to Claude and surface a refusal as an error.
 pub(crate) async fn post_messages(
     api_key: &str,
     opts: &SendOptions,
     body: &Value,
 ) -> Result<Value, String> {
-    let resp = post_json(&messages_url(opts), &headers(api_key), body).await?;
-    match refusal_message(&resp) {
-        Some(msg) => Err(msg),
-        None => Ok(resp),
-    }
+    Endpoint::claude(api_key, opts).post(body).await
 }
 
 /// One-shot chat: the project system prompt plus the user prompt, no tools.
 pub async fn send_message(prompt: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
-    let messages = [json!({ "role": "user", "content": prompt })];
-    let body = message_body(&model_of(opts), SYSTEM_PROMPT, &messages, None);
-    let resp = post_messages(api_key, opts, &body).await?;
-    Ok(extract_text(&resp))
+    Endpoint::claude(api_key, opts).complete(SYSTEM_PROMPT, prompt).await
 }
 
 /// Native web search via Claude's server-side `web_search` tool. The API runs

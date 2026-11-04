@@ -9,7 +9,7 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 - AI chat assistant integrated directly into EduPage
 - Clean, responsive design that matches EduPage's aesthetic and doesn't obscure important UI elements
 - **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
-- Chat with Ollama Cloud, OpenRouter, ChatGPT / OpenAI, Claude (Anthropic) or Claude Code, or with a local LM Studio / Ollama
+- Chat with Ollama Cloud, OpenRouter, ChatGPT / OpenAI, OpenCode Go, Claude (Anthropic) or Claude Code, or with a local LM Studio / Ollama
 - Agentic page tools, web search and SVG image generation
 - Secure local storage of API credentials
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests

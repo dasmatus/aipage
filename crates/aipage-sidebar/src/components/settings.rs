@@ -45,6 +45,11 @@ fn api_key_strings(t: &Translation, p: ProviderType) -> (String, String, String)
             t.openai_api_key_placeholder.clone(),
             t.openai_api_key_hint.clone(),
         ),
+        ProviderType::OpenCodeGo => (
+            t.opencode_go_api_key.clone(),
+            t.opencode_go_api_key_placeholder.clone(),
+            t.opencode_go_api_key_hint.clone(),
+        ),
         ProviderType::Anthropic => (
             t.anthropic_api_key.clone(),
             t.anthropic_api_key_placeholder.clone(),
@@ -328,6 +333,7 @@ pub fn SettingsView(#[prop(into)] on_close: Callback<()>) -> impl IntoView {
                             <option value="ollama-cloud">{move || app.tr().ollama_cloud_mode}</option>
                             <option value="openrouter">{move || app.tr().provider_openrouter}</option>
                             <option value="openai">{move || app.tr().provider_openai}</option>
+                            <option value="opencode-go">{move || app.tr().provider_opencode_go}</option>
                             <option value="anthropic">{move || app.tr().provider_anthropic}</option>
                             <option value="claude-code">{move || app.tr().provider_claude_code}</option>
                             <option value="ollama">{move || app.tr().provider_ollama}</option>

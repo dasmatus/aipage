@@ -7,7 +7,7 @@
 
 use serde_json::{json, Value};
 
-use crate::providers::{anthropic, claude_code};
+use crate::providers::{anthropic, claude_code, opencode_go};
 use crate::providers::openai_compat::{chat_messages, json_headers, parse_completion_text, OpenAiCompat};
 use crate::providers::SendOptions;
 use crate::proxy::post_json;
@@ -84,6 +84,9 @@ async fn generate_svg(
         let body = anthropic::message_body(&anthropic::model_of(&opts), SVG_SYSTEM_PROMPT, &messages, None);
         let resp = anthropic::post_messages(api_key, &opts, &body).await?;
         anthropic::text_blocks(&resp)
+    } else if provider == ProviderType::OpenCodeGo {
+        // Routed per model: chat completions, Anthropic messages or Responses.
+        opencode_go::complete(SVG_SYSTEM_PROMPT, &user_prompt, api_key, &opts).await?
     } else if provider == ProviderType::ClaudeCode {
         // agent-server takes one prompt and keeps its own system prompt.
         claude_code::send_message(&format!("{SVG_SYSTEM_PROMPT}\n\n{user_prompt}"), api_key, &opts).await?

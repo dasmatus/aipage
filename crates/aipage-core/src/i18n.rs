@@ -98,6 +98,13 @@ pub struct Translation {
     pub openai_api_key: String,
     pub openai_api_key_placeholder: String,
     pub openai_api_key_hint: String,
+
+    // OpenCode Go
+    #[serde(rename = "providerOpenCodeGo")]
+    pub provider_opencode_go: String,
+    pub opencode_go_api_key: String,
+    pub opencode_go_api_key_placeholder: String,
+    pub opencode_go_api_key_hint: String,
     // Claude (Anthropic) — `provider_anthropic` is declared above with the
     // other engine labels.
     pub anthropic_api_key: String,
@@ -203,6 +210,10 @@ mod tests {
             assert!(!t.openai_api_key.is_empty(), "{code} openaiApiKey empty");
             assert!(!t.openai_api_key_placeholder.is_empty(), "{code} openaiApiKeyPlaceholder empty");
             assert!(t.openai_api_key_hint.contains("platform.openai.com/api-keys"), "{code} openaiApiKeyHint");
+            assert_eq!(t.provider_opencode_go, "OpenCode Go", "{code} providerOpenCodeGo");
+            assert!(!t.opencode_go_api_key.is_empty(), "{code} opencodeGoApiKey empty");
+            assert!(!t.opencode_go_api_key_placeholder.is_empty(), "{code} opencodeGoApiKeyPlaceholder empty");
+            assert!(t.opencode_go_api_key_hint.contains("opencode.ai"), "{code} opencodeGoApiKeyHint");
             assert_eq!(t.provider_anthropic, "Claude (Anthropic)", "{code} providerAnthropic");
             assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
             assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");

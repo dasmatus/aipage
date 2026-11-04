@@ -1,7 +1,7 @@
 //! Shared client for OpenAI-compatible backends (`/v1/chat/completions` +
 //! `/v1/models` with `Authorization: Bearer <key>`).
 //!
-//! Ollama Cloud, OpenRouter, OpenAI, LM Studio and local Ollama all expose
+//! Ollama Cloud, OpenRouter, OpenAI, OpenCode Go, LM Studio and local Ollama all expose
 //! this shape; they differ only in base URL, default model, display label and
 //! any extra headers, captured in one [`OpenAiCompat`] constant each. The
 //! provider dispatchers in [`super`], the tool-calling loop in
@@ -66,6 +66,18 @@ pub const OPENAI: OpenAiCompat = OpenAiCompat {
     extra_headers: &[],
 };
 
+/// OpenCode Go (`https://opencode.ai/zen/go/v1`, see [`super::opencode_go`]).
+/// Only Go's chat-completions models use this client for chat; its
+/// Anthropic-messages and Responses models go through their own modules.
+/// `deepseek-v4.1-flash` has the plan's largest monthly allowance and serves
+/// chat completions with function tools.
+pub const OPENCODE_GO: OpenAiCompat = OpenAiCompat {
+    label: "OpenCode Go",
+    default_base_url: "https://opencode.ai/zen/go",
+    default_model: "deepseek-v4.1-flash",
+    extra_headers: &[],
+};
+
 /// Claude. The extension talks to Claude over the Anthropic Messages API
 /// (see [`super::anthropic`]), not this client; this config keeps
 /// [`OpenAiCompat::for_provider`] total and supplies the label, base-URL
@@ -119,6 +131,7 @@ impl OpenAiCompat {
             ProviderType::OllamaCloud => &OLLAMA_CLOUD,
             ProviderType::OpenRouter => &OPENROUTER,
             ProviderType::OpenAi => &OPENAI,
+            ProviderType::OpenCodeGo => &OPENCODE_GO,
             ProviderType::Anthropic => &ANTHROPIC,
             ProviderType::ClaudeCode => &CLAUDE_CODE,
             ProviderType::Lmstudio => &LMSTUDIO,
@@ -184,9 +197,14 @@ impl OpenAiCompat {
 
     /// One-shot chat completion: system prompt + user prompt, no tools.
     pub async fn send_message(&self, prompt: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
+        self.complete(SYSTEM_PROMPT, prompt, api_key, opts).await
+    }
+
+    /// One-shot chat completion with an explicit system prompt, no tools.
+    pub async fn complete(&self, system: &str, user: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
         let body = json!({
             "model": self.model_of(opts),
-            "messages": chat_messages(SYSTEM_PROMPT, prompt),
+            "messages": chat_messages(system, user),
             "temperature": 0.7,
             "stream": false,
         });

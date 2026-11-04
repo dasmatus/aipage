@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **update:** check GitHub releases with a stable/nightly channel and self-update the sidebar bundle ([61be9ef](https://github.com/dasmatus/aipage/commit/61be9efd71b56c7ad30fe06569294b95d6c71d75))
 * **web:** publish the sidebar bundle with a hash manifest ([b155acd](https://github.com/dasmatus/aipage/commit/b155acd514e9b8521752afb70c33f3c52b20a6ab))
 * **claude-code:** embed Claude Code through the Claude Agent SDK ([c9a8d9b](https://github.com/dasmatus/aipage/commit/c9a8d9bd9ffc89cc112f234cce3a590cd5103013))
+* **providers:** add OpenCode Go subscription provider ([72758b4](https://github.com/dasmatus/aipage/commit/72758b42fc1d3e782d5bc93156972df2d3198ef2))
+* **providers:** route OpenCode Go models over their own API formats ([afc89e4](https://github.com/dasmatus/aipage/commit/afc89e498c07362f77643bc24e6a749d64bd50f4))
 
 ### 🐛 Bug Fixes
 
