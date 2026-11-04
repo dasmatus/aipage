@@ -1,0 +1,201 @@
+name: GHCR build cache
+description: >-
+  Restore or save a directory cache (cargo registry + target/) as an OCI
+  artifact on GitHub Container Registry, pushed and pulled with ORAS.
+
+# Why GHCR and not actions/cache: the builds run inside `nix develop`, not in
+# Docker, so there is no buildx layer cache to point at a registry. Instead the
+# cache is one zstd tarball stored as an OCI artifact in
+# ghcr.io/<owner>/<repo>-ci-cache. The Nix store itself stays on
+# magic-nix-cache; this covers what Nix does not: cargo's registry and the
+# compiled target/ dir, which dominate CI time.
+#
+# Tags (all prefixed with `<scope>-<os>-<arch>`):
+#   -<hash>   flake.lock + Cargo.lock (+ `key-files`); written by main pushes
+#   -main     the latest main save; fallback when the lockfiles changed
+#   -pr-<N>   the latest save of pull request N (same-repo PRs only)
+# Restore tries pr-<N> (on PRs), then <hash>, then main. A miss or any
+# registry error never fails the job, it only logs a warning.
+#
+# Writes happen only on pushes to the default branch (exact + main tags) and
+# on pull requests from this repository (their own pr-<N> tag), so a branch
+# can never overwrite the cache main and release builds read. After a main
+# save the now untagged older versions are pruned.
+
+inputs:
+  mode:
+    description: "`restore` or `save`."
+    required: true
+  scope:
+    description: Cache namespace, e.g. `check` or `build` (jobs compiling different profiles/targets should not share one).
+    required: true
+  paths:
+    description: Newline-separated paths to cache. `~` is $HOME, relative paths are under the workspace.
+    required: false
+    default: |
+      ~/.cargo/registry/index
+      ~/.cargo/registry/cache
+      ~/.cargo/git/db
+      target
+  key-files:
+    description: Space-separated files whose content keys the cache (beyond flake.lock and Cargo.lock).
+    required: false
+    default: ""
+  token:
+    description: "Token with `packages: read` (restore) / `packages: write` (save)."
+    required: false
+    default: ${{ github.token }}
+outputs:
+  cache-hit:
+    description: The tag that was restored (empty on a miss).
+    value: ${{ steps.restore.outputs.hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up ORAS
+      uses: oras-project/setup-oras@v1
+      with:
+        version: 1.2.3
+
+    - name: Compute cache reference
+      id: ref
+      shell: bash
+      env:
+        SCOPE: ${{ inputs.scope }}
+        KEY_FILES: ${{ inputs.key-files }}
+        REPO: ${{ github.repository }}
+        RUNNER_OS_: ${{ runner.os }}
+        RUNNER_ARCH_: ${{ runner.arch }}
+        EVENT: ${{ github.event_name }}
+        REF: ${{ github.ref }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      run: |
+        set -euo pipefail
+        image="ghcr.io/${REPO,,}-ci-cache"
+        prefix="${SCOPE}-${RUNNER_OS_,,}-${RUNNER_ARCH_,,}"
+        # shellcheck disable=SC2086
+        hash="$(cat flake.lock Cargo.lock ${KEY_FILES} | sha256sum | cut -c1-16)"
+        restore="${prefix}-${hash} ${prefix}-main"
+        save=""
+        if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
+          restore="${prefix}-pr-${PR_NUMBER} ${restore}"
+          if [ "$PR_REPO" = "$REPO" ]; then
+            save="${prefix}-pr-${PR_NUMBER}"
+          fi
+        elif [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/${DEFAULT_BRANCH}" ]; then
+          save="${prefix}-${hash} ${prefix}-main"
+        fi
+        {
+          echo "image=$image"
+          echo "restore=$restore"
+          echo "save=$save"
+          echo "dir=${RUNNER_TEMP}/ghcr-cache-${SCOPE}"
+        } >> "$GITHUB_OUTPUT"
+        echo "image: $image"
+        echo "restore order: $restore"
+        echo "save tags: ${save:-<none, this event does not write the cache>}"
+
+    - name: Log in to GHCR
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ACTOR: ${{ github.actor }}
+      run: |
+        echo "$TOKEN" | oras login ghcr.io -u "$ACTOR" --password-stdin \
+          || echo "::warning title=GHCR cache::login failed; continuing without the cache"
+
+    - name: Restore cache
+      id: restore
+      if: inputs.mode == 'restore'
+      shell: bash
+      env:
+        IMAGE: ${{ steps.ref.outputs.image }}
+        TAGS: ${{ steps.ref.outputs.restore }}
+        DIR: ${{ steps.ref.outputs.dir }}
+      run: |
+        set -uo pipefail
+        rm -rf "$DIR" && mkdir -p "$DIR"
+        for tag in $TAGS; do
+          if oras pull "$IMAGE:$tag" -o "$DIR" >/dev/null 2>"$DIR/pull.err"; then
+            start=$SECONDS
+            if tar -P --zstd -xf "$DIR/cache.tar.zst"; then
+              echo "restored $IMAGE:$tag ($(du -h "$DIR/cache.tar.zst" | cut -f1), unpacked in $((SECONDS - start))s)"
+              echo "hit=$tag" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning title=GHCR cache::$IMAGE:$tag could not be unpacked; building without it"
+            fi
+            rm -rf "$DIR"
+            exit 0
+          fi
+          echo "miss: $IMAGE:$tag ($(tail -n1 "$DIR/pull.err"))"
+        done
+        echo "no cache found; building from scratch"
+        rm -rf "$DIR"
+
+    - name: Save cache
+      id: save
+      if: inputs.mode == 'save' && steps.ref.outputs.save != ''
+      shell: bash
+      env:
+        IMAGE: ${{ steps.ref.outputs.image }}
+        TAGS: ${{ steps.ref.outputs.save }}
+        DIR: ${{ steps.ref.outputs.dir }}
+        PATHS: ${{ inputs.paths }}
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}
+      run: |
+        set -uo pipefail
+        list=()
+        while IFS= read -r p; do
+          [ -z "$p" ] && continue
+          case "$p" in
+            "~/"*) p="$HOME/${p#\~/}" ;;
+            /*) ;;
+            *) p="$GITHUB_WORKSPACE/$p" ;;
+          esac
+          [ -e "$p" ] && list+=("$p")
+        done <<< "$PATHS"
+        if [ ${#list[@]} -eq 0 ]; then
+          echo "nothing to cache"
+          exit 0
+        fi
+        # Incremental artifacts are large and useless across commits.
+        find "${list[@]}" -type d -name incremental -prune -exec rm -rf {} + 2>/dev/null || true
+        rm -rf "$DIR" && mkdir -p "$DIR"
+        start=$SECONDS
+        tar -P -I 'zstd -T0 -3' -cf "$DIR/cache.tar.zst" "${list[@]}" || {
+          echo "::warning title=GHCR cache::packing the cache failed; not saving"
+          exit 0
+        }
+        echo "packed $(du -h "$DIR/cache.tar.zst" | cut -f1) in $((SECONDS - start))s"
+        cd "$DIR"
+        read -r first rest <<< "$TAGS"
+        start=$SECONDS
+        if ! oras push "$IMAGE:$first" \
+            --artifact-type application/vnd.aipage.ci-cache.v1 \
+            --annotation "org.opencontainers.image.source=$SOURCE" \
+            --annotation "org.opencontainers.image.description=AIPage CI build cache (cargo registry + target)" \
+            cache.tar.zst:application/vnd.aipage.ci-cache.layer.v1.tar+zstd; then
+          echo "::warning title=GHCR cache::push to $IMAGE:$first failed; the next run builds without this cache"
+          exit 0
+        fi
+        echo "pushed $IMAGE:$first in $((SECONDS - start))s"
+        for tag in $rest; do
+          oras tag "$IMAGE:$first" "$tag" || echo "::warning title=GHCR cache::could not tag $tag"
+        done
+        cd / && rm -rf "$DIR"
+        echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+    # Every main save moves its tags, leaving the previous blobs untagged.
+    - name: Prune untagged cache versions
+      if: inputs.mode == 'save' && steps.save.outputs.pushed == 'true' && github.event_name == 'push'
+      continue-on-error: true
+      uses: actions/delete-package-versions@v5
+      with:
+        package-name: ${{ github.event.repository.name }}-ci-cache
+        package-type: container
+        delete-only-untagged-versions: "true"
+        min-versions-to-keep: 0
+        token: ${{ inputs.token }}
