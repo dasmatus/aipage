@@ -254,13 +254,12 @@ fn init(controller: Controller, anti_cheat_done: Rc<Cell<bool>>) {
     });
 }
 
-/// Hosted-UI settings → `Some(base_url)` when enabled (default), else `None`.
+/// Hosted-UI settings → `Some(base_url)` when enabled (opt-in), else `None`.
 fn remote_ui_from_storage(result: &JsValue) -> Option<String> {
-    let enabled = Reflect::get(result, &remote_ui::KEY_REMOTE_UI_ENABLED.into())
+    let stored = Reflect::get(result, &remote_ui::KEY_REMOTE_UI_ENABLED.into())
         .ok()
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-    if !enabled {
+        .and_then(|v| v.as_bool());
+    if !remote_ui::remote_ui_enabled(stored) {
         return None;
     }
     let stored = Reflect::get(result, &remote_ui::KEY_REMOTE_UI_URL.into())

@@ -14,7 +14,7 @@ A cross-browser extension for Chrome, Firefox, and Safari that adds an AI-powere
 - Secure local storage of API credentials
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
 - **Smart System Prompt**: Ensures the AI acts as a helpful assistant that answers correctly
-- **Self-updating UI**: the sidebar loads from a hosted copy, with the bundled one as fallback
+- **Self-updating UI (opt-in)**: the sidebar can load from a hosted copy or a GitHub-released bundle, with the bundled one as fallback
 
 ## Quick start
 

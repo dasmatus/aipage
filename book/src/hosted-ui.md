@@ -1,16 +1,18 @@
 # Hosted UI
 
 The sidebar's user interface (the Leptos/WASM app in `sidebar.html`) is also
-published as a static site on Vercel. By default the extension loads the
-sidebar **from that hosted copy**, so UI fixes and features ship the moment
-they are deployed — without reinstalling or updating the extension. The
-extension itself (content script, background CORS proxy, manifests) is still
-the installed package; only the panel's UI is remote.
+published as a static site on Vercel. When the hosted UI is turned on, the
+extension loads the sidebar **from that hosted copy**, so UI fixes and
+features ship the moment they are deployed — without reinstalling or updating
+the extension. The extension itself (content script, background CORS proxy,
+manifests) is still the installed package; only the panel's UI is remote.
 
-- **Default: on.** Settings → *Hosted UI* → *Remote UI (auto-updating)*.
-  Turning it off makes the extension use the sidebar bundled with the install;
-  the sidebar reloads immediately. The setting is stored under the
-  `remote_ui_enabled` key (absent = on).
+- **Default: off.** The Vercel deployment is currently not served, so the
+  extension uses the sidebar bundled with the install unless you opt in:
+  Settings → *Hosted UI* → *Remote UI (auto-updating)*. Toggling it reloads
+  the sidebar immediately. The setting is stored under the
+  `remote_ui_enabled` key (absent = off, `REMOTE_UI_ENABLED_DEFAULT` in
+  `crates/aipage-core/src/remote_ui.rs`).
 - **Custom URL (advanced).** The same card has a *Custom UI URL* field
   (`remote_ui_url`). Only `https://` origins are accepted (plus
   `http://localhost` for development); leave it empty to use the default,

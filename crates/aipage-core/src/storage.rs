@@ -264,7 +264,7 @@ pub async fn save_update_notified_sha(sha: &str) {
 
 /// Whether the auto-updating hosted UI is used. Defaults to `true`.
 pub async fn get_remote_ui_enabled() -> bool {
-    get_raw(KEY_REMOTE_UI_ENABLED).await.as_bool().unwrap_or(true)
+    crate::remote_ui::remote_ui_enabled(get_raw(KEY_REMOTE_UI_ENABLED).await.as_bool())
 }
 
 pub async fn save_remote_ui_enabled(enabled: bool) {
