@@ -7,8 +7,8 @@ features ship the moment they are deployed — without reinstalling or updating
 the extension. The extension itself (content script, background CORS proxy,
 manifests) is still the installed package; only the panel's UI is remote.
 
-- **Default: off.** The Vercel deployment is currently not served, so the
-  extension uses the sidebar bundled with the install unless you opt in:
+- **Default: off.** The extension uses the sidebar bundled with the install
+  unless you opt in:
   Settings → *Hosted UI* → *Remote UI (auto-updating)*. Toggling it reloads
   the sidebar immediately. The setting is stored under the
   `remote_ui_enabled` key (absent = off, `REMOTE_UI_ENABLED_DEFAULT` in

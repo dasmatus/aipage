@@ -20,10 +20,9 @@ pub const KEY_REMOTE_UI_ENABLED: &str = "remote_ui_enabled";
 
 /// Whether the hosted UI is used when [`KEY_REMOTE_UI_ENABLED`] was never set.
 ///
-/// Off: the Vercel deployment is no longer served, so the bundled sidebar is
-/// the default and the hosted UI is opt-in (Settings → Hosted UI). With it on
-/// and the host unreachable, every open would wait
-/// [`REMOTE_UI_LOAD_TIMEOUT_MS`] before falling back.
+/// Off: the bundled sidebar is the default and the hosted UI is opt-in
+/// (Settings → Hosted UI), so opening the sidebar never depends on the host
+/// (an unreachable host costs [`REMOTE_UI_LOAD_TIMEOUT_MS`] before fallback).
 pub const REMOTE_UI_ENABLED_DEFAULT: bool = false;
 
 /// The stored `remote_ui_enabled` value (if any) → whether the hosted UI is used.
