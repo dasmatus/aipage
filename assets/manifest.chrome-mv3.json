@@ -18,6 +18,7 @@
     "https://ollama.com/*",
     "https://openrouter.ai/*",
     "https://api.openai.com/*",
+    "https://opencode.ai/*",
     "https://api.anthropic.com/*",
     "https://api.duckduckgo.com/*"
   ],

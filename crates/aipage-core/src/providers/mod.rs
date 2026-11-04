@@ -5,7 +5,7 @@
 //! proxy via [`crate::proxy`]. Pure helpers (URL normalisation, response
 //! parsing) are kept separate so they can be unit-tested natively.
 //!
-//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, LM Studio
+//! OpenAI-compatible backends (Ollama Cloud, OpenRouter, OpenAI, OpenCode Go, LM Studio
 //! and local Ollama's `/v1` layer) share one client,
 //! [`openai_compat::OpenAiCompat`], selected per provider by
 //! [`OpenAiCompat::for_provider`]. Claude ([`anthropic`]) speaks the Anthropic
@@ -52,6 +52,7 @@ pub mod lmstudio;
 pub mod ollama;
 pub mod openai;
 pub mod openai_compat;
+pub mod opencode_go;
 
 use crate::types::ProviderType;
 use openai_compat::OpenAiCompat;
@@ -116,6 +117,7 @@ pub async fn get_models(
         ProviderType::Ollama => ollama::get_models(opts).await,
         ProviderType::Lmstudio => lmstudio::get_models(opts).await,
         ProviderType::OpenAi => openai::get_models(api_key, opts).await,
+        ProviderType::OpenCodeGo => opencode_go::get_models(api_key, opts).await,
         p => OpenAiCompat::for_provider(p).get_models(api_key, opts).await,
     }
 }
@@ -146,6 +148,7 @@ mod tests {
         assert_eq!(default_base_url(ProviderType::OllamaCloud), "https://ollama.com");
         assert_eq!(default_base_url(ProviderType::OpenRouter), "https://openrouter.ai/api");
         assert_eq!(default_base_url(ProviderType::OpenAi), "https://api.openai.com");
+        assert_eq!(default_base_url(ProviderType::OpenCodeGo), "https://opencode.ai/zen/go");
         assert_eq!(default_base_url(ProviderType::Anthropic), "https://api.anthropic.com");
         assert_eq!(default_base_url(ProviderType::ClaudeCode), "http://localhost:8787");
         assert_eq!(default_base_url(ProviderType::Lmstudio), "http://localhost:1234/v1");

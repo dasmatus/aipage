@@ -7,7 +7,7 @@ AIPage is a cross-browser extension (Chrome, Firefox, Safari) that adds an AI si
 ## Features
 
 - **Multi-Browser Support**: Works on Chrome, Firefox, and Safari
-- **Several AI backends**: Ollama Cloud, OpenRouter, ChatGPT / OpenAI and Claude (Anthropic) for chat, agentic page tools, native web search and SVG image generation; LM Studio and Ollama for local models
+- **Several AI backends**: Ollama Cloud, OpenRouter, ChatGPT / OpenAI, OpenCode Go and Claude (Anthropic) for chat, agentic page tools, native web search and SVG image generation; LM Studio and Ollama for local models
 - **Anti-Cheat Protection**: Automatically blocks tab switch and copy-paste detection during tests
 - **Privacy First**: All API keys stored locally, no data collection
 - **Hosted UI**: The sidebar UI auto-updates from a web origin, with the bundled copy as fallback

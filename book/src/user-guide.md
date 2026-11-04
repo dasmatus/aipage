@@ -1,6 +1,6 @@
 # User Guide
 
-AIPage adds an AI sidebar to EduPage: chat with Ollama Cloud, OpenRouter, ChatGPT / OpenAI, Claude (Anthropic), Claude Code or a local LM Studio / Ollama, scan the page into the chat, search the web and generate images without leaving EduPage.
+AIPage adds an AI sidebar to EduPage: chat with Ollama Cloud, OpenRouter, ChatGPT / OpenAI, OpenCode Go, Claude (Anthropic), Claude Code or a local LM Studio / Ollama, scan the page into the chat, search the web and generate images without leaving EduPage.
 
 1. **[Installation](installation.md)**: install a release (or a nightly) in Chrome / Brave, Firefox or Safari.
 2. **[AI Providers](providers.md)**: pick an AI backend, add its API key and start chatting.
