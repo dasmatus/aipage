@@ -126,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * regenerate the changelog on main and render release notes with git-cliff ([111b2a5](https://github.com/dasmatus/aipage/commit/111b2a5239342296de1b3be5c6aebb02e4501d18))
 * **docs:** build and deploy the mdBook on Vercel ([fb79b63](https://github.com/dasmatus/aipage/commit/fb79b63e7d37f41e208f4e86737802811c06988d))
 * sign the Firefox xpi via AMO and build the Safari app wrapper on macOS ([d73c9fe](https://github.com/dasmatus/aipage/commit/d73c9fe63727d63c21ef159232b36c9caf7fd1a3))
+* **build:** pin the build job to ubuntu-24.04 for the Chromium 141 install test ([cfbcb52](https://github.com/dasmatus/aipage/commit/cfbcb526f7fd60459178a9aa156c40fd17b3e030))
 
 ### ✅ Tests
 
@@ -156,6 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * describe GitHub updates, channels and the self-updating sidebar ([b297379](https://github.com/dasmatus/aipage/commit/b2973796f25269186f3028c1d6d9199284f419c5))
 * **user-guide:** escape <channel> so mdbook renders it ([fcaa27a](https://github.com/dasmatus/aipage/commit/fcaa27a7d5a6dd7eb3a5c2618c2ff87498c4ffaa))
 * split the README into separate book pages ([16e9b48](https://github.com/dasmatus/aipage/commit/16e9b4889f9a40ee918d917b0d5a89a4ace43eea))
+* **sidebar:** describe the bundled-UI default without the hosting reason ([1843943](https://github.com/dasmatus/aipage/commit/1843943fca0b62223787accd9074828fe3b4f1c8))
 
 ### 💎 Styles
 
