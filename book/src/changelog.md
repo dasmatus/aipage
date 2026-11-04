@@ -72,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **pages:** publish the mdBook to GitHub Pages under /aipage/ ([9c72abc](https://github.com/dasmatus/aipage/commit/9c72abc39e25d549d7124be381db03570d2a00fc))
 * **agent-server:** keep run-failure details out of the HTTP reply ([5537a42](https://github.com/dasmatus/aipage/commit/5537a420977ddcb78aefe401ed3f52a7917cfbe2))
 * **deps:** bump leptos to 0.8.22 with server_fn_macro_default 0.8.6 ([b274313](https://github.com/dasmatus/aipage/commit/b2743130f4b2ab545cd97ef42c86572540eb9544))
+* **sidebar:** default to the bundled UI, make the hosted UI opt-in ([648a026](https://github.com/dasmatus/aipage/commit/648a026ddab2b8144e561e6ead0050dcf6122907))
+* **providers:** send x-opencode-session on OpenCode Go requests ([489a522](https://github.com/dasmatus/aipage/commit/489a5224feee601a13fc0cdcc3e50cf9aa4c7dd5))
 
 ### 📦 Dependencies
 
