@@ -67,6 +67,8 @@ pub const OPENAI: OpenAiCompat = OpenAiCompat {
 };
 
 /// OpenCode Go (`https://opencode.ai/zen/go/v1`, see [`super::opencode_go`]).
+/// Only Go's chat-completions models use this client for chat; its
+/// Anthropic-messages and Responses models go through their own modules.
 /// `deepseek-v4.1-flash` has the plan's largest monthly allowance and serves
 /// chat completions with function tools.
 pub const OPENCODE_GO: OpenAiCompat = OpenAiCompat {
@@ -195,9 +197,14 @@ impl OpenAiCompat {
 
     /// One-shot chat completion: system prompt + user prompt, no tools.
     pub async fn send_message(&self, prompt: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
+        self.complete(SYSTEM_PROMPT, prompt, api_key, opts).await
+    }
+
+    /// One-shot chat completion with an explicit system prompt, no tools.
+    pub async fn complete(&self, system: &str, user: &str, api_key: &str, opts: &SendOptions) -> Result<String, String> {
         let body = json!({
             "model": self.model_of(opts),
-            "messages": chat_messages(SYSTEM_PROMPT, prompt),
+            "messages": chat_messages(system, user),
             "temperature": 0.7,
             "stream": false,
         });

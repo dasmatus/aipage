@@ -12,7 +12,10 @@
 //! Messages API and owns its wire format; local Ollama ([`ollama`]) uses its
 //! native `/api/*` endpoints for chat and model listing. Claude Code
 //! ([`claude_code`]) is a client of the repository's `agent-server`, which
-//! runs Claude Code through the Claude Agent SDK.
+//! runs Claude Code through the Claude Agent SDK. OpenCode Go
+//! ([`opencode_go`]) serves each model family over one of three formats and
+//! routes per model: chat completions, Anthropic messages, or the OpenAI
+//! Responses API ([`responses`]).
 //!
 //! # Adding a provider
 //!
@@ -53,6 +56,7 @@ pub mod ollama;
 pub mod openai;
 pub mod openai_compat;
 pub mod opencode_go;
+pub mod responses;
 
 use crate::types::ProviderType;
 use openai_compat::OpenAiCompat;
@@ -99,6 +103,8 @@ pub async fn send_message(
         // The key is agent-server's optional access token.
         ProviderType::ClaudeCode => claude_code::send_message(prompt, api_key, opts).await,
         ProviderType::Ollama => ollama::send_message(prompt, opts).await,
+        // Picks chat completions, Anthropic messages or Responses per model.
+        ProviderType::OpenCodeGo => opencode_go::send_message(prompt, api_key, opts).await,
         // Local backends never send an auth header, even with a stored key.
         ProviderType::Lmstudio => lmstudio::CONFIG.send_message(prompt, "", opts).await,
         p => OpenAiCompat::for_provider(p).send_message(prompt, api_key, opts).await,

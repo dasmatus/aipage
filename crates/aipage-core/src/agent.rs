@@ -14,11 +14,15 @@
 //! * the Anthropic Messages API loop for Claude: `tool_use` content blocks
 //!   answered by `tool_result` blocks in one `user` turn, plus Claude's
 //!   server-side `web_search` tool in place of the DuckDuckGo one, and
-//!   `pause_turn` resumption.
+//!   `pause_turn` resumption. OpenCode Go's messages models (MiniMax, Qwen,
+//!   Claude) run the same loop against Go's `/v1/messages`, with the
+//!   DuckDuckGo tool since Go has no server-side search;
+//! * the OpenAI Responses API loop for OpenCode Go's `gpt-*` models:
+//!   `function_call` output items answered by `function_call_output` items.
 //!
-//! [`run_agent_turn`] and [`web_search`] dispatch on [`ProviderType`]; any
-//! provider whose [`ProviderType::supports_native_tools`] is true lands in one
-//! of the two.
+//! [`run_agent_turn`] and [`web_search`] dispatch on [`ProviderType`] (and,
+//! for OpenCode Go, on the model's [`Protocol`]); any provider whose
+//! [`ProviderType::supports_native_tools`] is true lands in one of them.
 
 use serde_json::{json, Value};
 
@@ -26,6 +30,8 @@ use aipage_bindings::{from_js, runtime, tabs, to_js};
 
 use crate::providers::anthropic;
 use crate::providers::openai_compat::OpenAiCompat;
+use crate::providers::opencode_go::{self, Protocol};
+use crate::providers::responses;
 use crate::providers::SendOptions;
 use crate::proxy::post_json;
 use crate::types::ProviderType;
@@ -254,10 +260,9 @@ where
 /// server-side web search is resumed by re-sending the same history. The
 /// loop ends on any other stop reason (`end_turn`, `max_tokens`, ...) or at
 /// [`MAX_ITERS`]; a refusal is surfaced as an error by
-/// [`anthropic::post_messages`].
+/// [`anthropic::Endpoint::post`].
 async fn run_anthropic_tool_loop<F>(
-    api_key: &str,
-    opts: &SendOptions,
+    endpoint: &anthropic::Endpoint,
     system: &str,
     messages: &mut Vec<Value>,
     tools: &Value,
@@ -266,12 +271,11 @@ async fn run_anthropic_tool_loop<F>(
 where
     F: Fn(String),
 {
-    let model = anthropic::model_of(opts);
     let mut answer = String::new();
 
     for _ in 0..MAX_ITERS {
-        let body = anthropic::message_body(&model, system, messages, Some(tools));
-        let resp = anthropic::post_messages(api_key, opts, &body).await?;
+        let body = anthropic::message_body(&endpoint.model, system, messages, Some(tools));
+        let resp = endpoint.post(&body).await?;
 
         let text = anthropic::text_blocks(&resp);
         if !text.is_empty() {
@@ -303,6 +307,86 @@ where
     Ok(answer)
 }
 
+/// Run a tool-calling round against the OpenAI Responses API (OpenCode Go's
+/// `gpt-*` models). Mirrors [`run_tool_loop`]: each response's messages and
+/// function calls are replayed as input items, followed by one
+/// `function_call_output` per call, until a response has no function calls.
+async fn run_responses_tool_loop<F>(
+    endpoint: &responses::Endpoint,
+    instructions: &str,
+    input: &mut Vec<Value>,
+    tools: &Value,
+    on_text: &F,
+) -> Result<String, String>
+where
+    F: Fn(String),
+{
+    let mut answer = String::new();
+
+    for _ in 0..MAX_ITERS {
+        let body = responses::request_body(&endpoint.model, instructions, input, Some(tools));
+        let resp = endpoint.post(&body).await?;
+
+        let text = responses::output_text(&resp);
+        if !text.is_empty() {
+            if !answer.is_empty() {
+                answer.push_str("\n\n");
+            }
+            answer.push_str(&text);
+            on_text(answer.clone());
+        }
+
+        let calls = responses::function_calls(&resp);
+        if calls.is_empty() {
+            return Ok(answer);
+        }
+        input.extend(responses::replay_items(&resp));
+        for call in &calls {
+            let (content, _is_error) = execute_tool(&call.name, &decode_arguments(&call.arguments)).await;
+            input.push(responses::function_call_output(&call.call_id, &content));
+        }
+    }
+
+    // Hit the iteration cap: return whatever we have rather than failing.
+    Ok(answer)
+}
+
+/// Run a tool round for OpenCode Go over the model's wire format, with the
+/// given chat-completions function tools (converted as needed).
+async fn run_opencode_go_loop<F>(
+    api_key: &str,
+    opts: &SendOptions,
+    system: &str,
+    user_text: &str,
+    tools: &Value,
+    on_text: &F,
+) -> Result<String, String>
+where
+    F: Fn(String),
+{
+    match opencode_go::protocol_for(opts) {
+        Protocol::AnthropicMessages => {
+            let endpoint = opencode_go::messages_endpoint(api_key, opts);
+            let mut messages = vec![json!({ "role": "user", "content": user_text })];
+            let tools = anthropic::tools_from_openai(tools);
+            run_anthropic_tool_loop(&endpoint, system, &mut messages, &tools, on_text).await
+        }
+        Protocol::Responses => {
+            let endpoint = opencode_go::responses_endpoint(api_key, opts);
+            let mut input = vec![responses::user_message(user_text)];
+            let tools = responses::tools_from_chat(tools);
+            run_responses_tool_loop(&endpoint, system, &mut input, &tools, on_text).await
+        }
+        Protocol::ChatCompletions => {
+            let mut messages = vec![
+                json!({ "role": "system", "content": system }),
+                json!({ "role": "user", "content": user_text }),
+            ];
+            run_tool_loop(opencode_go::CONFIG, api_key, opts, &mut messages, tools, on_text).await
+        }
+    }
+}
+
 /// Run one agentic chat turn for a tool-capable provider, streaming text via
 /// `on_text`.
 pub async fn run_agent_turn<F>(
@@ -317,8 +401,11 @@ where
 {
     let answer = if provider == ProviderType::Anthropic {
         let mut messages = vec![json!({ "role": "user", "content": user_text })];
-        let tools = anthropic_tools(&anthropic::model_of(opts));
-        run_anthropic_tool_loop(api_key, opts, AGENT_SYSTEM_PROMPT, &mut messages, &tools, &on_text).await?
+        let endpoint = anthropic::Endpoint::claude(api_key, opts);
+        let tools = anthropic_tools(&endpoint.model);
+        run_anthropic_tool_loop(&endpoint, AGENT_SYSTEM_PROMPT, &mut messages, &tools, &on_text).await?
+    } else if provider == ProviderType::OpenCodeGo {
+        run_opencode_go_loop(api_key, opts, AGENT_SYSTEM_PROMPT, user_text, &openai_tools(), &on_text).await?
     } else {
         let cfg = OpenAiCompat::for_provider(provider);
         let mut messages = vec![
@@ -345,6 +432,9 @@ pub async fn web_search(
 ) -> Result<String, String> {
     if provider == ProviderType::Anthropic {
         return anthropic::web_search(query, api_key, opts).await;
+    }
+    if provider == ProviderType::OpenCodeGo {
+        return run_opencode_go_loop(api_key, opts, WEB_SEARCH_SYSTEM_PROMPT, query, &web_search_tool(), &|_| {}).await;
     }
     let cfg = OpenAiCompat::for_provider(provider);
     let mut messages = vec![
