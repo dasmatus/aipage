@@ -79,7 +79,11 @@ permissions:
 jobs:
   build:
     name: Build & package
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.56.1 (the
+    # last one bundling the MV2-capable Chromium 141 used by the install
+    # test) refuses to install on ("does not support chromium on
+    # ubuntu26.04-x64").
+    runs-on: ubuntu-24.04
     outputs:
       firefox-signed: ${{ steps.sign-firefox.outputs.signed }}
     env:
