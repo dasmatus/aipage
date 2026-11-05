@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **deps:** bump leptos to 0.8.22 with server_fn_macro_default 0.8.6 ([b274313](https://github.com/dasmatus/aipage/commit/b2743130f4b2ab545cd97ef42c86572540eb9544))
 * **sidebar:** default to the bundled UI, make the hosted UI opt-in ([648a026](https://github.com/dasmatus/aipage/commit/648a026ddab2b8144e561e6ead0050dcf6122907))
 * **providers:** send x-opencode-session on OpenCode Go requests ([489a522](https://github.com/dasmatus/aipage/commit/489a5224feee601a13fc0cdcc3e50cf9aa4c7dd5))
+* **ci:** make nightly tag update resilient to repository rules ([#40](https://github.com/dasmatus/aipage/issues/40)) ([b94f7d3](https://github.com/dasmatus/aipage/commit/b94f7d396164be3f28383d82aba9d5afbed17abe))
 
 ### 📦 Dependencies
 
