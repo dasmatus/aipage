@@ -25,6 +25,15 @@ This project uses [GitHub Actions](https://github.com/dasmatus/aipage/tree/main/
 - **Release workflow**: on a pushed `v*` tag, runs the build workflow (signing on) and publishes a GitHub Release with `aipage-chrome.zip`, `aipage-firefox.xpi` (or `-unsigned`), `aipage-safari.zip` and, when the macOS job succeeded, `aipage-safari-macos.zip`, plus the sidebar bundle (`aipage-web.zip`, `aipage-web.json` and its files); the extension's update check reads these releases
 - **Nightly workflow**: daily cron / manual; skips when `main` is unchanged, otherwise builds with a `<base>.<YYYYMMDD>` version stamp, runs the install tests, signs the Firefox xpi and updates the rolling [`nightly` pre-release](https://github.com/dasmatus/aipage/releases/tag/nightly) (the *Nightly* update channel)
 
+### Build cache (GHCR)
+
+The Nix store is cached by `magic-nix-cache`; the cargo registry and the compiled `target/` dir are cached on GitHub Container Registry by the composite action `.github/actions/ghcr-cache`. It packs those paths into one zstd tarball and pushes it with [ORAS](https://oras.land) as an OCI artifact to `ghcr.io/dasmatus/aipage-ci-cache`, one scope per job: `check` (debug, clippy + tests) and `build` (release wasm + xtask; the e2e job and the release/nightly builds read it too).
+
+- **Tags**: `<scope>-<os>-<arch>-<hash>` keyed on `flake.lock` + `Cargo.lock`, `<scope>-…-main` (latest main save) and `<scope>-…-pr-<N>`. A run restores the PR tag first (on pull requests), then the lockfile tag, then the main tag.
+- **Writes**: only pushes to `main` (lockfile + main tags; the untagged leftovers are pruned afterwards) and pull requests from this repository (their own `pr-<N>` tag). Fork PRs, tags and the nightly cron only read, so nothing outside `main` can change what releases build from.
+- **Failure mode**: a miss, a registry error or a failed push only logs a warning; the job then compiles from scratch.
+- **Housekeeping**: the package is created by the first save and is private by default; make it public in its package settings so it does not count against the Packages storage quota. `pr-<N>` tags are not removed when a PR closes; delete them from the package page when they pile up.
+
 ## Firefox signing (AMO)
 
 Release builds of Firefox install only Mozilla-signed extensions, so `build.yml` runs `scripts/sign-firefox.sh` (`web-ext sign --channel unlisted`) for nightlies and releases: it uploads `dist-firefox` to addons.mozilla.org's **self-distribution** channel, waits for the automatic validation + signing (up to 15 minutes), downloads the signed file and ships it as `aipage-firefox.xpi`. The add-on never appears in the public AMO listing; it is identified by the `browser_specific_settings.gecko.id` in `assets/manifest.firefox.json` (`edupage-ai-sidebar@hesburger.dev`), which is also why that manifest declares `data_collection_permissions` — AMO rejects new submissions without it.

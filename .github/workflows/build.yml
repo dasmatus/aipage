@@ -73,26 +73,36 @@ on:
         description: "'true' when aipage-firefox.xpi was signed by AMO, 'false' when the unsigned xpi was kept."
         value: ${{ jobs.build.outputs.firefox-signed }}
 
-permissions:
-  contents: read
+# No workflow-level `permissions`: each job inherits what the caller grants.
+# ci.yml grants `packages: write` (its main / same-repo PR runs save the GHCR
+# build cache); release.yml and nightly.yml grant `packages: read` (restore
+# only; the cache action never writes outside push-to-main / PR events).
 
 jobs:
   build:
     name: Build & package
-    # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.56.1 (the
-    # last one bundling the MV2-capable Chromium 141 used by the install
-    # test) refuses to install on ("does not support chromium on
-    # ubuntu26.04-x64").
+    # Pinned: ubuntu-latest moved to 26.04, which the Playwright 1.56.1 used
+    # for the Chromium 141 MV2 install test cannot install deps for
+    # ("Playwright does not support chromium on ubuntu26.04-x64").
     runs-on: ubuntu-24.04
     outputs:
       firefox-signed: ${{ steps.sign-firefox.outputs.signed }}
     env:
       STAMP_VERSION: ${{ inputs.version }}
       STAMP_VERSION_NAME: ${{ inputs.version-name }}
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@v7
       - uses: DeterminateSystems/nix-installer-action@v23
       - uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      # cargo registry + target/ (release wasm, xtask) as an OCI artifact on
+      # ghcr.io; see .github/actions/ghcr-cache/action.yml.
+      - name: Restore cargo cache (GHCR)
+        uses: ./.github/actions/ghcr-cache
+        with:
+          mode: restore
+          scope: build
 
       - name: Build chrome / firefox / safari (in nix devShell)
         run: |
@@ -128,6 +138,14 @@ jobs:
             fi
             cargo run -p xtask -- build --target web "${args[@]}"
           '
+
+      # Saved before packaging/tests: a red install test is no reason to
+      # throw away a good compile.
+      - name: Save cargo cache (GHCR)
+        uses: ./.github/actions/ghcr-cache
+        with:
+          mode: save
+          scope: build
 
       - name: Package artifacts (canonical names)
         run: |

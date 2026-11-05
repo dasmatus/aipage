@@ -107,6 +107,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     permissions:
       contents: read
+      packages: read # restore the GHCR build cache (never written from here)
     # `secrets: inherit` hands the AMO credentials (WEB_EXT_API_KEY /
     # WEB_EXT_API_SECRET) to the reusable workflow; without them the nightly
     # ships aipage-firefox-unsigned.xpi. The stamped version is unique per
