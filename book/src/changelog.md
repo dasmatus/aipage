@@ -127,6 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **docs:** build and deploy the mdBook on Vercel ([fb79b63](https://github.com/dasmatus/aipage/commit/fb79b63e7d37f41e208f4e86737802811c06988d))
 * sign the Firefox xpi via AMO and build the Safari app wrapper on macOS ([d73c9fe](https://github.com/dasmatus/aipage/commit/d73c9fe63727d63c21ef159232b36c9caf7fd1a3))
 * **build:** pin the build job to ubuntu-24.04 for the Chromium 141 install test ([cfbcb52](https://github.com/dasmatus/aipage/commit/cfbcb526f7fd60459178a9aa156c40fd17b3e030))
+* cache cargo registry and target/ on GHCR ([fe233c0](https://github.com/dasmatus/aipage/commit/fe233c022b4d9bc3e18503bc83cd407780ba1b21))
+* **build:** pin the build job to ubuntu-24.04 ([74622fb](https://github.com/dasmatus/aipage/commit/74622fb26241312ee75de2aa4b70a981cbb7a917))
 
 ### ✅ Tests
 
