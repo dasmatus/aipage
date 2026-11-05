@@ -230,10 +230,19 @@ jobs:
           cat nightly.json
 
       - name: Move the `nightly` tag to this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git tag -f nightly "${GITHUB_SHA}"
-          git push --force origin refs/tags/nightly
+          if git push --force origin refs/tags/nightly; then
+            exit 0
+          fi
+          echo "::warning::Force-push of nightly tag failed; trying delete+create via API (may be blocked by repository rules)."
+          if gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly" >/dev/null 2>&1; then
+            git push origin refs/tags/nightly && exit 0
+          fi
+          echo "::warning::Could not move refs/tags/nightly (repository rules may protect it). Publishing the prerelease assets/notes for ${GITHUB_SHA} anyway; the git tag may lag behind nightly.json."
 
       - name: Create or update the `nightly` prerelease
         env:
