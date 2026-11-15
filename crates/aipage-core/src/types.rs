@@ -52,11 +52,12 @@ impl Message {
 }
 
 /// Which AI backend a request targets:
-/// `'ollama-cloud' | 'openrouter' | 'openai' | 'opencode-go' | 'anthropic' | 'claude-code' | 'lmstudio' | 'ollama'`.
+/// `'ollama-cloud' | 'openrouter' | 'openai' | 'opencode-go' | 'opencode-free' | 'abacus' | 'anthropic' | 'claude-code' | 'lmstudio' | 'ollama'`.
 /// `OllamaCloud` is the hosted Ollama service, `OpenRouter` the OpenRouter
 /// gateway and `OpenAi` the public OpenAI platform API (ChatGPT models); all
 /// three are OpenAI-compatible and need an API key, as does `OpenCodeGo`, the
-/// OpenCode Go subscription. `Anthropic` is Claude
+/// OpenCode Go subscription, `OpenCodeFree`, the free models of the OpenCode
+/// inference endpoint, and `Abacus`, the Abacus.AI RouteLLM API. `Anthropic` is Claude
 /// over the Anthropic Messages API (API key required). The local variants
 /// talk to a self-hosted server on the loopback: Ollama, LM Studio, or
 /// `ClaudeCode`, the repository's `agent-server` running Claude Code through
@@ -76,6 +77,10 @@ pub enum ProviderType {
     OpenAi,
     #[serde(rename = "opencode-go")]
     OpenCodeGo,
+    #[serde(rename = "opencode-free")]
+    OpenCodeFree,
+    #[serde(rename = "abacus")]
+    Abacus,
     Anthropic,
     #[serde(rename = "claude-code")]
     ClaudeCode,
@@ -85,11 +90,13 @@ pub enum ProviderType {
 
 impl ProviderType {
     /// Every provider, in settings-menu order.
-    pub const ALL: [ProviderType; 8] = [
+    pub const ALL: [ProviderType; 10] = [
         ProviderType::OllamaCloud,
         ProviderType::OpenRouter,
         ProviderType::OpenAi,
         ProviderType::OpenCodeGo,
+        ProviderType::OpenCodeFree,
+        ProviderType::Abacus,
         ProviderType::Anthropic,
         ProviderType::ClaudeCode,
         ProviderType::Ollama,
@@ -102,6 +109,8 @@ impl ProviderType {
             ProviderType::OpenRouter => "openrouter",
             ProviderType::OpenAi => "openai",
             ProviderType::OpenCodeGo => "opencode-go",
+            ProviderType::OpenCodeFree => "opencode-free",
+            ProviderType::Abacus => "abacus",
             ProviderType::Anthropic => "anthropic",
             ProviderType::ClaudeCode => "claude-code",
             ProviderType::Lmstudio => "lmstudio",
@@ -115,6 +124,8 @@ impl ProviderType {
             ProviderType::OpenRouter => "OpenRouter",
             ProviderType::OpenAi => "ChatGPT / OpenAI",
             ProviderType::OpenCodeGo => "OpenCode Go",
+            ProviderType::OpenCodeFree => "OpenCode Free",
+            ProviderType::Abacus => "Abacus.AI",
             ProviderType::Anthropic => "Claude (Anthropic)",
             ProviderType::ClaudeCode => "Claude Code (Agent SDK)",
             ProviderType::Lmstudio => "LM Studio",
@@ -132,6 +143,8 @@ impl ProviderType {
             "openrouter" => ProviderType::OpenRouter,
             "openai" => ProviderType::OpenAi,
             "opencode-go" => ProviderType::OpenCodeGo,
+            "opencode-free" => ProviderType::OpenCodeFree,
+            "abacus" => ProviderType::Abacus,
             "anthropic" => ProviderType::Anthropic,
             "claude-code" => ProviderType::ClaudeCode,
             "lmstudio" => ProviderType::Lmstudio,
@@ -162,6 +175,8 @@ impl ProviderType {
                 | ProviderType::OpenRouter
                 | ProviderType::OpenAi
                 | ProviderType::OpenCodeGo
+                | ProviderType::OpenCodeFree
+                | ProviderType::Abacus
                 | ProviderType::Anthropic
         )
     }
@@ -210,6 +225,22 @@ mod tests {
         assert!(!ProviderType::OpenCodeGo.is_local());
         assert!(ProviderType::OpenCodeGo.requires_api_key());
         assert!(ProviderType::OpenCodeGo.supports_native_tools());
+    }
+
+    #[test]
+    fn opencode_free_and_abacus_are_cloud_providers_with_tools() {
+        assert_eq!(serde_json::to_string(&ProviderType::OpenCodeFree).unwrap(), "\"opencode-free\"");
+        assert_eq!(ProviderType::from_str_or_default("opencode-free"), ProviderType::OpenCodeFree);
+        assert_eq!(ProviderType::OpenCodeFree.display_name(), "OpenCode Free");
+        assert!(!ProviderType::OpenCodeFree.is_local());
+        assert!(ProviderType::OpenCodeFree.requires_api_key());
+        assert!(ProviderType::OpenCodeFree.supports_native_tools());
+        assert_eq!(serde_json::to_string(&ProviderType::Abacus).unwrap(), "\"abacus\"");
+        assert_eq!(ProviderType::from_str_or_default("abacus"), ProviderType::Abacus);
+        assert_eq!(ProviderType::Abacus.display_name(), "Abacus.AI");
+        assert!(!ProviderType::Abacus.is_local());
+        assert!(ProviderType::Abacus.requires_api_key());
+        assert!(ProviderType::Abacus.supports_native_tools());
     }
 
     #[test]

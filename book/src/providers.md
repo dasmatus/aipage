@@ -8,6 +8,8 @@ The extension supports multiple AI providers. Choose your preferred provider and
 - **OpenRouter** — the same feature set over any OpenRouter model (`vendor/model` ids)
 - **ChatGPT / OpenAI** — the same feature set over the public OpenAI API (`gpt-*` models, API key)
 - **OpenCode Go** — the same feature set over every model of an [OpenCode Go](https://opencode.ai/docs/go) subscription (GLM, Kimi, DeepSeek, MiMo, MiniMax, Qwen, and the premium GPT / Claude models)
+- **OpenCode Free** — the same feature set over the free models of the OpenCode inference endpoint (Big Pickle, MiMo, DeepSeek, GLM, MiniMax, LongCat, Nemotron and the other `-free` models), at no charge
+- **Abacus.AI** — the same feature set over the [Abacus.AI RouteLLM](https://abacus.ai/help/developer-platform/route-llm) API, including the `route-llm` router that picks a model per turn
 - **Claude (Anthropic)** — chat, agentic tools, native web search (Claude's built-in search tool) and SVG image generation over the Anthropic Messages API
 - **Claude Code (Agent SDK)** — Claude Code itself, run on your computer by the bundled `agent-server` through the Claude Agent SDK; it searches and reads the web with its own tools
 - **LM Studio** (Local)
@@ -82,6 +84,26 @@ The public OpenAI platform API (the models behind ChatGPT), billed per request t
 3. Click the refresh button next to **Model** to list every model on your plan and pick one; the default is `deepseek-v4.1-flash`, which has the largest monthly allowance. Every model powers the agentic chat, web search (over DuckDuckGo) and SVG image generation.
 
 > Go serves each model family over its own API format, and AIPage picks it from the model id: OpenAI chat completions for most models, the Anthropic messages API for `minimax-*`, `qwen*` and `claude-*`, and the OpenAI Responses API for `gpt-*`. Every request carries the `x-opencode-session` header Go requires (one id per sidebar session, so Go can route and cache the conversation) and an `aipage/<version>` user agent. The key is stored locally in your browser and is only ever sent to `opencode.ai` (through the extension's background proxy). Requests count against your Go allowance; once a limit is hit, Go refuses requests until it resets (unless you enabled pay-as-you-go balance in the OpenCode console).
+
+### OpenCode Free
+
+The free models of OpenCode's inference endpoint, served from `https://opencode.ai/inference/openai/v1`. They cost nothing; the endpoint still wants an OpenCode API key.
+
+1. Sign in to **[OpenCode](https://opencode.ai/auth)** and copy your API key from the console (a Go subscription is not needed for the free models).
+2. In the AIPage settings pick **OpenCode Free** as the engine, leave the **Base URL** at `https://opencode.ai/inference/openai` and paste the key.
+3. Click the refresh button next to **Model** to list the free models and pick one; the default is `big-pickle`. Every free model speaks chat completions with function tools, so all of them power the agentic chat, web search (over DuckDuckGo) and SVG image generation.
+
+> The model list comes from `https://opencode.ai/inference/v1/models`, which covers the whole endpoint; AIPage keeps only the entries priced at zero (plus the `-free` ids and `big-pickle`). Requests carry the same `x-opencode-session` header and `aipage/<version>` user agent as OpenCode Go. The key is stored locally in your browser and is only ever sent to `opencode.ai` (through the extension's background proxy). Free usage is rate-limited per key; the endpoint answers `429 FreeUsageLimitError` once the limit is reached, and an OpenCode Go subscription lifts it.
+
+### Abacus.AI
+
+[Abacus.AI](https://abacus.ai) serves its models, and its `route-llm` router, over an OpenAI-compatible API at `https://routellm.abacus.ai/v1`, billed to your Abacus.AI account.
+
+1. Sign in to the **[Abacus.AI console](https://apps.abacus.ai)** and create an API key.
+2. In the AIPage settings pick **Abacus.AI** as the engine, leave the **Base URL** at `https://routellm.abacus.ai` (entering `https://routellm.abacus.ai/v1` works too) and paste the key.
+3. Click the refresh button next to **Model** to list the available models and pick one; the default is `route-llm`, the router that classifies each turn and sends it to a suitable model. Function-calling models power the agentic chat, native web search and SVG image generation.
+
+> The key is stored locally in your browser and is only ever sent to `routellm.abacus.ai` (through the extension's background proxy).
 
 ### LM Studio (Local)
 
