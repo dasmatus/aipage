@@ -105,6 +105,20 @@ pub struct Translation {
     pub opencode_go_api_key: String,
     pub opencode_go_api_key_placeholder: String,
     pub opencode_go_api_key_hint: String,
+
+    // OpenCode Free
+    #[serde(rename = "providerOpenCodeFree")]
+    pub provider_opencode_free: String,
+    pub opencode_free_api_key: String,
+    pub opencode_free_api_key_placeholder: String,
+    pub opencode_free_api_key_hint: String,
+
+    // Abacus.AI
+    #[serde(rename = "providerAbacus")]
+    pub provider_abacus: String,
+    pub abacus_api_key: String,
+    pub abacus_api_key_placeholder: String,
+    pub abacus_api_key_hint: String,
     // Claude (Anthropic) — `provider_anthropic` is declared above with the
     // other engine labels.
     pub anthropic_api_key: String,
@@ -214,6 +228,14 @@ mod tests {
             assert!(!t.opencode_go_api_key.is_empty(), "{code} opencodeGoApiKey empty");
             assert!(!t.opencode_go_api_key_placeholder.is_empty(), "{code} opencodeGoApiKeyPlaceholder empty");
             assert!(t.opencode_go_api_key_hint.contains("opencode.ai"), "{code} opencodeGoApiKeyHint");
+            assert_eq!(t.provider_opencode_free, "OpenCode Free", "{code} providerOpenCodeFree");
+            assert!(!t.opencode_free_api_key.is_empty(), "{code} opencodeFreeApiKey empty");
+            assert!(!t.opencode_free_api_key_placeholder.is_empty(), "{code} opencodeFreeApiKeyPlaceholder empty");
+            assert!(t.opencode_free_api_key_hint.contains("opencode.ai"), "{code} opencodeFreeApiKeyHint");
+            assert_eq!(t.provider_abacus, "Abacus.AI", "{code} providerAbacus");
+            assert!(!t.abacus_api_key.is_empty(), "{code} abacusApiKey empty");
+            assert!(!t.abacus_api_key_placeholder.is_empty(), "{code} abacusApiKeyPlaceholder empty");
+            assert!(t.abacus_api_key_hint.contains("abacus.ai"), "{code} abacusApiKeyHint");
             assert_eq!(t.provider_anthropic, "Claude (Anthropic)", "{code} providerAnthropic");
             assert!(!t.anthropic_api_key.is_empty(), "{code} anthropicApiKey empty");
             assert_eq!(t.anthropic_api_key_placeholder, "sk-ant-...", "{code} anthropicApiKeyPlaceholder");

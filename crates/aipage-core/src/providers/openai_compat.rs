@@ -1,7 +1,8 @@
 //! Shared client for OpenAI-compatible backends (`/v1/chat/completions` +
 //! `/v1/models` with `Authorization: Bearer <key>`).
 //!
-//! Ollama Cloud, OpenRouter, OpenAI, OpenCode Go, LM Studio and local Ollama all expose
+//! Ollama Cloud, OpenRouter, OpenAI, OpenCode Go, OpenCode Free, Abacus.AI,
+//! LM Studio and local Ollama all expose
 //! this shape; they differ only in base URL, default model, display label and
 //! any extra headers, captured in one [`OpenAiCompat`] constant each. The
 //! provider dispatchers in [`super`], the tool-calling loop in
@@ -89,6 +90,29 @@ pub const OPENCODE_GO: OpenAiCompat = OpenAiCompat {
     session_header: Some("x-opencode-session"),
 };
 
+/// OpenCode Free: the free models of the OpenCode inference endpoint
+/// (`https://opencode.ai/inference/openai/v1`, see [`super::opencode_free`]).
+/// Every free model is served over chat completions, so this client carries
+/// the whole provider; only the model list comes from a different path.
+/// `big-pickle` is the flagship free model.
+pub const OPENCODE_FREE: OpenAiCompat = OpenAiCompat {
+    label: "OpenCode Free",
+    default_base_url: "https://opencode.ai/inference/openai",
+    default_model: "big-pickle",
+    extra_headers: &[("User-Agent", super::session::USER_AGENT)],
+    session_header: Some("x-opencode-session"),
+};
+
+/// Abacus.AI RouteLLM (`https://routellm.abacus.ai/v1`, keys from the Abacus
+/// console). `route-llm` is the router that picks a model per turn.
+pub const ABACUS: OpenAiCompat = OpenAiCompat {
+    label: "Abacus.AI",
+    default_base_url: "https://routellm.abacus.ai",
+    default_model: "route-llm",
+    extra_headers: &[],
+    session_header: None,
+};
+
 /// Claude. The extension talks to Claude over the Anthropic Messages API
 /// (see [`super::anthropic`]), not this client; this config keeps
 /// [`OpenAiCompat::for_provider`] total and supplies the label, base-URL
@@ -147,6 +171,8 @@ impl OpenAiCompat {
             ProviderType::OpenRouter => &OPENROUTER,
             ProviderType::OpenAi => &OPENAI,
             ProviderType::OpenCodeGo => &OPENCODE_GO,
+            ProviderType::OpenCodeFree => &OPENCODE_FREE,
+            ProviderType::Abacus => &ABACUS,
             ProviderType::Anthropic => &ANTHROPIC,
             ProviderType::ClaudeCode => &CLAUDE_CODE,
             ProviderType::Lmstudio => &LMSTUDIO,
@@ -304,6 +330,11 @@ mod tests {
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OllamaCloud).label, "Ollama Cloud");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenRouter).label, "OpenRouter");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenAi).label, "ChatGPT / OpenAI");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenCodeGo).label, "OpenCode Go");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenCodeFree).label, "OpenCode Free");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::OpenCodeFree).default_model, "big-pickle");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::Abacus).label, "Abacus.AI");
+        assert_eq!(OpenAiCompat::for_provider(ProviderType::Abacus).default_base_url, "https://routellm.abacus.ai");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).label, "Claude (Anthropic)");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::Anthropic).default_model, "claude-opus-5-5");
         assert_eq!(OpenAiCompat::for_provider(ProviderType::ClaudeCode).label, "Claude Code");
@@ -313,7 +344,7 @@ mod tests {
 
     #[test]
     fn default_base_urls_do_not_end_in_v1() {
-        for cfg in [OLLAMA_CLOUD, OPENROUTER, OPENAI, ANTHROPIC, LMSTUDIO, OLLAMA] {
+        for cfg in [OLLAMA_CLOUD, OPENROUTER, OPENAI, OPENCODE_GO, OPENCODE_FREE, ABACUS, ANTHROPIC, LMSTUDIO, OLLAMA] {
             assert!(!cfg.default_base_url.ends_with("/v1"), "{}", cfg.label);
             assert!(!cfg.default_base_url.ends_with('/'), "{}", cfg.label);
         }

@@ -33,6 +33,8 @@ fn api_key_key(p: ProviderType) -> &'static str {
         ProviderType::OpenRouter => "openrouter_api_key",
         ProviderType::OpenAi => "openai_api_key",
         ProviderType::OpenCodeGo => "opencode_go_api_key",
+        ProviderType::OpenCodeFree => "opencode_free_api_key",
+        ProviderType::Abacus => "abacus_api_key",
         ProviderType::Anthropic => "anthropic_api_key",
         ProviderType::ClaudeCode => "claude_code_api_key",
     }
@@ -47,6 +49,8 @@ fn local_settings_keys(p: ProviderType) -> (&'static str, &'static str) {
         ProviderType::OpenRouter => ("openrouter_base_url", "openrouter_model"),
         ProviderType::OpenAi => ("openai_base_url", "openai_model"),
         ProviderType::OpenCodeGo => ("opencode_go_base_url", "opencode_go_model"),
+        ProviderType::OpenCodeFree => ("opencode_free_base_url", "opencode_free_model"),
+        ProviderType::Abacus => ("abacus_base_url", "abacus_model"),
         ProviderType::Anthropic => ("anthropic_base_url", "anthropic_model"),
         ProviderType::ClaudeCode => ("claude_code_base_url", "claude_code_model"),
     }
@@ -306,6 +310,10 @@ mod tests {
         assert_eq!(local_settings_keys(ProviderType::OpenAi), ("openai_base_url", "openai_model"));
         assert_eq!(api_key_key(ProviderType::OpenCodeGo), "opencode_go_api_key");
         assert_eq!(local_settings_keys(ProviderType::OpenCodeGo), ("opencode_go_base_url", "opencode_go_model"));
+        assert_eq!(api_key_key(ProviderType::OpenCodeFree), "opencode_free_api_key");
+        assert_eq!(local_settings_keys(ProviderType::OpenCodeFree), ("opencode_free_base_url", "opencode_free_model"));
+        assert_eq!(api_key_key(ProviderType::Abacus), "abacus_api_key");
+        assert_eq!(local_settings_keys(ProviderType::Abacus), ("abacus_base_url", "abacus_model"));
         assert_eq!(local_settings_keys(ProviderType::OllamaCloud), ("ollama_cloud_base_url", "ollama_cloud_model"));
     }
 }
