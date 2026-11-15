@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **claude-code:** embed Claude Code through the Claude Agent SDK ([c9a8d9b](https://github.com/dasmatus/aipage/commit/c9a8d9bd9ffc89cc112f234cce3a590cd5103013))
 * **providers:** add OpenCode Go subscription provider ([72758b4](https://github.com/dasmatus/aipage/commit/72758b42fc1d3e782d5bc93156972df2d3198ef2))
 * **providers:** route OpenCode Go models over their own API formats ([afc89e4](https://github.com/dasmatus/aipage/commit/afc89e498c07362f77643bc24e6a749d64bd50f4))
+* **providers:** add OpenCode Free and Abacus.AI endpoints ([3652bdb](https://github.com/dasmatus/aipage/commit/3652bdb4f67a0f7ae77195b3f32b51edb554284b))
 
 ### 🐛 Bug Fixes
 
